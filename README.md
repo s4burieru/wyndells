@@ -88,4 +88,3 @@ You can also run commands inside a single workspace, e.g. `npm run typecheck -w 
 
 `server/models/Item.ts` and `server/routes/items.ts` are a minimal CRUD
 template — copy and adapt them for your real domain models.
->>>>>>> Stashed changes
