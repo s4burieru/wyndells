@@ -26,6 +26,23 @@
   }
 }
 
+@media print {
+  body * {
+    visibility: hidden;
+  }
+  #qr-print-card,
+  #qr-print-card * {
+    visibility: visible;
+  }
+  #qr-print-card {
+    position: fixed;
+    inset: 0;
+    margin: auto;
+    width: 320px;
+    box-shadow: none;
+  }
+}
+
 @layer utilities {
   .container-wyndell {
     @apply mx-auto w-full max-w-6xl px-4 sm:px-6 lg:px-8;

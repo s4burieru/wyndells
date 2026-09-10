@@ -79,3 +79,14 @@ export function addDays(dateString: string, days: number): string {
 export function normalizeReference(value: string): string {
   return value.trim().toUpperCase()
 }
+
+/**
+ * Reduces a contact number to its comparable form. Formatting characters are
+ * stripped, and numbers longer than 10 digits (e.g. +63 917 …) are reduced to
+ * the last 10 so `0917-123-4567`, `0917 123 4567`, and `+639171234567` all
+ * match the same stored reservation.
+ */
+export function normalizePhone(value: string): string {
+  const digits = String(value ?? '').replace(/\D/g, '')
+  return digits.length > 10 ? digits.slice(-10) : digits
+}

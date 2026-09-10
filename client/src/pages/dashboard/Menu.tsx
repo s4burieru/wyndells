@@ -6,6 +6,7 @@ import { Button } from '../../components/ui/controls'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '../../components/ui/display'
 import { useAuth } from '../../lib/auth'
 import { MenuFormModal } from './MenuFormModal'
+import { QRMenuModal } from './QRMenuModal'
 
 export function ManageMenuPage() {
   const { user } = useAuth()
@@ -14,6 +15,7 @@ export function ManageMenuPage() {
   const [error, setError] = useState(false)
   const [editing, setEditing] = useState<MenuItem | null>(null)
   const [creating, setCreating] = useState(false)
+  const [showQR, setShowQR] = useState(false)
 
   const load = () => {
     setLoading(true)
@@ -53,7 +55,14 @@ export function ManageMenuPage() {
       <PageHeader
         title="Menu"
         subtitle={user?.role === 'manager' ? 'Manage your branch menu and availability.' : 'Manage menu items across all branches.'}
-        action={<Button onClick={() => setCreating(true)}>+ Add menu item</Button>}
+        action={
+          <div className="flex items-center gap-2">
+            <Button variant="ghost" onClick={() => setShowQR(true)}>
+              QR menu
+            </Button>
+            <Button onClick={() => setCreating(true)}>+ Add menu item</Button>
+          </div>
+        }
       />
 
       {items.length === 0 ? (
@@ -132,6 +141,13 @@ export function ManageMenuPage() {
             setEditing(null)
           }}
           onSave={handleSave}
+        />
+      ) : null}
+
+      {showQR ? (
+        <QRMenuModal
+          defaultBranchId={user?.assignedBranch?.id ?? ''}
+          onClose={() => setShowQR(false)}
         />
       ) : null}
     </div>

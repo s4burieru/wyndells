@@ -11,6 +11,7 @@ import {
   assertPhone,
   assertTimeString,
   isRealDate,
+  normalizePhone,
   normalizeReference,
   requireFields,
   todayString,
@@ -389,14 +390,14 @@ export async function createReservation(payload: Record<string, unknown>) {
 
 export async function verifyReservation(reference: string, contactNumber: string) {
   const normalized = normalizeReference(reference)
-  const number = String(contactNumber ?? '').trim()
-  if (!normalized || !number) {
+  const digits = normalizePhone(contactNumber)
+  if (!normalized || !digits) {
     throw new ApiError(400, 'Please provide both your reservation reference and contact number.')
   }
-  const reservation = await ReservationModel.findOne({ reference: normalized, contactNumber: number })
+  const reservation = await ReservationModel.findOne({ reference: normalized })
     .populate(RESERVATION_POPULATE)
     .lean()
-  if (!reservation) {
+  if (!reservation || normalizePhone(reservation.contactNumber) !== digits) {
     throw new ApiError(404, 'No reservation matches that reference and contact number.')
   }
   return reservation
@@ -404,12 +405,12 @@ export async function verifyReservation(reference: string, contactNumber: string
 
 export async function cancelGuestReservation(reference: string, contactNumber: string) {
   const normalized = normalizeReference(reference)
-  const number = String(contactNumber ?? '').trim()
-  if (!normalized || !number) {
+  const digits = normalizePhone(contactNumber)
+  if (!normalized || !digits) {
     throw new ApiError(400, 'Please provide both your reservation reference and contact number.')
   }
-  const reservation = await ReservationModel.findOne({ reference: normalized, contactNumber: number })
-  if (!reservation) {
+  const reservation = await ReservationModel.findOne({ reference: normalized })
+  if (!reservation || normalizePhone(reservation.contactNumber) !== digits) {
     throw new ApiError(404, 'No reservation matches that reference and contact number.')
   }
   if (reservation.status === 'cancelled') {
