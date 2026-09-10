@@ -15,6 +15,14 @@ export default defineConfig([
       reactHooks.configs.flat.recommended,
       reactRefresh.configs.vite,
     ],
+    rules: {
+      // This codebase uses the standard "set a loading flag at the start of an
+      // async fetch effect" pattern; the rule is too aggressive for it.
+      'react-hooks/set-state-in-effect': 'off',
+      // Small constants and hooks are intentionally co-located with the
+      // components that use them.
+      'react-refresh/only-export-components': 'off',
+    },
     languageOptions: {
       globals: globals.browser,
     },
