@@ -1,6 +1,6 @@
 import { type NextFunction, type Request, type RequestHandler, type Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { UserModel } from '../models/User'
+import { getDb } from '../config/db'
 import { ApiError } from '../utils/ApiError'
 
 export type UserRole = 'admin' | 'manager'
@@ -55,16 +55,20 @@ export async function authenticateUser(
       return
     }
 
-    const user = await UserModel.findById(decoded.sub).select('name role assignedBranch isActive')
-    if (!user || !user.isActive) {
+    const { data: user, error } = await getDb()
+      .from('users')
+      .select('id, name, role, assigned_branch_id, is_active')
+      .eq('id', String(decoded.sub))
+      .maybeSingle()
+    if (error || !user || !user.is_active) {
       next(new ApiError(401, 'Your account is unavailable. Please contact support.'))
       return
     }
 
     const authUser: AuthUser = {
-      id: String(user._id),
+      id: user.id,
       role: user.role,
-      branch: user.assignedBranch ? String(user.assignedBranch) : null,
+      branch: user.assigned_branch_id,
     }
 
     ;(req as AuthedRequest).user = authUser
@@ -100,9 +104,4 @@ export function assertBranchAccess(user: AuthUser, branchId: string | null | und
   if (user.branch !== branchId) {
     throw new ApiError(403, 'You can only manage the branch assigned to you.')
   }
-}
-
-/** Mongo query filter that scopes a manager to their own branch. */
-export function branchScopeFilter(user: AuthUser): Record<string, string> {
-  return user.role === 'admin' ? {} : { branch: user.branch! }
 }

@@ -6,6 +6,11 @@ export async function fetchBranches(includeInactive = false): Promise<Branch[]> 
   return data.branches
 }
 
+export async function fetchBranch(codeOrId: string): Promise<Branch> {
+  const data = await apiRequest<{ branch: Branch }>(`/api/branches/${encodeURIComponent(codeOrId)}`)
+  return data.branch
+}
+
 export async function createBranch(payload: Record<string, unknown>): Promise<Branch> {
   const data = await apiRequest<{ branch: Branch }>('/api/branches', {
     method: 'POST',

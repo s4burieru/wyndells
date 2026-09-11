@@ -20,6 +20,7 @@ export function BranchFormModal({
   const [email, setEmail] = useState(branch?.email ?? '')
   const [hours, setHours] = useState(branch?.hours ?? '')
   const [description, setDescription] = useState(branch?.description ?? '')
+  const [image, setImage] = useState(branch?.image ?? '')
 
   const canSave = name.trim() && code.trim()
 
@@ -56,6 +57,9 @@ export function BranchFormModal({
         <Field label="Description">
           <TextInput value={description} onChange={(event) => setDescription(event.target.value)} />
         </Field>
+        <Field label="Image URL" hint="Optional photo shown at the top of the branch's public page.">
+          <TextInput value={image} onChange={(event) => setImage(event.target.value)} placeholder="https://…" />
+        </Field>
       </div>
       <div className="mt-4 flex justify-end gap-2">
         <button type="button" onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
@@ -72,6 +76,7 @@ export function BranchFormModal({
               email: email.trim(),
               hours: hours.trim(),
               description: description.trim(),
+              image: image.trim(),
             })
           }
           disabled={!canSave}

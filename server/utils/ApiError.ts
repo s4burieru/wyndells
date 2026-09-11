@@ -18,8 +18,8 @@ export function isApiError(error: unknown): error is ApiError {
   return error instanceof ApiError
 }
 
-/** MongoDB duplicate-key error code. */
-export const DUPLICATE_KEY_CODE = 11000
+/** PostgreSQL unique-violation SQLSTATE, surfaced by PostgREST error responses. */
+export const DUPLICATE_KEY_CODE = '23505'
 
 export function isDuplicateKeyError(error: unknown): boolean {
   return (

@@ -1,8 +1,9 @@
 import { createHash } from 'node:crypto'
-import { FeedbackModel } from '../models/Feedback'
-import { BranchModel } from '../models/Branch'
+import { getDb } from '../config/db'
+import { feedbackTable, toFeedback, toFeedbackSummary, type FeedbackWithBranchRow } from '../models/Feedback'
+import { branchesTable } from '../models/Branch'
 import { ApiError } from '../utils/ApiError'
-import { assertEmail, assertObjectId, assertPhone, requireFields } from '../utils/validate'
+import { assertEmail, assertUuid, assertPhone, requireFields } from '../utils/validate'
 import { FEEDBACK_MAX_SUBMISSIONS_PER_CLIENT_PER_HOUR } from '../constants'
 
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000 // one hour
@@ -50,7 +51,7 @@ export async function createFeedback(payload: Record<string, unknown>, clientKey
   }
 
   requireFields(payload, ['branch', 'customerName', 'rating', 'comment'])
-  const branchId = assertObjectId(String(payload.branch), 'branch')
+  const branchId = assertUuid(String(payload.branch), 'branch')
   const rating = Number(payload.rating)
   if (!Number.isInteger(rating) || rating < 1 || rating > 5) {
     throw new ApiError(400, 'Rating must be between 1 and 5 stars.')
@@ -76,54 +77,84 @@ export async function createFeedback(payload: Record<string, unknown>, clientKey
     assertEmail(email, 'email address')
   }
 
-  const branch = await BranchModel.findOne({ _id: branchId, isActive: true }).lean()
-  if (!branch) {
+  const { data: branch, error: branchError } = await getDb()
+    .from(branchesTable)
+    .select('id')
+    .eq('id', branchId)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (branchError || !branch) {
     throw new ApiError(404, 'The selected branch is not available right now.')
   }
 
-  const feedback = await FeedbackModel.create({
-    branch: branchId,
-    customerName,
-    contactNumber,
-    email,
-    rating,
-    comment,
-    reservationReference: payload.reservationReference
-      ? String(payload.reservationReference).trim().toUpperCase()
-      : '',
-  })
-  return FeedbackModel.findById(feedback._id).populate('branch', 'name').lean()
+  const { data: created, error } = await getDb()
+    .from(feedbackTable)
+    .insert({
+      branch_id: branchId,
+      customer_name: customerName,
+      contact_number: contactNumber,
+      email,
+      rating,
+      comment,
+      reservation_reference: payload.reservationReference
+        ? String(payload.reservationReference).trim().toUpperCase()
+        : '',
+    })
+    .select('id')
+    .single()
+  if (error) {
+    throw new ApiError(500, 'Could not save your feedback. Please try again.')
+  }
+  return getFeedbackById(created.id)
+}
+
+async function getFeedbackById(id: string) {
+  const { data, error } = await getDb()
+    .from(feedbackTable)
+    .select('*, branch:branch_id(id, name, code)')
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !data) {
+    throw new ApiError(404, 'Feedback not found')
+  }
+  return toFeedback(data as FeedbackWithBranchRow)
 }
 
 /** Public listing — never exposes contact information. */
 export async function listPublicFeedback(branchId?: string, limit = 20) {
-  const query = branchId ? { branch: assertObjectId(branchId, 'branch') } : {}
-  return FeedbackModel.find(query)
-    .select('customerName rating comment branch createdAt')
-    .sort({ createdAt: -1 })
+  let query = getDb().from(feedbackTable).select('customer_name, rating, comment, created_at, branch:branch_id(id, name, code)')
+  if (branchId) {
+    query = query.eq('branch_id', assertUuid(branchId, 'branch'))
+  }
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
     .limit(Math.min(Math.max(limit, 1), 50))
-    .populate('branch', 'name')
-    .lean()
+  if (error) {
+    throw new ApiError(500, 'Could not load feedback.')
+  }
+  return (data ?? []).map((row) => toFeedbackSummary(row as unknown as FeedbackWithBranchRow))
 }
 
 /** Staff listing — includes contact details for follow-ups. */
 export async function listManageableFeedback(filter: { branch?: string; limit?: number }) {
-  const query: Record<string, unknown> = {}
+  let query = getDb().from(feedbackTable).select('*, branch:branch_id(id, name, code)')
   if (filter.branch) {
-    query.branch = assertObjectId(filter.branch, 'branch')
+    query = query.eq('branch_id', assertUuid(filter.branch, 'branch'))
   }
   const limit = Math.min(Math.max(filter.limit ?? 100, 1), 300)
-  return FeedbackModel.find(query)
-    .sort({ createdAt: -1 })
+  const { data, error } = await query
+    .order('created_at', { ascending: false })
     .limit(limit)
-    .populate('branch', 'name code')
-    .lean()
+  if (error) {
+    throw new ApiError(500, 'Could not load feedback.')
+  }
+  return (data ?? []).map((row) => toFeedback(row as FeedbackWithBranchRow))
 }
 
 export async function deleteFeedback(id: string): Promise<void> {
-  assertObjectId(id, 'feedback')
-  const feedback = await FeedbackModel.findByIdAndDelete(id)
-  if (!feedback) {
+  assertUuid(id, 'feedback')
+  const { data, error } = await getDb().from(feedbackTable).delete().eq('id', id).select('id').single()
+  if (error || !data) {
     throw new ApiError(404, 'Feedback not found')
   }
 }

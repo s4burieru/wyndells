@@ -1,20 +1,56 @@
-import { Schema, model, Types, type InferSchemaType } from 'mongoose'
+import { toBranchRef, type BranchRef, type BranchRefRow } from './Branch'
 
-const feedbackSchema = new Schema(
-  {
-    branch: { type: Types.ObjectId, ref: 'Branch', required: true, index: true },
-    customerName: { type: String, required: true, trim: true },
-    contactNumber: { type: String, default: '', trim: true },
-    email: { type: String, default: '', trim: true, lowercase: true },
-    rating: { type: Number, required: true, min: 1, max: 5 },
-    comment: { type: String, required: true, trim: true, maxlength: 1000 },
-    reservationReference: { type: String, default: '', trim: true, uppercase: true },
-  },
-  { timestamps: true },
-)
+export const feedbackTable = 'feedback'
 
-feedbackSchema.index({ branch: 1, createdAt: -1 })
+/** Row shape as stored in the Supabase `feedback` table. */
+export type FeedbackRow = {
+  id: string
+  branch_id: string
+  customer_name: string
+  contact_number: string
+  email: string
+  rating: number
+  comment: string
+  reservation_reference: string
+  created_at: string
+  updated_at: string
+}
 
-export type Feedback = InferSchemaType<typeof feedbackSchema>
+export type FeedbackWithBranchRow = FeedbackRow & { branch: BranchRefRow }
 
-export const FeedbackModel = model<Feedback>('Feedback', feedbackSchema)
+/** Public summary — never exposes contact information. */
+export type FeedbackSummary = {
+  _id: string
+  customerName: string
+  rating: number
+  comment: string
+  branch: BranchRef
+  createdAt: string
+}
+
+/** Staff view — includes contact details for follow-ups. */
+export type Feedback = FeedbackSummary & {
+  contactNumber: string
+  email: string
+  reservationReference: string
+}
+
+export function toFeedbackSummary(row: FeedbackWithBranchRow): FeedbackSummary {
+  return {
+    _id: row.id,
+    customerName: row.customer_name,
+    rating: row.rating,
+    comment: row.comment,
+    branch: toBranchRef(row.branch),
+    createdAt: row.created_at,
+  }
+}
+
+export function toFeedback(row: FeedbackWithBranchRow): Feedback {
+  return {
+    ...toFeedbackSummary(row),
+    contactNumber: row.contact_number,
+    email: row.email,
+    reservationReference: row.reservation_reference,
+  }
+}

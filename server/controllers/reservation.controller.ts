@@ -76,7 +76,7 @@ export const getReservationController = asyncHandler(async (req: AuthedRequest, 
   // Branch-level access is checked inside the status/table handlers; for reads
   // the reservation is loaded to verify the actor may view it.
   const reservation = await getReservation(id)
-  assertBranchAccess(req.user, reservation.branch ? String(reservation.branch) : undefined)
+  assertBranchAccess(req.user, reservation.branch ? reservation.branch._id : undefined)
   res.json({ reservation })
 })
 

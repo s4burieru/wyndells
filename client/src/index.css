@@ -1,4 +1,7 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
 
 @theme {
   /* Wyndell's brand palette */
@@ -17,9 +20,84 @@
   --font-display: "Georgia", "Palatino Linotype", "Book Antiqua", serif;
 }
 
+/* shadcn/ui design tokens (mapped to the Wyndell's brand palette) */
+:root {
+  --background: #f5edda;
+  --foreground: #1f2a22;
+  --card: #ffffff;
+  --card-foreground: #1f2a22;
+  --popover: #ffffff;
+  --popover-foreground: #1f2a22;
+  --primary: #f0810d;
+  --primary-foreground: #ffffff;
+  --secondary: #168b48;
+  --secondary-foreground: #ffffff;
+  --muted: #ece0c4;
+  --muted-foreground: #6f6a5c;
+  --accent: #ece0c4;
+  --accent-foreground: #1f2a22;
+  --destructive: #dc2626;
+  --destructive-foreground: #ffffff;
+  --border: #d5cfba;
+  --input: #d5cfba;
+  --ring: #f0810d;
+  --radius: 0.625rem;
+}
+
+.dark {
+  --background: #1f2a22;
+  --foreground: #f5edda;
+  --card: #2a382e;
+  --card-foreground: #f5edda;
+  --popover: #2a382e;
+  --popover-foreground: #f5edda;
+  --primary: #f0810d;
+  --primary-foreground: #1f2a22;
+  --secondary: #124a2b;
+  --secondary-foreground: #f5edda;
+  --muted: #2a382e;
+  --muted-foreground: #a8a294;
+  --accent: #2a382e;
+  --accent-foreground: #f5edda;
+  --destructive: #ef4444;
+  --destructive-foreground: #ffffff;
+  --border: #3a4a3e;
+  --input: #3a4a3e;
+  --ring: #f0810d;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
 @layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
   body {
-    @apply bg-wyndell-cream text-wyndell-ink antialiased;
+    @apply bg-background text-foreground antialiased;
   }
   h1, h2, h3 {
     @apply text-wyndell-forest;

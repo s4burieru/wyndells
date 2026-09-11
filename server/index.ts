@@ -51,7 +51,7 @@ app.use('/api/reports', reportsRouter)
 app.use(notFoundHandler)
 app.use(errorHandler)
 
-// Start the HTTP server immediately; connect to MongoDB in parallel so a
+// Start the HTTP server immediately; reach Supabase in parallel so a
 // missing database never blocks the API from coming up.
 void connectDB()
 

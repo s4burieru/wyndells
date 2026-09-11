@@ -1,10 +1,11 @@
-import { UserModel } from '../models/User'
-import { BranchModel } from '../models/Branch'
+import { getDb } from '../config/db'
+import { usersTable } from '../models/User'
+import { branchesTable } from '../models/Branch'
 import { ApiError, isDuplicateKeyError } from '../utils/ApiError'
 import { pickFields } from '../utils/pick'
-import { assertEmail, assertObjectId, requireFields } from '../utils/validate'
+import { assertEmail, assertUuid, requireFields } from '../utils/validate'
 import { USER_ROLES, type UserRole } from '../constants'
-import { buildSafeUsers, hashPassword, type SafeUser } from './auth.service'
+import { buildSafeUsers, hashPassword, USER_SELECT, type SafeUser } from './auth.service'
 
 const USER_EDITABLE_FIELDS = ['name', 'email', 'password', 'role', 'assignedBranch', 'isActive']
 
@@ -16,17 +17,39 @@ async function assertAssignedBranch(role: string, branchId: unknown): Promise<vo
   if (!value) {
     throw new ApiError(400, 'A manager must be assigned to a branch.')
   }
-  assertObjectId(value, 'branch')
-  const branch = await BranchModel.exists({ _id: value })
-  if (!branch) {
+  assertUuid(value, 'branch')
+  const { data: branch, error } = await getDb()
+    .from(branchesTable)
+    .select('id')
+    .eq('id', value)
+    .maybeSingle()
+  if (error || !branch) {
     throw new ApiError(400, 'The assigned branch does not exist.')
   }
 }
 
+async function fetchSafeUser(userId: string): Promise<SafeUser> {
+  const { data: user, error } = await getDb()
+    .from(usersTable)
+    .select(USER_SELECT)
+    .eq('id', userId)
+    .maybeSingle()
+  if (error || !user) {
+    throw new ApiError(404, 'User not found')
+  }
+  return (await buildSafeUsers([user]))[0]
+}
+
 export async function listUsers(role?: string): Promise<SafeUser[]> {
-  const query = role ? { role: role as 'admin' | 'manager' } : {}
-  const users = await UserModel.find(query).sort({ createdAt: -1 }).limit(250)
-  return buildSafeUsers(users)
+  let query = getDb().from(usersTable).select(USER_SELECT)
+  if (role) {
+    query = query.eq('role', role as 'admin' | 'manager')
+  }
+  const { data: users, error } = await query.order('created_at', { ascending: false }).limit(250)
+  if (error) {
+    throw new ApiError(500, 'Could not load users.')
+  }
+  return buildSafeUsers(users ?? [])
 }
 
 export async function createUser(payload: Record<string, unknown>): Promise<SafeUser> {
@@ -43,87 +66,96 @@ export async function createUser(payload: Record<string, unknown>): Promise<Safe
   }
   await assertAssignedBranch(role, payload.assignedBranch)
 
-  const user = await UserModel.create({
-    name: String(payload.name).trim(),
-    email: String(payload.email).trim().toLowerCase(),
-    password: await hashPassword(password),
-    role: roleValue,
-    assignedBranch: payload.assignedBranch ? String(payload.assignedBranch) : null,
-    isActive: payload.isActive === undefined ? true : Boolean(payload.isActive),
-  })
-  return buildSafeUsersWithOne(String(user._id))
-}
-
-async function buildSafeUsersWithOne(userId: string): Promise<SafeUser> {
-  const user = await UserModel.findById(userId)
-  if (!user) {
-    throw new ApiError(404, 'User not found')
+  const { data: inserted, error } = await getDb()
+    .from(usersTable)
+    .insert({
+      name: String(payload.name).trim(),
+      email: String(payload.email).trim().toLowerCase(),
+      password_hash: await hashPassword(password),
+      role: roleValue,
+      assigned_branch_id: payload.assignedBranch ? String(payload.assignedBranch) : null,
+      is_active: payload.isActive === undefined ? true : Boolean(payload.isActive),
+    })
+    .select('id')
+    .single()
+  if (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new ApiError(409, 'A user with this email already exists.')
+    }
+    throw new ApiError(500, 'Could not create the user.')
   }
-  return (await buildSafeUsers([user]))[0]
+  return fetchSafeUser(inserted.id)
 }
 
 export async function updateUser(id: string, payload: Record<string, unknown>): Promise<SafeUser> {
-  assertObjectId(id, 'user')
-  const existing = await UserModel.findById(id)
-  if (!existing) {
-    throw new ApiError(404, 'User not found')
-  }
+  assertUuid(id, 'user')
+  const existing = await fetchSafeUser(id)
 
   const updates = pickFields(payload, USER_EDITABLE_FIELDS)
+  const rowUpdates: Record<string, unknown> = {}
 
+  if (updates.name !== undefined) {
+    rowUpdates.name = String(updates.name).trim()
+  }
   if (updates.email !== undefined) {
     assertEmail(String(updates.email))
-    updates.email = String(updates.email).trim().toLowerCase()
+    rowUpdates.email = String(updates.email).trim().toLowerCase()
   }
   if (updates.password !== undefined) {
     const password = String(updates.password)
     if (password.length < 8) {
       throw new ApiError(400, 'Password must be at least 8 characters long.')
     }
-    updates.password = await hashPassword(password)
+    rowUpdates.password_hash = await hashPassword(password)
   }
   if (updates.role !== undefined) {
     const role = String(updates.role)
     if (!USER_ROLES.includes(role as UserRole)) {
       throw new ApiError(400, 'Role must be either "admin" or "manager".')
     }
+    rowUpdates.role = role as 'admin' | 'manager'
+  }
+  if (updates.assignedBranch !== undefined) {
+    const value = updates.assignedBranch === null || updates.assignedBranch === '' ? null : String(updates.assignedBranch)
+    rowUpdates.assigned_branch_id = value
+  }
+  if (updates.isActive !== undefined) {
+    rowUpdates.is_active = Boolean(updates.isActive)
   }
   if (updates.role !== undefined || updates.assignedBranch !== undefined) {
     const role = updates.role !== undefined ? String(updates.role) : existing.role
-    await assertAssignedBranch(role, updates.assignedBranch !== undefined ? updates.assignedBranch : existing.assignedBranch)
+    const branchId =
+      updates.assignedBranch !== undefined ? updates.assignedBranch : existing.assignedBranch?.id
+    await assertAssignedBranch(role, branchId)
   }
 
-  try {
-    const user = await UserModel.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-    if (!user) {
-      throw new ApiError(404, 'User not found')
-    }
-    return buildSafeUsersWithOne(String(user._id))
-  } catch (error) {
+  const { error } = await getDb().from(usersTable).update(rowUpdates).eq('id', id)
+  if (error) {
     if (isDuplicateKeyError(error)) {
       throw new ApiError(409, 'A user with this email already exists.')
     }
-    throw error
+    throw new ApiError(500, 'Could not update the user.')
   }
+  return fetchSafeUser(id)
 }
 
 export async function setUserActive(id: string, isActive: boolean): Promise<SafeUser> {
-  assertObjectId(id, 'user')
-  const user = await UserModel.findByIdAndUpdate(id, { isActive }, { new: true })
-  if (!user) {
+  assertUuid(id, 'user')
+  const { error } = await getDb().from(usersTable).update({ is_active: isActive }).eq('id', id)
+  if (error) {
     throw new ApiError(404, 'User not found')
   }
-  return buildSafeUsersWithOne(String(user._id))
+  return fetchSafeUser(id)
 }
 
 export async function deleteUser(id: string): Promise<void> {
-  assertObjectId(id, 'user')
-  const user = await UserModel.findById(id)
-  if (!user) {
-    throw new ApiError(404, 'User not found')
-  }
-  if (user.role === 'admin') {
+  assertUuid(id, 'user')
+  const existing = await fetchSafeUser(id)
+  if (existing.role === 'admin') {
     throw new ApiError(400, 'Administrator accounts cannot be deleted.')
   }
-  await UserModel.deleteOne({ _id: id })
+  const { data, error } = await getDb().from(usersTable).delete().eq('id', id).select('id').single()
+  if (error || !data) {
+    throw new ApiError(404, 'User not found')
+  }
 }

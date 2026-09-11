@@ -1,19 +1,27 @@
-import { MenuItemModel } from '../models/MenuItem'
-import { BranchModel } from '../models/Branch'
+import { getDb } from '../config/db'
+import { menuItemsTable, toMenuItem, toMenuItemWithBranch, type MenuItemRow, type MenuItemWithBranchRow } from '../models/MenuItem'
+import { branchesTable } from '../models/Branch'
 import { ApiError } from '../utils/ApiError'
 import { pickFields } from '../utils/pick'
-import { assertObjectId, requireFields } from '../utils/validate'
+import { assertUuid, requireFields } from '../utils/validate'
 import { MENU_CATEGORIES, type MenuCategory } from '../constants'
 import { assertBranchAccess, type AuthUser } from '../middleware/auth'
 
 const MENU_EDITABLE_FIELDS = ['name', 'description', 'price', 'category', 'image', 'status', 'isFeatured']
 
+/** Select used for reads that embed the branch reference (mirrors mongoose `.populate`). */
+const MENU_SELECT = '*, branch:branch_id(id, name, code)'
+
 async function assertMenuItemBranchAccess(id: string, actor: AuthUser): Promise<void> {
-  const match = await MenuItemModel.findById(id).select('branch').lean()
-  if (!match) {
+  const { data: match, error } = await getDb()
+    .from(menuItemsTable)
+    .select('branch_id')
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !match) {
     throw new ApiError(404, 'Menu item not found')
   }
-  assertBranchAccess(actor, String(match.branch))
+  assertBranchAccess(actor, String(match.branch_id))
 }
 
 export async function listMenuItems(options: {
@@ -23,39 +31,46 @@ export async function listMenuItems(options: {
   featuredOnly?: boolean
   limit?: number
 }) {
-  const query: Record<string, unknown> = {}
+  let query = getDb().from(menuItemsTable).select(MENU_SELECT)
   if (options.branch) {
-    query.branch = assertObjectId(options.branch, 'branch')
+    query = query.eq('branch_id', assertUuid(options.branch, 'branch'))
   }
   if (options.category) {
-    query.category = options.category
+    query = query.eq('category', options.category)
   }
   if (!options.includeUnavailable) {
-    query.status = 'available'
+    query = query.eq('status', 'available')
   }
   if (options.featuredOnly) {
-    query.isFeatured = true
+    query = query.eq('is_featured', true)
   }
-
-  let cursor = MenuItemModel.find(query).populate('branch', 'name code').sort({ category: 1, name: 1 })
+  query = query.order('category').order('name')
   if (options.limit && options.limit > 0) {
-    cursor = cursor.limit(options.limit)
+    query = query.limit(options.limit)
   }
-  return cursor.lean()
+  const { data, error } = await query
+  if (error) {
+    throw new ApiError(500, 'Could not load menu items.')
+  }
+  return (data ?? []).map((row) => toMenuItemWithBranch(row as MenuItemWithBranchRow))
 }
 
 export async function getMenuItem(id: string) {
-  assertObjectId(id, 'menu item')
-  const item = await MenuItemModel.findById(id).populate('branch', 'name code').lean()
-  if (!item) {
+  assertUuid(id, 'menu item')
+  const { data: item, error } = await getDb()
+    .from(menuItemsTable)
+    .select(MENU_SELECT)
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !item) {
     throw new ApiError(404, 'Menu item not found')
   }
-  return item
+  return toMenuItemWithBranch(item as MenuItemWithBranchRow)
 }
 
 export async function createMenuItem(payload: Record<string, unknown>, actor: AuthUser) {
   requireFields(payload, ['branch', 'name', 'price', 'category'])
-  const branchId = assertObjectId(String(payload.branch), 'branch')
+  const branchId = assertUuid(String(payload.branch), 'branch')
   assertBranchAccess(actor, branchId)
   const category = String(payload.category)
   if (!MENU_CATEGORIES.includes(category as MenuCategory)) {
@@ -65,40 +80,79 @@ export async function createMenuItem(payload: Record<string, unknown>, actor: Au
   if (!Number.isFinite(price) || price < 0) {
     throw new ApiError(400, 'Price must be a non-negative number.')
   }
-  const branch = await BranchModel.exists({ _id: branchId })
-  if (!branch) {
+  const { data: branch, error: branchError } = await getDb()
+    .from(branchesTable)
+    .select('id')
+    .eq('id', branchId)
+    .maybeSingle()
+  if (branchError || !branch) {
     throw new ApiError(400, 'The selected branch does not exist.')
   }
+
   const updates = pickFields(payload, ['name', 'description', 'price', 'category', 'image', 'status', 'isFeatured'])
-  updates.branch = branchId
-  updates.price = price
-  updates.category = category
-  return MenuItemModel.create(updates)
+  const { data: created, error } = await getDb()
+    .from(menuItemsTable)
+    .insert({
+      branch_id: branchId,
+      name: String(updates.name),
+      description: updates.description === undefined ? '' : String(updates.description),
+      price,
+      category,
+      image: updates.image === undefined ? '' : String(updates.image),
+      status: updates.status === undefined ? 'available' : String(updates.status),
+      is_featured: updates.isFeatured === undefined ? false : Boolean(updates.isFeatured),
+    })
+    .select('*')
+    .single()
+  if (error) {
+    throw new ApiError(500, 'Could not create the menu item.')
+  }
+  return toMenuItem(created as MenuItemRow)
 }
 
 export async function updateMenuItem(id: string, payload: Record<string, unknown>, actor: AuthUser) {
-  assertObjectId(id, 'menu item')
+  assertUuid(id, 'menu item')
   await assertMenuItemBranchAccess(id, actor)
   const updates = pickFields(payload, MENU_EDITABLE_FIELDS)
+
+  const row: Record<string, unknown> = {}
+  if (updates.name !== undefined) row.name = String(updates.name)
+  if (updates.description !== undefined) row.description = String(updates.description)
+  if (updates.image !== undefined) row.image = String(updates.image)
+  if (updates.status !== undefined) row.status = String(updates.status)
+  if (updates.isFeatured !== undefined) row.is_featured = Boolean(updates.isFeatured)
+  if (updates.category !== undefined) {
+    const category = String(updates.category)
+    if (!MENU_CATEGORIES.includes(category as MenuCategory)) {
+      throw new ApiError(400, 'Invalid menu category.')
+    }
+    row.category = category
+  }
   if (updates.price !== undefined) {
     const price = Number(updates.price)
     if (!Number.isFinite(price) || price < 0) {
       throw new ApiError(400, 'Price must be a non-negative number.')
     }
-    updates.price = price
+    row.price = price
   }
-  const item = await MenuItemModel.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-  if (!item) {
+
+  const { data: updated, error } = await getDb()
+    .from(menuItemsTable)
+    .update(row)
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !updated) {
     throw new ApiError(404, 'Menu item not found')
   }
-  return item
+  return toMenuItem(updated as MenuItemRow)
 }
 
 export async function deleteMenuItem(id: string, actor: AuthUser): Promise<void> {
-  assertObjectId(id, 'menu item')
+  assertUuid(id, 'menu item')
   await assertMenuItemBranchAccess(id, actor)
-  const item = await MenuItemModel.findByIdAndDelete(id)
-  if (!item) {
+  const { data, error } = await getDb().from(menuItemsTable).delete().eq('id', id).select('id').single()
+  if (error || !data) {
     throw new ApiError(404, 'Menu item not found')
   }
 }

@@ -1,4 +1,3 @@
-import mongoose from 'mongoose'
 import { ApiError } from './ApiError'
 
 const EMAIL_PATTERN = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
@@ -6,8 +5,16 @@ const PHONE_PATTERN = /^\+?[\d\s()-]{7,20}$/
 export const DATE_PATTERN = /^\d{4}-\d{2}-\d{2}$/
 export const TIME_PATTERN = /^([01]\d|2[0-3]):[0-5]\d$/
 
-export function assertObjectId(value: string, label = 'id'): string {
-  if (!mongoose.isValidObjectId(value)) {
+/** PostgreSQL `uuid` key format (v4-style with a valid variant/version nibble). */
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+/** True when the value looks like a Postgres uuid key. */
+export function isUuid(value: string): boolean {
+  return UUID_PATTERN.test(value)
+}
+
+export function assertUuid(value: string, label = 'id'): string {
+  if (!isUuid(value)) {
     throw new ApiError(400, `Invalid ${label}`)
   }
   return value

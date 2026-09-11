@@ -1,27 +1,19 @@
-import { Schema, model, Types, type InferSchemaType } from 'mongoose'
-import { USER_ROLES } from '../constants'
+import type { UserRole } from '../constants'
 
-const userSchema = new Schema(
-  {
-    name: { type: String, required: true, trim: true },
-    email: { type: String, required: true, unique: true, trim: true, lowercase: true },
-    // select: false keeps the hash out of normal queries.
-    password: { type: String, required: true, select: false },
-    role: { type: String, required: true, enum: USER_ROLES, default: 'manager' },
-    assignedBranch: { type: Types.ObjectId, ref: 'Branch', default: null },
-    isActive: { type: Boolean, default: true },
-  },
-  { timestamps: true },
-)
+export const usersTable = 'users'
 
-// Never leak the password hash through JSON serialization.
-userSchema.set('toJSON', {
-  transform(_doc: unknown, ret: Record<string, unknown>) {
-    delete ret.password
-    delete ret.__v
-  },
-})
+/** Row shape as stored in the Supabase `users` table. */
+export type UserRow = {
+  id: string
+  name: string
+  email: string
+  password_hash: string
+  role: UserRole
+  assigned_branch_id: string | null
+  is_active: boolean
+  created_at: string
+  updated_at: string
+}
 
-export type User = InferSchemaType<typeof userSchema>
-
-export const UserModel = model<User>('User', userSchema)
+/** A user row with the embedded branch name from the `assigned_branch` foreign key. */
+export type UserWithBranchRow = UserRow & { assigned_branch: { name: string } | null }

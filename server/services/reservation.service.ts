@@ -1,13 +1,13 @@
-import mongoose from 'mongoose'
-import { DiningTableModel } from '../models/DiningTable'
-import { BranchModel } from '../models/Branch'
-import { ReservationModel } from '../models/Reservation'
-import { ApiError } from '../utils/ApiError'
+import { getDb } from '../config/db'
+import { diningTablesTable, toDiningTable, type DiningTableRow } from '../models/DiningTable'
+import { branchesTable } from '../models/Branch'
+import { reservationsTable, toReservation, type ReservationRow, type ReservationWithBranchRow } from '../models/Reservation'
+import { ApiError, isDuplicateKeyError } from '../utils/ApiError'
 import { generateReference } from '../utils/reference'
 import {
   assertDateString,
   assertEmail,
-  assertObjectId,
+  assertUuid,
   assertPhone,
   assertTimeString,
   isRealDate,
@@ -33,7 +33,8 @@ const SLOT_START_MINUTES = 10 * 60 // 10:00
 const SLOT_END_MINUTES = 21 * 60 // 21:00
 const SLOT_STEP_MINUTES = 30
 
-const ObjectId = mongoose.Types.ObjectId
+/** Select that embeds the branch and table references (mirrors mongoose `.populate`). */
+const RESERVATION_SELECT = '*, branch:branch_id(id, name, code, address), table:table_id(id, table_number, capacity, location, status)'
 
 // ---------------------------------------------------------------------------
 // Time helpers
@@ -63,23 +64,6 @@ export function businessTimeSlots(): string[] {
 // Availability logic
 // ---------------------------------------------------------------------------
 
-function activeReservationFilter(
-  branchId: string,
-  date: string,
-  excludeReservationId?: string,
-): Record<string, unknown> {
-  const filter: Record<string, unknown> = {
-    branch: branchId,
-    date,
-    status: { $in: [...ACTIVE_RESERVATION_STATUSES] },
-    table: { $ne: null },
-  }
-  if (excludeReservationId) {
-    filter._id = { $ne: excludeReservationId }
-  }
-  return filter
-}
-
 /** Table ids already held by active reservations overlapping the requested time. */
 async function occupiedTableIds(
   branchId: string,
@@ -87,14 +71,25 @@ async function occupiedTableIds(
   time: string,
   excludeReservationId?: string,
 ): Promise<string[]> {
-  const reservations = await ReservationModel.find(activeReservationFilter(branchId, date, excludeReservationId))
-    .select('table time')
-    .lean()
+  let query = getDb()
+    .from(reservationsTable)
+    .select('table_id, time')
+    .eq('branch_id', branchId)
+    .eq('date', date)
+    .in('status', [...ACTIVE_RESERVATION_STATUSES])
+    .not('table_id', 'is', 'null')
+  if (excludeReservationId) {
+    query = query.neq('id', excludeReservationId)
+  }
+  const { data, error } = await query
+  if (error) {
+    throw new ApiError(500, 'Could not check reservation availability.')
+  }
 
   const occupied = new Set<string>()
-  for (const reservation of reservations) {
-    if (reservation.table && timesOverlap(String(reservation.time), time)) {
-      occupied.add(String(reservation.table))
+  for (const reservation of data ?? []) {
+    if (timesOverlap(String(reservation.time), time)) {
+      occupied.add(String(reservation.table_id))
     }
   }
   return [...occupied]
@@ -107,16 +102,20 @@ async function activeBookingsAtTime(
   time: string,
   excludeReservationId?: string,
 ): Promise<number> {
-  const filter: Record<string, unknown> = {
-    branch: branchId,
-    date,
-    status: { $in: [...ACTIVE_RESERVATION_STATUSES] },
-  }
+  let query = getDb()
+    .from(reservationsTable)
+    .select('time')
+    .eq('branch_id', branchId)
+    .eq('date', date)
+    .in('status', [...ACTIVE_RESERVATION_STATUSES])
   if (excludeReservationId) {
-    filter._id = { $ne: excludeReservationId }
+    query = query.neq('id', excludeReservationId)
   }
-  const reservations = await ReservationModel.find(filter).select('time').lean()
-  return reservations.filter((reservation) => timesOverlap(String(reservation.time), time)).length
+  const { data, error } = await query
+  if (error) {
+    throw new ApiError(500, 'Could not check reservation availability.')
+  }
+  return (data ?? []).filter((reservation) => timesOverlap(String(reservation.time), time)).length
 }
 
 /**
@@ -131,16 +130,21 @@ export async function findAvailableTables(
   excludeReservationId?: string,
 ) {
   const occupied = await occupiedTableIds(branchId, date, time, excludeReservationId)
-  const query: Record<string, unknown> = {
-    branch: branchId,
-    isActive: true,
-    capacity: { $gte: guests },
-    status: { $nin: [...UNBOOKABLE_TABLE_STATUSES] },
-  }
+  let query = getDb()
+    .from(diningTablesTable)
+    .select('*')
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .gte('capacity', guests)
+    .not('status', 'in', [...UNBOOKABLE_TABLE_STATUSES])
   if (occupied.length > 0) {
-    query._id = { $nin: occupied }
+    query = query.not('id', 'in', occupied)
   }
-  return DiningTableModel.find(query).sort({ capacity: 1, tableNumber: 1 }).lean()
+  const { data, error } = await query.order('capacity').order('table_number')
+  if (error) {
+    throw new ApiError(500, 'Could not check table availability.')
+  }
+  return (data ?? []).map((row) => toDiningTable(row as DiningTableRow))
 }
 
 /** Whether a specific table can take a booking at the given slot. */
@@ -152,14 +156,16 @@ export async function canUseTable(
   guests: number,
   excludeReservationId?: string,
 ): Promise<boolean> {
-  const table = await DiningTableModel.findOne({
-    _id: tableId,
-    branch: branchId,
-    isActive: true,
-    capacity: { $gte: guests },
-    status: { $nin: [...UNBOOKABLE_TABLE_STATUSES] },
-  }).lean()
-  if (!table) {
+  const { data: table, error } = await getDb()
+    .from(diningTablesTable)
+    .select('id')
+    .eq('id', tableId)
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .gte('capacity', guests)
+    .not('status', 'in', [...UNBOOKABLE_TABLE_STATUSES])
+    .maybeSingle()
+  if (error || !table) {
     return false
   }
   const occupied = await occupiedTableIds(branchId, date, time, excludeReservationId)
@@ -173,8 +179,12 @@ export async function canUseTable(
 async function generateUniqueReference(): Promise<string> {
   for (let attempt = 0; attempt < 10; attempt += 1) {
     const reference = generateReference()
-    const exists = await ReservationModel.exists({ reference })
-    if (!exists) {
+    const { data: existing, error } = await getDb()
+      .from(reservationsTable)
+      .select('id')
+      .eq('reference', reference)
+      .maybeSingle()
+    if (!error && !existing) {
       return reference
     }
   }
@@ -186,37 +196,44 @@ async function generateUniqueReference(): Promise<string> {
 // ---------------------------------------------------------------------------
 
 async function markTableReserved(tableId: string): Promise<void> {
-  await DiningTableModel.updateOne(
-    { _id: tableId, status: { $in: ['available'] } },
-    { $set: { status: 'reserved' } },
-  )
+  const { error } = await getDb()
+    .from(diningTablesTable)
+    .update({ status: 'reserved' })
+    .eq('id', tableId)
+    .in('status', ['available'])
+  if (error) {
+    throw new ApiError(500, 'Could not update the table.')
+  }
 }
 
 async function releaseTableIfHeld(tableId: string): Promise<void> {
   // Only auto-release statuses that this workflow set; never clobber manual
   // statuses like "cleaning" or "unavailable".
-  await DiningTableModel.updateOne(
-    { _id: tableId, status: { $in: ['reserved', 'occupied'] } },
-    { $set: { status: 'available' } },
-  )
+  const { error } = await getDb()
+    .from(diningTablesTable)
+    .update({ status: 'available' })
+    .eq('id', tableId)
+    .in('status', ['reserved', 'occupied'])
+  if (error) {
+    throw new ApiError(500, 'Could not update the table.')
+  }
 }
 
 // ---------------------------------------------------------------------------
 // Queries
 // ---------------------------------------------------------------------------
 
-const RESERVATION_POPULATE = [
-  { path: 'branch', select: 'name code address' },
-  { path: 'table', select: 'tableNumber capacity location status' },
-]
-
 export async function getReservation(id: string) {
-  assertObjectId(id, 'reservation')
-  const reservation = await ReservationModel.findById(id).populate(RESERVATION_POPULATE).lean()
-  if (!reservation) {
+  assertUuid(id, 'reservation')
+  const { data: reservation, error } = await getDb()
+    .from(reservationsTable)
+    .select(RESERVATION_SELECT)
+    .eq('id', id)
+    .maybeSingle()
+  if (error || !reservation) {
     throw new ApiError(404, 'Reservation not found')
   }
-  return reservation
+  return toReservation(reservation as ReservationWithBranchRow)
 }
 
 export async function listReservations(options: {
@@ -228,39 +245,37 @@ export async function listReservations(options: {
   limit?: number
   skip?: number
 }) {
-  const query: Record<string, unknown> = {}
+  let query = getDb().from(reservationsTable).select(RESERVATION_SELECT, { count: 'exact' })
   if (options.branch) {
-    query.branch = assertObjectId(options.branch, 'branch')
+    query = query.eq('branch_id', assertUuid(options.branch, 'branch'))
   }
   if (options.status) {
-    query.status = options.status
+    query = query.eq('status', options.status)
   }
   if (options.date) {
-    query.date = options.date
+    query = query.eq('date', options.date)
   }
-  const dateRange: Record<string, string> = {}
   if (options.dateFrom) {
-    dateRange.$gte = options.dateFrom
+    query = query.gte('date', options.dateFrom)
   }
   if (options.dateTo) {
-    dateRange.$lte = options.dateTo
-  }
-  if (Object.keys(dateRange).length > 0) {
-    query.date = dateRange
+    query = query.lte('date', options.dateTo)
   }
 
   const limit = Math.min(Math.max(options.limit ?? 50, 1), 100)
   const skip = Math.max(options.skip ?? 0, 0)
 
-  const total = await ReservationModel.countDocuments(query)
-  const items = await ReservationModel.find(query)
-    .populate(RESERVATION_POPULATE)
-    .sort({ date: -1, time: -1, createdAt: -1 })
-    .skip(skip)
-    .limit(limit)
-    .lean()
+  const { data, count, error } = await query
+    .order('date', { ascending: false })
+    .order('time', { ascending: false })
+    .order('created_at', { ascending: false })
+    .range(skip, skip + limit - 1)
+  if (error) {
+    throw new ApiError(500, 'Could not load reservations.')
+  }
 
-  return { items, total }
+  const items = (data ?? []).map((row) => toReservation(row as ReservationWithBranchRow))
+  return { items, total: count ?? items.length }
 }
 
 // ---------------------------------------------------------------------------
@@ -268,7 +283,7 @@ export async function listReservations(options: {
 // ---------------------------------------------------------------------------
 
 export async function getAvailableTimeSlots(options: { branch: string; date: string; guests: number }) {
-  const branchId = assertObjectId(options.branch, 'branch')
+  const branchId = assertUuid(options.branch, 'branch')
   assertDateString(options.date)
   if (!isRealDate(options.date)) {
     throw new ApiError(400, 'Please provide a valid date.')
@@ -281,8 +296,13 @@ export async function getAvailableTimeSlots(options: { branch: string; date: str
     throw new ApiError(400, `Number of guests must be between 1 and ${MAX_GUESTS_PER_RESERVATION}.`)
   }
 
-  const branch = await BranchModel.findOne({ _id: branchId, isActive: true }).lean()
-  if (!branch) {
+  const { data: branch, error: branchError } = await getDb()
+    .from(branchesTable)
+    .select('id')
+    .eq('id', branchId)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (branchError || !branch) {
     throw new ApiError(404, 'The selected branch is not available right now.')
   }
 
@@ -308,7 +328,7 @@ function timeToMinutesToday(): number {
 export async function createReservation(payload: Record<string, unknown>) {
   requireFields(payload, ['branch', 'customerName', 'email', 'contactNumber', 'date', 'time', 'guests'])
 
-  const branchId = assertObjectId(String(payload.branch), 'branch')
+  const branchId = assertUuid(String(payload.branch), 'branch')
   const customerName = String(payload.customerName).trim()
   const email = String(payload.email).trim().toLowerCase()
   const contactNumber = String(payload.contactNumber).trim()
@@ -331,18 +351,27 @@ export async function createReservation(payload: Record<string, unknown>) {
     throw new ApiError(400, `Number of guests must be between 1 and ${MAX_GUESTS_PER_RESERVATION}.`)
   }
 
-  const branch = await BranchModel.findOne({ _id: branchId, isActive: true }).lean()
-  if (!branch) {
+  const { data: branch, error: branchError } = await getDb()
+    .from(branchesTable)
+    .select('id')
+    .eq('id', branchId)
+    .eq('is_active', true)
+    .maybeSingle()
+  if (branchError || !branch) {
     throw new ApiError(404, 'The selected branch is not available right now.')
   }
 
   // Light anti-abuse guard: limit same contact/day.
-  const bookingsToday = await ReservationModel.countDocuments({
-    branch: branchId,
-    date,
-    contactNumber,
-  })
-  if (bookingsToday >= MAX_RESERVATIONS_PER_CONTACT_PER_DAY) {
+  const { count: bookingsToday, error: countError } = await getDb()
+    .from(reservationsTable)
+    .select('id', { count: 'exact', head: true })
+    .eq('branch_id', branchId)
+    .eq('date', date)
+    .eq('contact_number', contactNumber)
+  if (countError) {
+    throw new ApiError(500, 'Could not check your existing reservations.')
+  }
+  if ((bookingsToday ?? 0) >= MAX_RESERVATIONS_PER_CONTACT_PER_DAY) {
     throw new ApiError(
       409,
       'You already have reservations for this date. Please contact the branch directly if you need more.',
@@ -359,33 +388,47 @@ export async function createReservation(payload: Record<string, unknown>) {
   }
 
   // Capacity backstop so unlimited pending requests cannot flood a slot.
-  const totalBookableTables = await DiningTableModel.countDocuments({
-    branch: branchId,
-    isActive: true,
-    status: { $nin: [...UNBOOKABLE_TABLE_STATUSES] },
-  })
+  const { count: totalBookableTables, error: tableCountError } = await getDb()
+    .from(diningTablesTable)
+    .select('id', { count: 'exact', head: true })
+    .eq('branch_id', branchId)
+    .eq('is_active', true)
+    .not('status', 'in', [...UNBOOKABLE_TABLE_STATUSES])
+  if (tableCountError) {
+    throw new ApiError(500, 'Could not check table availability.')
+  }
   const activeBookings = await activeBookingsAtTime(branchId, date, time)
-  if (activeBookings >= totalBookableTables) {
+  if (activeBookings >= (totalBookableTables ?? 0)) {
     throw new ApiError(409, 'That time slot is fully booked. Please try another time or date.')
   }
 
   const reference = await generateUniqueReference()
 
-  const reservation = await ReservationModel.create({
-    reference,
-    branch: branchId,
-    customerName,
-    email,
-    contactNumber,
-    date,
-    time,
-    guests,
-    specialRequests,
-    status: 'pending',
-    statusHistory: [{ status: 'pending', note: 'Reservation submitted' }],
-  })
+  const { data: created, error } = await getDb()
+    .from(reservationsTable)
+    .insert({
+      reference,
+      branch_id: branchId,
+      customer_name: customerName,
+      email,
+      contact_number: contactNumber,
+      date,
+      time,
+      guests,
+      special_requests: specialRequests,
+      status: 'pending',
+      status_history: [{ status: 'pending', note: 'Reservation submitted' }],
+    })
+    .select('id')
+    .single()
+  if (error) {
+    if (isDuplicateKeyError(error)) {
+      throw new ApiError(409, 'Could not save the reservation. Please try again.')
+    }
+    throw new ApiError(500, 'Could not save the reservation.')
+  }
 
-  return getReservation(String(reservation._id))
+  return getReservation(created.id)
 }
 
 export async function verifyReservation(reference: string, contactNumber: string) {
@@ -394,13 +437,16 @@ export async function verifyReservation(reference: string, contactNumber: string
   if (!normalized || !digits) {
     throw new ApiError(400, 'Please provide both your reservation reference and contact number.')
   }
-  const reservation = await ReservationModel.findOne({ reference: normalized })
-    .populate(RESERVATION_POPULATE)
-    .lean()
-  if (!reservation || normalizePhone(reservation.contactNumber) !== digits) {
+  const { data: reservation, error } = await getDb()
+    .from(reservationsTable)
+    .select(RESERVATION_SELECT)
+    .eq('reference', normalized)
+    .maybeSingle()
+  const row = error ? null : (reservation as ReservationWithBranchRow | null)
+  if (!row || normalizePhone(row.contact_number) !== digits) {
     throw new ApiError(404, 'No reservation matches that reference and contact number.')
   }
-  return reservation
+  return toReservation(row)
 }
 
 export async function cancelGuestReservation(reference: string, contactNumber: string) {
@@ -409,27 +455,36 @@ export async function cancelGuestReservation(reference: string, contactNumber: s
   if (!normalized || !digits) {
     throw new ApiError(400, 'Please provide both your reservation reference and contact number.')
   }
-  const reservation = await ReservationModel.findOne({ reference: normalized })
-  if (!reservation || normalizePhone(reservation.contactNumber) !== digits) {
+  const { data: reservation, error } = await getDb()
+    .from(reservationsTable)
+    .select(RESERVATION_SELECT)
+    .eq('reference', normalized)
+    .maybeSingle()
+  const row = error ? null : (reservation as ReservationWithBranchRow | null)
+  if (!row || normalizePhone(row.contact_number) !== digits) {
     throw new ApiError(404, 'No reservation matches that reference and contact number.')
   }
-  if (reservation.status === 'cancelled') {
-    return getReservation(String(reservation._id))
+  if (row.status === 'cancelled') {
+    return toReservation(row)
   }
-  if (!ACTIVE_RESERVATION_STATUSES.includes(reservation.status)) {
+  if (!ACTIVE_RESERVATION_STATUSES.includes(row.status)) {
     throw new ApiError(400, 'This reservation can no longer be cancelled.')
   }
-  if (reservation.table) {
-    await releaseTableIfHeld(String(reservation.table))
+  if (row.table_id) {
+    await releaseTableIfHeld(String(row.table_id))
   }
-  reservation.status = 'cancelled'
-  reservation.statusHistory.push({
-    status: 'cancelled',
-    changedAt: new Date(),
-    note: 'Cancelled by the customer',
-  } as object)
-  await reservation.save()
-  return getReservation(String(reservation._id))
+  const history = [
+    ...row.status_history,
+    { status: 'cancelled', changedAt: new Date().toISOString(), note: 'Cancelled by the customer' },
+  ]
+  const { error: updateError } = await getDb()
+    .from(reservationsTable)
+    .update({ status: 'cancelled', status_history: history })
+    .eq('id', row.id)
+  if (updateError) {
+    throw new ApiError(500, 'Could not cancel the reservation.')
+  }
+  return getReservation(row.id)
 }
 
 // ---------------------------------------------------------------------------
@@ -455,30 +510,36 @@ export async function updateReservationStatus(
   note: string,
   actor: AuthUser,
 ) {
-  assertObjectId(id, 'reservation')
+  assertUuid(id, 'reservation')
   if (!RESERVATION_STATUSES.includes(nextStatus as ReservationStatus)) {
     throw new ApiError(400, 'Invalid reservation status.')
   }
-  const reservation = await ReservationModel.findById(id)
-  if (!reservation) {
+  const { data: reservation, error: fetchError } = await getDb()
+    .from(reservationsTable)
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchError || !reservation) {
     throw new ApiError(404, 'Reservation not found')
   }
-  assertBranchAccess(actor, String(reservation.branch))
+  const row = reservation as ReservationRow
+  assertBranchAccess(actor, String(row.branch_id))
 
-  const current = reservation.status
+  const current = row.status
   assertTransition(current, nextStatus)
   if (current === nextStatus) {
     return getReservation(id)
   }
 
+  let tableId = row.table_id
   if (nextStatus === 'confirmed') {
     // A confirmation must hold a table for the slot.
-    if (!reservation.table) {
+    if (!row.table_id) {
       const available = await findAvailableTables(
-        String(reservation.branch),
-        reservation.date,
-        String(reservation.time),
-        reservation.guests,
+        String(row.branch_id),
+        row.date,
+        String(row.time),
+        row.guests,
         id,
       )
       if (available.length === 0) {
@@ -487,14 +548,14 @@ export async function updateReservationStatus(
           'No free table fits this reservation right now. Choose a table manually or reject the reservation.',
         )
       }
-      reservation.table = available[0]._id
+      tableId = available[0]._id
     } else {
       const free = await canUseTable(
-        String(reservation.table),
-        String(reservation.branch),
-        reservation.date,
-        String(reservation.time),
-        reservation.guests,
+        String(row.table_id),
+        String(row.branch_id),
+        row.date,
+        String(row.time),
+        row.guests,
         id,
       )
       if (!free) {
@@ -504,53 +565,71 @@ export async function updateReservationStatus(
         )
       }
     }
-    await markTableReserved(String(reservation.table))
-  } else if (reservation.table && ['completed', 'cancelled', 'rejected', 'no-show'].includes(nextStatus)) {
-    await releaseTableIfHeld(String(reservation.table))
+    await markTableReserved(String(tableId))
+  } else if (row.table_id && ['completed', 'cancelled', 'rejected', 'no-show'].includes(nextStatus)) {
+    await releaseTableIfHeld(String(row.table_id))
   }
 
-  reservation.status = nextStatus as ReservationStatus
-  reservation.statusHistory.push({
-    status: nextStatus,
-    changedBy: reservedIfDefined(actor.id),
-    changedAt: new Date(),
-    note: note.trim().slice(0, 300),
-  } as object)
-  await reservation.save()
+  const history = [
+    ...row.status_history,
+    {
+      status: nextStatus,
+      changedBy: reservedIfDefined(actor.id),
+      changedAt: new Date().toISOString(),
+      note: note.trim().slice(0, 300),
+    },
+  ]
+  const { error: updateError } = await getDb()
+    .from(reservationsTable)
+    .update({ status: nextStatus, table_id: tableId, status_history: history })
+    .eq('id', id)
+  if (updateError) {
+    throw new ApiError(500, 'Could not update the reservation.')
+  }
 
   return getReservation(id)
 }
 
 export async function assignTable(id: string, tableId: string, actor: AuthUser) {
-  assertObjectId(id, 'reservation')
-  const tableIdValue = assertObjectId(tableId, 'table')
+  assertUuid(id, 'reservation')
+  const tableIdValue = assertUuid(tableId, 'table')
 
-  const reservation = await ReservationModel.findById(id)
-  if (!reservation) {
+  const { data: reservation, error: fetchError } = await getDb()
+    .from(reservationsTable)
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchError || !reservation) {
     throw new ApiError(404, 'Reservation not found')
   }
-  assertBranchAccess(actor, String(reservation.branch))
-  if (!ACTIVE_RESERVATION_STATUSES.includes(reservation.status)) {
+  const row = reservation as ReservationRow
+  assertBranchAccess(actor, String(row.branch_id))
+  if (!ACTIVE_RESERVATION_STATUSES.includes(row.status)) {
     throw new ApiError(400, 'Only pending or confirmed reservations can be assigned a table.')
   }
 
   const free = await canUseTable(
     tableIdValue,
-    String(reservation.branch),
-    reservation.date,
-    String(reservation.time),
-    reservation.guests,
+    String(row.branch_id),
+    row.date,
+    String(row.time),
+    row.guests,
     id,
   )
   if (!free) {
     throw new ApiError(409, 'The selected table is not available for this time slot.')
   }
 
-  const previousTable = reservation.table
-  reservation.table = new ObjectId(tableIdValue)
-  await reservation.save()
+  const previousTable = row.table_id
+  const { error: updateError } = await getDb()
+    .from(reservationsTable)
+    .update({ table_id: tableIdValue })
+    .eq('id', id)
+  if (updateError) {
+    throw new ApiError(500, 'Could not assign the table.')
+  }
 
-  if (previousTable && String(previousTable) !== tableIdValue) {
+  if (previousTable && previousTable !== tableIdValue) {
     await releaseTableIfHeld(String(previousTable))
   }
   await markTableReserved(tableIdValue)

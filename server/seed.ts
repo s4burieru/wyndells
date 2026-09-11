@@ -1,14 +1,27 @@
-import mongoose from 'mongoose'
+import { existsSync } from 'node:fs'
+import path from 'node:path'
+import { fileURLToPath } from 'node:url'
+import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
-import { BranchModel } from './models/Branch'
-import { UserModel } from './models/User'
-import { DiningTableModel } from './models/DiningTable'
-import { MenuItemModel } from './models/MenuItem'
-import { ReservationModel } from './models/Reservation'
-import { FeedbackModel } from './models/Feedback'
+import { getDb } from './config/db'
+import { branchesTable, type BranchRow } from './models/Branch'
+import { usersTable } from './models/User'
+import { diningTablesTable } from './models/DiningTable'
+import { menuItemsTable } from './models/MenuItem'
+import { reservationsTable } from './models/Reservation'
+import { feedbackTable } from './models/Feedback'
 import { addDays, todayString } from './utils/validate'
 
-const URI = process.env.MONGODB_URI || 'mongodb://127.0.0.1:27017/wyndells'
+const __dirname = path.dirname(fileURLToPath(import.meta.url))
+
+// Load env from the project root (.env), falling back to server/.env so the seed
+// works whether launched from the root or from inside the workspace.
+for (const envPath of [path.resolve(__dirname, '../.env'), path.resolve(process.cwd(), '.env')]) {
+  if (existsSync(envPath)) {
+    dotenv.config({ path: envPath })
+    break
+  }
+}
 
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@wyndells.com'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!'
@@ -105,27 +118,53 @@ const FEEDBACK_NAMES = ['Maria Santos', 'Josefina Reyes', 'Andres Cruz', 'Bianca
 // Helpers
 // ---------------------------------------------------------------------------
 
-async function getOrCreateBranch(data: (typeof BRANCH_DATA)[number]) {
-  const existing = await BranchModel.findOne({ code: data.code })
+async function getOrCreateBranch(data: (typeof BRANCH_DATA)[number]): Promise<BranchRow> {
+  const { data: existing } = await getDb().from(branchesTable).select('*').eq('code', data.code).maybeSingle()
   if (existing) {
-    return existing
+    return existing as BranchRow
   }
-  return BranchModel.create({ ...data, isActive: true })
+  const { data: created, error } = await getDb()
+    .from(branchesTable)
+    .insert({
+      name: data.name,
+      code: data.code,
+      address: data.address,
+      city: data.city,
+      contact_number: data.contactNumber,
+      email: data.email,
+      hours: data.hours,
+      description: data.description,
+      is_active: true,
+    })
+    .select('*')
+    .single()
+  if (error) {
+    throw error
+  }
+  return created as BranchRow
 }
 
 async function getOrCreateUser(data: { name: string; email: string; password: string; role: 'admin' | 'manager'; branchId?: string }) {
-  const existing = await UserModel.findOne({ email: data.email })
+  const { data: existing } = await getDb().from(usersTable).select('*').eq('email', data.email).maybeSingle()
   if (existing) {
     return existing
   }
-  return UserModel.create({
-    name: data.name,
-    email: data.email,
-    password: await bcrypt.hash(data.password, 10),
-    role: data.role,
-    assignedBranch: data.branchId ?? null,
-    isActive: true,
-  })
+  const { data: created, error } = await getDb()
+    .from(usersTable)
+    .insert({
+      name: data.name,
+      email: data.email,
+      password_hash: await bcrypt.hash(data.password, 10),
+      role: data.role,
+      assigned_branch_id: data.branchId ?? null,
+      is_active: true,
+    })
+    .select('*')
+    .single()
+  if (error) {
+    throw error
+  }
+  return created
 }
 
 async function seedBranchesAndUsers() {
@@ -149,7 +188,7 @@ async function seedBranchesAndUsers() {
       email: `${branch.code}@wyndells.com`,
       password: MANAGER_PASSWORD,
       role: 'manager',
-      branchId: String(branch._id),
+      branchId: String(branch.id),
     })
     console.log(`Manager ready: ${manager.email} / ${MANAGER_PASSWORD}`)
   }
@@ -157,36 +196,53 @@ async function seedBranchesAndUsers() {
 }
 
 async function seedBranchContent() {
-  const branches = await BranchModel.find().lean()
-  for (const branch of branches) {
+  const { data: branches, error } = await getDb().from(branchesTable).select('*')
+  if (error) {
+    throw error
+  }
+  for (const branch of branches as BranchRow[]) {
     // Tables
-    const tableCount = await DiningTableModel.countDocuments({ branch: branch._id })
-    if (tableCount === 0) {
+    const { count: tableCount } = await getDb()
+      .from(diningTablesTable)
+      .select('id', { count: 'exact', head: true })
+      .eq('branch_id', branch.id)
+    if ((tableCount ?? 0) === 0) {
       const tables = TABLE_TEMPLATE.map((table) => ({
-        tableNumber: table.tableNumber,
+        table_number: table.tableNumber,
         capacity: table.capacity,
         location: table.location,
-        branch: branch._id,
+        branch_id: branch.id,
+        status: 'available',
+        is_active: true,
       }))
-      await DiningTableModel.insertMany(tables)
+      const { error: insertError } = await getDb().from(diningTablesTable).insert(tables)
+      if (insertError) {
+        throw insertError
+      }
       console.log(`  ${branch.name}: ${tables.length} tables added`)
     } else {
       console.log(`  ${branch.name}: ${tableCount} tables already present`)
     }
 
     // Menu
-    const menuCount = await MenuItemModel.countDocuments({ branch: branch._id })
-    if (menuCount === 0) {
+    const { count: menuCount } = await getDb()
+      .from(menuItemsTable)
+      .select('id', { count: 'exact', head: true })
+      .eq('branch_id', branch.id)
+    if ((menuCount ?? 0) === 0) {
       const items = MENU_TEMPLATE.map((item) => ({
         name: item.name,
         description: item.description,
         price: item.price,
         category: item.category,
-        isFeatured: item.isFeatured,
+        is_featured: item.isFeatured,
         status: 'available',
-        branch: branch._id,
+        branch_id: branch.id,
       }))
-      await MenuItemModel.insertMany(items)
+      const { error: insertError } = await getDb().from(menuItemsTable).insert(items)
+      if (insertError) {
+        throw insertError
+      }
       console.log(`  ${branch.name}: ${items.length} menu items added`)
     } else {
       console.log(`  ${branch.name}: ${menuCount} menu items already present`)
@@ -196,86 +252,107 @@ async function seedBranchContent() {
 }
 
 async function seedSamples() {
-  const branches = await BranchModel.find().lean()
+  const { data: branches } = await getDb().from(branchesTable).select('*')
   const today = todayString()
 
-  for (const branch of branches) {
-    const tables = await DiningTableModel.find({ branch: branch._id }).sort({ capacity: 1 }).limit(4).lean()
-    const tableFor = (index: number) => (tables[index % Math.max(tables.length, 1)]?._id ?? null)
+  for (const branch of branches as BranchRow[]) {
+    const { data: tableRows } = await getDb()
+      .from(diningTablesTable)
+      .select('*')
+      .eq('branch_id', branch.id)
+      .order('capacity')
+      .limit(4)
+    const tables = tableRows ?? []
+    const tableFor = (index: number) => (tables[index % Math.max(tables.length, 1)]?.id ?? null)
 
     const sampleReservations: {
       reference: string
-      branch: mongoose.Types.ObjectId
-      customerName: string
+      branch_id: string
+      customer_name: string
       email: string
-      contactNumber: string
+      contact_number: string
       date: string
       time: string
       guests: number
-      specialRequests: string
+      special_requests: string
       status: 'pending' | 'confirmed' | 'rejected' | 'cancelled' | 'completed' | 'no-show'
-      table: mongoose.Types.ObjectId | null
-      statusHistory: { status: string; note: string; changedAt?: Date }[]
+      table_id: string | null
+      status_history: { status: string; note: string; changedAt?: string }[]
     }[] = [
       {
-        reference: `WYN-SEED${1}`, branch: branch._id,
-        customerName: 'Ana Villanueva', email: 'ana.v@example.com', contactNumber: '0917 555 0101',
-        date: addDays(today, -2), time: '18:30', guests: 4, specialRequests: 'Window seat please',
-        status: 'completed', table: tableFor(0),
-        statusHistory: [
+        reference: `WYN-SEED${1}`, branch_id: branch.id,
+        customer_name: 'Ana Villanueva', email: 'ana.v@example.com', contact_number: '0917 555 0101',
+        date: addDays(today, -2), time: '18:30', guests: 4, special_requests: 'Window seat please',
+        status: 'completed', table_id: tableFor(0),
+        status_history: [
           { status: 'pending', note: 'Reservation submitted' },
-          { status: 'confirmed', note: 'Confirmed by staff', changedAt: new Date() },
-          { status: 'completed', note: 'Guest visited', changedAt: new Date() },
+          { status: 'confirmed', note: 'Confirmed by staff', changedAt: new Date().toISOString() },
+          { status: 'completed', note: 'Guest visited', changedAt: new Date().toISOString() },
         ],
       },
       {
-        reference: `WYN-SEED${2}`, branch: branch._id,
-        customerName: 'Carlo Mercado', email: 'carlo.m@example.com', contactNumber: '0917 555 0202',
-        date: addDays(today, -1), time: '12:00', guests: 2, specialRequests: '',
-        status: 'cancelled', table: tableFor(1),
-        statusHistory: [
+        reference: `WYN-SEED${2}`, branch_id: branch.id,
+        customer_name: 'Carlo Mercado', email: 'carlo.m@example.com', contact_number: '0917 555 0202',
+        date: addDays(today, -1), time: '12:00', guests: 2, special_requests: '',
+        status: 'cancelled', table_id: tableFor(1),
+        status_history: [
           { status: 'pending', note: 'Reservation submitted' },
-          { status: 'confirmed', note: 'Confirmed by staff', changedAt: new Date() },
-          { status: 'cancelled', note: 'Customer cancelled', changedAt: new Date() },
+          { status: 'confirmed', note: 'Confirmed by staff', changedAt: new Date().toISOString() },
+          { status: 'cancelled', note: 'Customer cancelled', changedAt: new Date().toISOString() },
         ],
       },
       {
-        reference: `WYN-SEED${3}`, branch: branch._id,
-        customerName: 'Nica Dimagiba', email: 'nica.d@example.com', contactNumber: '0917 555 0303',
-        date: addDays(today, 1), time: '17:30', guests: 6, specialRequests: 'Birthday dessert surprise!',
-        status: 'confirmed', table: tableFor(2),
-        statusHistory: [
+        reference: `WYN-SEED${3}`, branch_id: branch.id,
+        customer_name: 'Nica Dimagiba', email: 'nica.d@example.com', contact_number: '0917 555 0303',
+        date: addDays(today, 1), time: '17:30', guests: 6, special_requests: 'Birthday dessert surprise!',
+        status: 'confirmed', table_id: tableFor(2),
+        status_history: [
           { status: 'pending', note: 'Reservation submitted' },
-          { status: 'confirmed', note: 'Confirmed by staff', changedAt: new Date() },
+          { status: 'confirmed', note: 'Confirmed by staff', changedAt: new Date().toISOString() },
         ],
       },
       {
-        reference: `WYN-SEED${4}`, branch: branch._id,
-        customerName: 'Rico Manalang', email: 'rico.m@example.com', contactNumber: '0917 555 0404',
-        date: addDays(today, 2), time: '19:00', guests: 3, specialRequests: '',
-        status: 'pending', table: null,
-        statusHistory: [{ status: 'pending', note: 'Reservation submitted' }],
+        reference: `WYN-SEED${4}`, branch_id: branch.id,
+        customer_name: 'Rico Manalang', email: 'rico.m@example.com', contact_number: '0917 555 0404',
+        date: addDays(today, 2), time: '19:00', guests: 3, special_requests: '',
+        status: 'pending', table_id: null,
+        status_history: [{ status: 'pending', note: 'Reservation submitted' }],
       },
     ]
 
     for (const sample of sampleReservations) {
-      const exists = await ReservationModel.exists({ reference: sample.reference })
-      if (!exists) {
-        await ReservationModel.create(sample)
+      const { data: existing } = await getDb()
+        .from(reservationsTable)
+        .select('id')
+        .eq('reference', sample.reference)
+        .maybeSingle()
+      if (!existing) {
+        const { error: insertError } = await getDb().from(reservationsTable).insert(sample)
+        if (insertError) {
+          throw insertError
+        }
       }
     }
 
-    const feedbackCount = await FeedbackModel.countDocuments({ branch: branch._id })
-    if (feedbackCount === 0) {
+    const { count: feedbackCount } = await getDb()
+      .from(feedbackTable)
+      .select('id', { count: 'exact', head: true })
+      .eq('branch_id', branch.id)
+    if ((feedbackCount ?? 0) === 0) {
+      const feedback = []
       for (let index = 0; index < 4; index += 1) {
-        await FeedbackModel.create({
-          branch: branch._id,
-          customerName: FEEDBACK_NAMES[index % FEEDBACK_NAMES.length],
-          contactNumber: `0917 555 100${index}`,
+        feedback.push({
+          branch_id: branch.id,
+          customer_name: FEEDBACK_NAMES[index % FEEDBACK_NAMES.length],
+          contact_number: `0917 555 100${index}`,
           rating: 4 + (index % 2),
           comment: SAMPLE_COMMENTS[index % SAMPLE_COMMENTS.length],
-          reservationReference: `WYN-SEED${index + 1}`,
+          reservation_reference: `WYN-SEED${index + 1}`,
         })
+      }
+      const { error: insertError } = await getDb().from(feedbackTable).insert(feedback)
+      if (insertError) {
+        throw insertError
       }
       console.log(`  ${branch.name}: sample feedback added`)
     }
@@ -284,15 +361,19 @@ async function seedSamples() {
 }
 
 async function main() {
-  await mongoose.connect(URI, { serverSelectionTimeoutMS: 5000 })
-  console.log(`Connected to ${URI}`)
+  const supabaseUrl = process.env.SUPABASE_URL
+  const { data, error } = await getDb().from(branchesTable).select('id').limit(1)
+  if (error) {
+    throw error
+  }
+  void data
+  console.log(`Connected to Supabase: ${supabaseUrl ? new URL(supabaseUrl).hostname : 'unknown host'}`)
 
   await seedBranchesAndUsers()
   await seedBranchContent()
   await seedSamples()
 
   console.log('Seed complete ✔')
-  await mongoose.disconnect()
 }
 
 try {

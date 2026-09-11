@@ -45,7 +45,7 @@ export function HomePage() {
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-gradient-to-br from-wyndell-cream via-wyndell-sand to-wyndell-orange/15">
+    <section className="relative overflow-hidden bg-linear-to-br from-wyndell-cream via-wyndell-sand to-wyndell-orange/15">
       <div
         aria-hidden
         className="pointer-events-none absolute inset-0 opacity-10"
@@ -119,7 +119,7 @@ function BranchesSection({ branches, loaded }: { branches: Branch[]; loaded: boo
         {branches.slice(0, 4).map((branch) => (
           <Link
             key={branch._id}
-            to="/branches"
+            to={`/branches/${branch.code}`}
             className="rounded-2xl border border-wyndell-cream-dark bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
           >
             <span className="flex h-10 w-10 items-center justify-center rounded-full bg-wyndell-orange/10 text-sm font-bold text-wyndell-orange-dark">
@@ -192,7 +192,7 @@ function ReviewsSection({ reviews, loaded }: { reviews: FeedbackSummary[]; loade
 function ReservationCtaSection() {
   return (
     <section className="container-wyndell py-16">
-      <div className="rounded-3xl bg-gradient-to-r from-wyndell-orange/15 via-wyndell-cream to-wyndell-green/10 p-8 sm:p-12">
+      <div className="rounded-3xl bg-linear-to-r from-wyndell-orange/15 via-wyndell-cream to-wyndell-green/10 p-8 sm:p-12">
         <h2 className="font-display text-3xl font-bold text-wyndell-forest">Plan your visit</h2>
         <p className="mt-3 max-w-2xl text-wyndell-ink">
           Reserve a table online in under a minute — no account needed. Pick a branch, a time that suits you,

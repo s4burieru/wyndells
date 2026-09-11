@@ -1,6 +1,6 @@
 # Wyndell's
 
-Full-stack **MERN** monorepo — **M**ongoDB, **E**xpress, **R**eact, **N**ode.
+Full-stack restaurant monorepo — **Supabase** (PostgreSQL), **E**xpress, **R**eact, **N**ode.
 Built with npm workspaces: the client and server are separate workspaces installed from the root.
 
 ## Stack
@@ -9,7 +9,7 @@ Built with npm workspaces: the client and server are separate workspaces install
 | -------- | ----------------------------------------------- |
 | Frontend | React 19, Vite, TypeScript, Tailwind CSS v4     |
 | Backend  | Node.js, Express, TypeScript (run with tsx)     |
-| Database | MongoDB via Mongoose                            |
+| Database | Supabase (PostgreSQL) via @supabase/supabase-js |
 
 ## Project layout
 
@@ -17,6 +17,8 @@ Built with npm workspaces: the client and server are separate workspaces install
 wyndells/
 ├── package.json        # root: scripts to run everything + lint tooling
 ├── .env.example        # copy to .env and configure
+├── supabase/
+│   └── migrations/     # SQL migrations (schema, indexes, RLS, report functions)
 ├── client/             # React frontend (Vite workspace)
 │   ├── src/            # components, pages, styles
 │   ├── public/         # static assets
@@ -25,8 +27,9 @@ wyndells/
 │   └── package.json
 └── server/             # Express API (workspace)
     ├── index.ts        # app entry
-    ├── config/db.ts    # Mongoose connection
-    ├── models/         # Mongoose models
+    ├── config/db.ts    # Supabase client (PostgREST)
+    ├── models/         # row types + API serializers
+    ├── services/       # queries against Supabase
     ├── routes/         # Express route handlers
     └── package.json
 ```
@@ -39,17 +42,41 @@ wyndells/
    npm install
    ```
 
-2. Configure environment variables:
+2. Create a Supabase project (https://supabase.com/dashboard) and run the schema
+   migration. Either use the Supabase CLI:
+
+   ```bash
+   supabase link --project-ref <project-ref>
+   supabase db push
+   ```
+
+   or open **SQL Editor → New query**, paste the contents of
+   `supabase/migrations/0001_initial_schema.sql`, and run it. This creates the
+   tables, indexes, row-level security, and the report functions the dashboard
+   depends on.
+
+3. Configure environment variables:
 
    ```bash
    copy .env.example .env
    ```
 
-   Edit `.env` and point `MONGODB_URI` at your database (a local `mongod`
-   instance or a MongoDB Atlas cluster). If no database is reachable, the API
-   still starts so you can keep working on the frontend.
+   Edit `.env` and set `SUPABASE_URL` (e.g. `https://abcxyz.supabase.co`) and
+   `SUPABASE_SERVICE_ROLE_KEY` (Project Settings → API). The service-role key
+   bypasses Row Level Security so all authorization stays in the Express API —
+   never put it in client code. If Supabase is not reachable, the API still
+   starts so you can keep working on the frontend.
 
-3. Run both dev servers from the project root:
+4. Seed the database (optional but recommended for development):
+
+   ```bash
+   npm run seed --workspace server
+   ```
+
+   Creates the branches, an admin + one manager per branch, dining tables, menu
+   items, and sample reservations/feedback.
+
+5. Run both dev servers from the project root:
 
    ```bash
    npm run dev
@@ -75,16 +102,22 @@ client calls the backend with relative URLs (e.g. `fetch('/api/health')`).
 
 You can also run commands inside a single workspace, e.g. `npm run typecheck -w server` or `npm run dev -w client`.
 
-## Starter API
+## API surface
 
-| Method | Path              | Description                 |
-| ------ | ----------------- | --------------------------- |
-| GET    | `/api/health`     | Server + database status    |
-| GET    | `/api/items`      | List all items              |
-| POST   | `/api/items`      | Create an item              |
-| GET    | `/api/items/:id`  | Get a single item           |
-| PUT    | `/api/items/:id`  | Update an item              |
-| DELETE | `/api/items/:id`  | Delete an item              |
+The Express server exposes the same routes the client uses today:
 
-`server/models/Item.ts` and `server/routes/items.ts` are a minimal CRUD
-template — copy and adapt them for your real domain models.
+| Method | Path                          | Access              |
+| ------ | ----------------------------- | ------------------- |
+| GET    | `/api/health`                 | Public              |
+| POST   | `/api/auth/login`             | Public              |
+| GET    | `/api/auth/me`                | Staff               |
+| GET    | `/api/branches` `/api/branches/:codeOrId` | Public  |
+| GET    | `/api/menu` `/api/menu/:id`   | Public (QR menu)    |
+| POST   | `/api/reservations` `/api/reservations/slots` `/api/reservations/verify` | Public |
+| GET    | `/api/feedback` `/api/feedback/manage` | Public / Staff |
+| GET    | `/api/tables` `/api/reservations` `/api/reports/overview` | Staff |
+| POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Admin / Manager |
+
+The response shapes are kept identical to the previous MongoDB version (ids are
+serialized as `_id`, fields stay camelCase), so the React client did not need
+any changes for this migration.

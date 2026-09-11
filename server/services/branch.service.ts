@@ -1,7 +1,8 @@
-import { BranchModel } from '../models/Branch'
+import { getDb } from '../config/db'
+import { branchesTable, toBranch, type BranchRow } from '../models/Branch'
 import { ApiError, isDuplicateKeyError } from '../utils/ApiError'
 import { pickFields } from '../utils/pick'
-import { assertObjectId, requireFields } from '../utils/validate'
+import { assertUuid, isUuid, requireFields } from '../utils/validate'
 
 const BRANCH_EDITABLE_FIELDS = [
   'name',
@@ -16,78 +17,107 @@ const BRANCH_EDITABLE_FIELDS = [
   'isActive',
 ]
 
-export async function listBranches(includeInactive = false) {
-  const filter = includeInactive ? {} : { isActive: true }
-  return BranchModel.find(filter).sort({ name: 1 }).lean()
+/** Maps camelCase edit payload fields to their snake_case columns. */
+function toRowUpdates(updates: Record<string, unknown>): Record<string, unknown> {
+  const row: Record<string, unknown> = {}
+  if (updates.name !== undefined) row.name = String(updates.name).trim()
+  if (updates.code !== undefined) row.code = String(updates.code).trim().toLowerCase()
+  if (updates.address !== undefined) row.address = String(updates.address)
+  if (updates.city !== undefined) row.city = String(updates.city)
+  if (updates.contactNumber !== undefined) row.contact_number = String(updates.contactNumber)
+  if (updates.email !== undefined) row.email = String(updates.email)
+  if (updates.hours !== undefined) row.hours = String(updates.hours)
+  if (updates.description !== undefined) row.description = String(updates.description)
+  if (updates.image !== undefined) row.image = String(updates.image)
+  if (updates.isActive !== undefined) row.is_active = Boolean(updates.isActive)
+  return row
 }
 
-export async function getBranch(id: string) {
-  assertObjectId(id, 'branch')
-  const branch = await BranchModel.findById(id).lean()
-  if (!branch) {
+export async function listBranches(includeInactive = false) {
+  let query = getDb().from(branchesTable).select('*')
+  if (!includeInactive) {
+    query = query.eq('is_active', true)
+  }
+  const { data, error } = await query.order('name')
+  if (error) {
+    throw new ApiError(500, 'Could not load branches.')
+  }
+  return (data ?? []).map((row) => toBranch(row as BranchRow))
+}
+
+export async function getBranch(idOrCode: string) {
+  // Accept either a uuid (`/branches/<id>`) or the human-friendly branch
+  // code used in public URLs (`/branches/<code>`).
+  const lookup = isUuid(idOrCode) ? { field: 'id', value: idOrCode } : { field: 'code', value: String(idOrCode).trim().toLowerCase() }
+  const query = getDb().from(branchesTable).select('*')
+  const { data, error } = await (lookup.field === 'id'
+    ? query.eq('id', lookup.value)
+    : query.eq('code', lookup.value)).maybeSingle()
+  if (error || !data) {
     throw new ApiError(404, 'Branch not found')
   }
-  return branch
+  return toBranch(data as BranchRow)
 }
 
 export async function createBranch(payload: Record<string, unknown>) {
   requireFields(payload, ['name', 'code'])
   const updates = pickFields(payload, BRANCH_EDITABLE_FIELDS)
   const code = String(updates.code).trim().toLowerCase()
-  updates.code = code
-  updates.name = String(updates.name).trim()
 
-  if (await BranchModel.exists({ code })) {
+  const { data: existing } = await getDb().from(branchesTable).select('id').eq('code', code).maybeSingle()
+  if (existing) {
     throw new ApiError(409, `A branch with the code "${code}" already exists.`)
   }
 
-  try {
-    return await BranchModel.create(updates)
-  } catch (error) {
+  const row = toRowUpdates(updates)
+  const { data: created, error } = await getDb().from(branchesTable).insert(row).select('*').single()
+  if (error) {
     if (isDuplicateKeyError(error)) {
       throw new ApiError(409, `A branch with the code "${code}" already exists.`)
     }
-    throw error
+    throw new ApiError(500, 'Could not create the branch.')
   }
+  return toBranch(created as BranchRow)
 }
 
 export async function updateBranch(id: string, payload: Record<string, unknown>) {
-  assertObjectId(id, 'branch')
+  assertUuid(id, 'branch')
   const updates = pickFields(payload, BRANCH_EDITABLE_FIELDS)
-  if (updates.code !== undefined) {
-    updates.code = String(updates.code).trim().toLowerCase()
-  }
-  if (updates.name !== undefined) {
-    updates.name = String(updates.name).trim()
-  }
+  const row = toRowUpdates(updates)
 
-  try {
-    const branch = await BranchModel.findByIdAndUpdate(id, updates, { new: true, runValidators: true })
-    if (!branch) {
-      throw new ApiError(404, 'Branch not found')
-    }
-    return branch
-  } catch (error) {
+  const { data: updated, error } = await getDb()
+    .from(branchesTable)
+    .update(row)
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error) {
     if (isDuplicateKeyError(error)) {
-      throw new ApiError(409, `A branch with the code "${updates.code}" already exists.`)
+      throw new ApiError(409, `A branch with the code "${row.code}" already exists.`)
     }
-    throw error
+    throw new ApiError(404, 'Branch not found')
   }
+  return toBranch(updated as BranchRow)
 }
 
 export async function setBranchActive(id: string, isActive: boolean) {
-  assertObjectId(id, 'branch')
-  const branch = await BranchModel.findByIdAndUpdate(id, { isActive }, { new: true })
-  if (!branch) {
+  assertUuid(id, 'branch')
+  const { data: updated, error } = await getDb()
+    .from(branchesTable)
+    .update({ is_active: isActive })
+    .eq('id', id)
+    .select('*')
+    .single()
+  if (error || !updated) {
     throw new ApiError(404, 'Branch not found')
   }
-  return branch
+  return toBranch(updated as BranchRow)
 }
 
 export async function deleteBranch(id: string): Promise<void> {
-  assertObjectId(id, 'branch')
-  const branch = await BranchModel.findByIdAndDelete(id)
-  if (!branch) {
+  assertUuid(id, 'branch')
+  const { data, error } = await getDb().from(branchesTable).delete().eq('id', id).select('id').single()
+  if (error || !data) {
     throw new ApiError(404, 'Branch not found')
   }
 }

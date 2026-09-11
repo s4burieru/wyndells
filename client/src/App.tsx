@@ -7,6 +7,7 @@ import { RequireAuth } from './components/RequireAuth'
 import { HomePage } from './pages/public/Home'
 import { MenuPage } from './pages/public/Menu'
 import { BranchesPage } from './pages/public/Branches'
+import { BranchDetailPage } from './pages/public/BranchDetail'
 import { ReservePage } from './pages/public/Reserve'
 import { CheckReservationPage } from './pages/public/CheckReservation'
 import { FeedbackPage } from './pages/public/Feedback'
@@ -31,6 +32,7 @@ function App() {
             <Route path="/" element={<HomePage />} />
             <Route path="/menu" element={<MenuPage />} />
             <Route path="/branches" element={<BranchesPage />} />
+            <Route path="/branches/:code" element={<BranchDetailPage />} />
             <Route path="/reserve" element={<ReservePage />} />
             <Route path="/check" element={<CheckReservationPage />} />
             <Route path="/feedback" element={<FeedbackPage />} />

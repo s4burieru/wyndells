@@ -41,15 +41,15 @@ export function BranchesPage() {
       <div className="mt-8 grid gap-6 md:grid-cols-2">
         {branches.map((branch) => (
           <article key={branch._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-6 shadow-sm">
-            <div className="flex items-center gap-3">
+            <Link to={`/branches/${branch.code}`} className="group flex items-center gap-3">
               <span className="flex h-12 w-12 items-center justify-center rounded-full bg-wyndell-orange/10 text-lg font-bold text-wyndell-orange-dark">
                 {branch.name.charAt(0)}
               </span>
-              <div>
-                <h2 className="text-lg font-bold text-wyndell-forest">{branch.name}</h2>
+              <span className="min-w-0">
+                <h2 className="text-lg font-bold text-wyndell-forest group-hover:underline">{branch.name}</h2>
                 <p className="text-xs font-medium text-wyndell-green-dark">{branch.hours}</p>
-              </div>
-            </div>
+              </span>
+            </Link>
             <p className="mt-3 text-sm leading-relaxed text-wyndell-ink">
               {branch.description || 'A warm Wyndell’s garden dining experience.'}
             </p>
@@ -85,6 +85,12 @@ export function BranchesPage() {
                 className="rounded-lg border border-wyndell-green-dark/30 px-4 py-2 text-sm font-semibold text-wyndell-green-dark hover:bg-wyndell-green/10"
               >
                 View menu
+              </Link>
+              <Link
+                to={`/branches/${branch.code}`}
+                className="rounded-lg border border-wyndell-ink/20 px-4 py-2 text-sm font-semibold text-wyndell-ink hover:bg-wyndell-cream-dark"
+              >
+                Branch details
               </Link>
             </div>
           </article>
