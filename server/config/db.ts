@@ -1,29 +1,61 @@
-import mongoose from 'mongoose'
+import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { ApiError } from '../utils/ApiError'
 
-const DEFAULT_URI = 'mongodb://127.0.0.1:27017/wyndells'
+let client: SupabaseClient | null = null
 
-const CONNECTION_STATES = ['disconnected', 'connected', 'connecting', 'disconnecting'] as const
-
-export function getDbState(): string {
-  const state = mongoose.connection.readyState as number
-  return CONNECTION_STATES[state] ?? 'unknown'
+function getConfig(): { url: string; key: string } {
+  const url = process.env.SUPABASE_URL
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY
+  if (!url || !key) {
+    throw new ApiError(
+      503,
+      'Supabase is not configured. Set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY in your .env file.',
+    )
+  }
+  return { url, key }
 }
 
-export async function connectDB(): Promise<void> {
-  const uri = process.env.MONGODB_URI || DEFAULT_URI
+/**
+ * Returns the shared Supabase client, creating it on first use. The client is
+ * stateless — each query is a REST call to the Supabase PostgREST API through
+ * the service-role key — so there is no persistent connection to manage.
+ * Row-level security is enabled on every table; the service-role key is what
+ * grants the API full access (all authorization stays in this Express app).
+ */
+export function getDb(): SupabaseClient {
+  if (!client) {
+    const { url, key } = getConfig()
+    client = createClient(url, key, { auth: { persistSession: false } })
+  }
+  return client
+}
 
+/** Verifies the Supabase project is reachable. Fails softly so the API still boots for frontend work. */
+export async function connectDB(): Promise<void> {
   try {
-    await mongoose.connect(uri, { serverSelectionTimeoutMS: 5000 })
-    console.log(`MongoDB connected: ${mongoose.connection.host}/${mongoose.connection.name}`)
+    const url = getConfig().url
+    const ping = await getDb().from('branches').select('id').limit(1)
+    if (ping.error) {
+      console.error(`Supabase connection failed: ${ping.error.message}`)
+      return
+    }
+    console.log(`Supabase connected: ${new URL(url).hostname}`)
   } catch (error) {
-    // Start the API anyway so the frontend can still be worked on.
-    console.error(
-      `MongoDB connection failed (${uri}). The API will run without a database.`,
-      error,
-    )
+    console.error('Supabase connection failed. The API will run without a database.', error)
+  }
+}
+
+/** Lightweight reachability check used by the /api/health endpoint. */
+export async function getDbState(): Promise<string> {
+  try {
+    const ping = await getDb().from('branches').select('id').limit(1)
+    return ping.error ? 'disconnected' : 'connected'
+  } catch {
+    return 'disconnected'
   }
 }
 
 export async function disconnectDB(): Promise<void> {
-  await mongoose.disconnect()
+  // supabase-js holds no persistent connection; just drop the cached client.
+  client = null
 }

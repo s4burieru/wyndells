@@ -6,7 +6,15 @@ import express from 'express'
 import cors from 'cors'
 import { connectDB } from './config/db'
 import healthRouter from './routes/health'
-import itemsRouter from './routes/items'
+import authRouter from './routes/auth'
+import usersRouter from './routes/users'
+import branchesRouter from './routes/branches'
+import menuRouter from './routes/menu'
+import tablesRouter from './routes/tables'
+import reservationsRouter from './routes/reservations'
+import feedbackRouter from './routes/feedback'
+import reportsRouter from './routes/reports'
+import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -24,16 +32,26 @@ const PORT = Number(process.env.PORT) || 5000
 const CLIENT_ORIGIN = process.env.CLIENT_ORIGIN || 'http://localhost:5173'
 
 app.use(cors({ origin: CLIENT_ORIGIN }))
-app.use(express.json())
+app.use(express.json({ limit: '1mb' }))
 
 app.get('/', (_req, res) => {
   res.json({ name: 'Wyndell\'s API', status: 'ok' })
 })
 
 app.use('/api/health', healthRouter)
-app.use('/api/items', itemsRouter)
+app.use('/api/auth', authRouter)
+app.use('/api/users', usersRouter)
+app.use('/api/branches', branchesRouter)
+app.use('/api/menu', menuRouter)
+app.use('/api/tables', tablesRouter)
+app.use('/api/reservations', reservationsRouter)
+app.use('/api/feedback', feedbackRouter)
+app.use('/api/reports', reportsRouter)
 
-// Start the HTTP server immediately; connect to MongoDB in parallel so a
+app.use(notFoundHandler)
+app.use(errorHandler)
+
+// Start the HTTP server immediately; reach Supabase in parallel so a
 // missing database never blocks the API from coming up.
 void connectDB()
 

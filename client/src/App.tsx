@@ -1,29 +1,63 @@
-import { useEffect, useState } from 'react'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { AuthProvider } from './lib/auth'
+import { PublicLayout } from './components/public/PublicLayout'
+import { DashboardLayout } from './components/dashboard/DashboardLayout'
+import { RequireAuth } from './components/RequireAuth'
 
-type Health = {
-  status: string
-  db: string
-}
+import { HomePage } from './pages/public/Home'
+import { MenuPage } from './pages/public/Menu'
+import { BranchesPage } from './pages/public/Branches'
+import { BranchDetailPage } from './pages/public/BranchDetail'
+import { ReservePage } from './pages/public/Reserve'
+import { CheckReservationPage } from './pages/public/CheckReservation'
+import { FeedbackPage } from './pages/public/Feedback'
+import { ContactPage } from './pages/public/Contact'
+
+import { StaffLoginPage } from './pages/auth/Login'
+import { DashboardOverviewPage } from './pages/dashboard/Overview'
+import { ManageReservationsPage } from './pages/dashboard/Reservations'
+import { ManageTablesPage } from './pages/dashboard/Tables'
+import { ManageMenuPage } from './pages/dashboard/Menu'
+import { ManageFeedbackPage } from './pages/dashboard/Feedback'
+import { ReportsPage } from './pages/dashboard/Reports'
+import { ManageBranchesPage } from './pages/dashboard/Branches'
+import { ManageUsersPage } from './pages/dashboard/Users'
 
 function App() {
-  const [health, setHealth] = useState<Health | null>(null)
-
-  useEffect(() => {
-    fetch('/api/health')
-      .then((res) => res.json())
-      .then(setHealth)
-      .catch(() => setHealth(null))
-  }, [])
-
   return (
-    <main className="min-h-screen bg-black text-white flex flex-col items-center justify-center gap-4">
-      <h1 className="text-4xl font-bold">
-        Wyndell's
-      </h1>
-      <p className="text-sm text-white/60">
-        {health ? `API: ${health.status} · MongoDB: ${health.db}` : 'API: connecting…'}
-      </p>
-    </main>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route element={<PublicLayout />}>
+            <Route path="/" element={<HomePage />} />
+            <Route path="/menu" element={<MenuPage />} />
+            <Route path="/branches" element={<BranchesPage />} />
+            <Route path="/branches/:code" element={<BranchDetailPage />} />
+            <Route path="/reserve" element={<ReservePage />} />
+            <Route path="/check" element={<CheckReservationPage />} />
+            <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/contact" element={<ContactPage />} />
+          </Route>
+
+          <Route path="/staff/login" element={<StaffLoginPage />} />
+
+          <Route element={<RequireAuth />}>
+            <Route element={<DashboardLayout />}>
+              <Route path="/staff" element={<DashboardOverviewPage />} />
+              <Route path="/staff/reservations" element={<ManageReservationsPage />} />
+              <Route path="/staff/tables" element={<ManageTablesPage />} />
+              <Route path="/staff/menu" element={<ManageMenuPage />} />
+              <Route path="/staff/feedback" element={<ManageFeedbackPage />} />
+              <Route path="/staff/reports" element={<ReportsPage />} />
+              <Route element={<RequireAuth role="admin" />}>
+                <Route path="/staff/branches" element={<ManageBranchesPage />} />
+                <Route path="/staff/users" element={<ManageUsersPage />} />
+              </Route>
+            </Route>
+          </Route>
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   )
 }
 
