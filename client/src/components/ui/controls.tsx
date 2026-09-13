@@ -1,38 +1,42 @@
 import { type ComponentPropsWithoutRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-
-type ButtonProps = ComponentPropsWithoutRef<'button'>
-type InputProps = ComponentPropsWithoutRef<'input'>
-type SelectProps = ComponentPropsWithoutRef<'select'>
-type TextareaProps = ComponentPropsWithoutRef<'textarea'>
+import { cn } from '@/lib/utils'
+import { Button as ShadcnButton } from './button'
+import { Input } from './input'
+import { Textarea } from './textarea'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'green'
 
-const VARIANT_CLASSES: Record<ButtonVariant, string> = {
-  primary: 'bg-wyndell-orange text-white hover:bg-wyndell-orange-dark focus-visible:outline-wyndell-orange',
-  secondary: 'bg-wyndell-green-dark text-white hover:bg-wyndell-green focus-visible:outline-wyndell-green-dark',
-  green: 'bg-wyndell-green text-white hover:bg-wyndell-green-dark focus-visible:outline-wyndell-green',
-  ghost: 'bg-transparent text-wyndell-ink border border-wyndell-ink/20 hover:bg-wyndell-cream-dark',
-  danger: 'bg-white text-red-700 border border-red-300 hover:bg-red-50',
+/** Maps the app's button variants onto shadcn/ui button variants. */
+const VARIANT_MAP: Record<
+  ButtonVariant,
+  { variant: 'default' | 'secondary' | 'outline' | 'destructive'; className?: string }
+> = {
+  primary: { variant: 'default' },
+  secondary: { variant: 'secondary' },
+  green: { variant: 'default', className: 'bg-wyndell-green text-white hover:bg-wyndell-green-dark' },
+  ghost: { variant: 'outline' },
+  danger: {
+    variant: 'outline',
+    className: 'border-destructive/30 text-destructive hover:bg-destructive/10',
+  },
 }
 
 export function Button({
   variant = 'primary',
-  className = '',
+  className,
   ...props
-}: ButtonProps & { variant?: ButtonVariant }) {
-  const classes = [
-    'inline-flex items-center justify-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold transition-colors disabled:opacity-50 disabled:cursor-not-allowed',
-    VARIANT_CLASSES[variant],
-    className,
-  ].join(' ')
-  return <button className={classes} {...props} />
+}: ComponentPropsWithoutRef<'button'> & { variant?: ButtonVariant }) {
+  const mapped = VARIANT_MAP[variant]
+  return (
+    <ShadcnButton variant={mapped.variant} className={cn(mapped.className, className)} {...props} />
+  )
 }
 
 export function ButtonLink({
   to,
   variant = 'primary',
-  className = '',
+  className,
   children,
 }: {
   to: string
@@ -40,37 +44,45 @@ export function ButtonLink({
   className?: string
   children: ReactNode
 }) {
+  const mapped = VARIANT_MAP[variant]
   return (
-    <Link
-      to={to}
-      className={['inline-flex items-center gap-2 rounded-lg px-4 py-2 text-sm font-semibold', VARIANT_CLASSES[variant], className].join(' ')}
-    >
-      {children}
-    </Link>
+    <ShadcnButton asChild variant={mapped.variant} className={cn(mapped.className, className)}>
+      <Link to={to}>{children}</Link>
+    </ShadcnButton>
   )
 }
 
-const FIELD_CLASSES =
-  'w-full rounded-lg border border-wyndell-ink/20 bg-white px-3 py-2 text-sm text-wyndell-ink placeholder:text-neutral-400 focus:border-wyndell-orange focus:outline-2 focus:outline-wyndell-orange/40 disabled:bg-neutral-100'
-
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="block">
-      <span className="mb-1 block text-sm font-medium text-wyndell-ink">{label}</span>
+    <label className="grid gap-2">
+      <span className="text-sm leading-none font-medium select-none">{label}</span>
       {children}
-      {hint ? <span className="mt-1 block text-xs text-neutral-500">{hint}</span> : null}
+      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
     </label>
   )
 }
 
-export function TextInput(props: InputProps) {
-  return <input className={FIELD_CLASSES} {...props} />
+export function TextInput(props: ComponentPropsWithoutRef<'input'>) {
+  return <Input {...props} />
 }
 
-export function TextArea(props: TextareaProps) {
-  return <textarea className={[FIELD_CLASSES, 'min-h-24'].join(' ')} {...props} />
+export function TextArea(props: ComponentPropsWithoutRef<'textarea'>) {
+  return <Textarea className="min-h-24" {...props} />
 }
 
-export function SelectInput(props: SelectProps) {
-  return <select className={FIELD_CLASSES} {...props} />
+const SELECT_CLASSES = cn(
+  'h-9 w-full appearance-none rounded-md border border-input bg-transparent px-3 py-1 pr-8 text-base shadow-xs',
+  'bg-[length:1rem] bg-[right_0.75rem_center] bg-no-repeat',
+  'text-foreground transition-[color,box-shadow] outline-none',
+  'focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50',
+  'disabled:cursor-not-allowed disabled:opacity-50 dark:bg-input/30 md:text-sm',
+  "bg-[url('data:image/svg+xml;charset=utf-8,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%236f6a5c%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m6%209%206%206%206-6%22%2F%3E%3C%2Fsvg%3E')]"
+)
+
+/**
+ * Native select styled to match the shadcn/ui input & select components.
+ * (Keeps the plain `<option>` API used across the app's forms.)
+ */
+export function SelectInput(props: ComponentPropsWithoutRef<'select'>) {
+  return <select data-slot="select-input" className={SELECT_CLASSES} {...props} />
 }

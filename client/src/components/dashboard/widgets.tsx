@@ -1,10 +1,12 @@
+import { StarIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
+import { Card } from '../ui/card'
 
 export function StatCard({
   label,
   value,
   icon,
-  accent = 'text-wyndell-ink',
+  accent = 'text-foreground',
 }: {
   label: string
   value: string | number
@@ -12,37 +14,26 @@ export function StatCard({
   accent?: string
 }) {
   return (
-    <div className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
+    <Card className="gap-0 p-4">
       <div className="flex items-center justify-between gap-2">
-        <p className="text-xs font-medium text-neutral-500">{label}</p>
+        <p className="text-xs font-medium text-muted-foreground">{label}</p>
         {icon ? <span className="text-lg" aria-hidden>{icon}</span> : null}
       </div>
       <p className={`mt-1 text-2xl font-bold ${accent}`}>{value}</p>
-    </div>
+    </Card>
   )
 }
 
 export function RatingStat({ label, value, count }: { label: string; value: number; count?: number }) {
   return (
-    <div className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
-      <p className="text-xs font-medium text-neutral-500">{label}</p>
+    <Card className="gap-0 p-4">
+      <p className="text-xs font-medium text-muted-foreground">{label}</p>
       <p className="mt-1 flex items-center gap-1.5 text-2xl font-bold text-wyndell-forest">
         {value}
-        <StarIcon className="h-5 w-5" />
+        <StarIcon className="size-5 fill-wyndell-sun text-wyndell-sun" aria-hidden />
       </p>
-      {count !== undefined ? <p className="mt-0.5 text-xs text-neutral-500">{count} submissions</p> : null}
-    </div>
-  )
-}
-
-export function StarIcon({ className = 'h-4 w-4' }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 20 20" fill="#f9c515" className={className} aria-hidden>
-      <path
-        strokeWidth="1.6"
-        d="M9.94 16.056l-5.97 4.527a.75.75 0 0 0-1.84-1.326 0 0 0-2.68-3.186c.124-.084.384-.432.55-.98 0 0-.821.41-.41.821-.82 0-1.643 0 0 .21-.131.5-.383.82 0 0-.5-.383-.21-.131-1.644-.41-.41-1.643-.82.82 0 0-0.821.41-.41.821-.82 0 0-2.68-3.184 0 0 -.384-.432-.55-.98V8.388c-.067.146-.812 1.25-1.254 1.513l1.448 1.093 1.882.91"
-      />
-    </svg>
+      {count !== undefined ? <p className="mt-0.5 text-xs text-muted-foreground">{count} submissions</p> : null}
+    </Card>
   )
 }
 
@@ -83,7 +74,7 @@ export function HBar({ label, value, max, color = 'bg-wyndell-orange' }: { label
         <span>{label}</span>
         <span>{value}</span>
       </div>
-      <div className="mt-0.5 h-2.5 w-full overflow-hidden rounded-full bg-neutral-100">
+      <div className="mt-0.5 h-2.5 w-full overflow-hidden rounded-full bg-muted">
         <div className={`h-full ${color}`} style={{ width: `${percent}%` }} />
       </div>
     </div>
