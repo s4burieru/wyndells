@@ -1,25 +1,62 @@
-import { useState } from 'react'
-import { Link, NavLink, Outlet, useNavigate } from 'react-router-dom'
+import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
+import {
+  ArmchairIcon,
+  CalendarCheckIcon,
+  ChartColumnIcon,
+  ExternalLinkIcon,
+  LayoutDashboardIcon,
+  LogOutIcon,
+  MapPinIcon,
+  MessageSquareTextIcon,
+  UsersIcon,
+  UtensilsCrossedIcon,
+} from 'lucide-react'
+import type { ComponentType } from 'react'
 import { useAuth } from '../../lib/auth'
+import { Badge } from '../ui/badge'
+import { Button } from '../ui/button'
+import { Separator } from '../ui/separator'
+import {
+  Sidebar,
+  SidebarContent,
+  SidebarFooter,
+  SidebarGroup,
+  SidebarGroupContent,
+  SidebarGroupLabel,
+  SidebarHeader,
+  SidebarInset,
+  SidebarMenu,
+  SidebarMenuButton,
+  SidebarMenuItem,
+  SidebarProvider,
+  SidebarRail,
+  SidebarTrigger,
+} from '../ui/sidebar'
 import { BrandMark, Wordmark } from '../public/Brand'
 
-type NavItem = { to: string; label: string; end?: boolean; adminOnly?: boolean }
+type NavItem = {
+  to: string
+  label: string
+  icon: ComponentType<{ className?: string }>
+  end?: boolean
+  adminOnly?: boolean
+}
 
 const NAV_ITEMS: NavItem[] = [
-  { to: '/staff', label: 'Dashboard', end: true },
-  { to: '/staff/reservations', label: 'Reservations' },
-  { to: '/staff/tables', label: 'Tables' },
-  { to: '/staff/menu', label: 'Menu' },
-  { to: '/staff/feedback', label: 'Feedback' },
-  { to: '/staff/reports', label: 'Reports' },
-  { to: '/staff/branches', label: 'Branches', adminOnly: true },
-  { to: '/staff/users', label: 'Users & Managers', adminOnly: true },
+  { to: '/staff', label: 'Dashboard', icon: LayoutDashboardIcon, end: true },
+  { to: '/staff/reservations', label: 'Reservations', icon: CalendarCheckIcon },
+  { to: '/staff/tables', label: 'Tables', icon: ArmchairIcon },
+  { to: '/staff/menu', label: 'Menu', icon: UtensilsCrossedIcon },
+  { to: '/staff/feedback', label: 'Feedback', icon: MessageSquareTextIcon },
+  { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon },
+  { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, adminOnly: true },
+  { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, adminOnly: true },
 ]
 
 export function DashboardLayout() {
   const { user, signOut } = useAuth()
   const navigate = useNavigate()
-  const [menuOpen, setMenuOpen] = useState(false)
+  const { pathname } = useLocation()
   const isAdmin = user?.role === 'admin'
 
   if (!user) {
@@ -32,89 +69,98 @@ export function DashboardLayout() {
   }
 
   const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
+  const isActive = (item: NavItem) =>
+    item.end === true ? pathname === item.to : pathname.startsWith(item.to)
 
   return (
-    <div className="flex min-h-screen flex-col lg:flex-row">
-      {/* Sidebar */}
-      <aside className="hidden w-64 border-r border-wyndell-cream-dark/70 bg-wyndell-cream lg:flex lg:flex-col lg:py-6">
-        <div className="mb-6 flex items-center gap-2">
-          <BrandMark />
-          <Wordmark />
-        </div>
-        <p className="mb-1 px-3 text-[11px] uppercase tracking-wide text-neutral-400">Staff portal</p>
-        <div className="flex items-center gap-1.5 px-3">
-          <span className="flex h-2 w-2 shrink-0 rounded-full bg-wyndell-green" />
-          <span className="text-xs font-medium text-wyndell-ink">
-            {user.name} · {isAdmin ? 'Administrator' : 'Manager'}
-          </span>
-        </div>
-        <nav className="mt-6 flex-1 space-y-1 overflow-y-auto">
-          {items.map((item) => (
-            <NavLink
-              key={item.to}
-              to={item.to}
-              end={item.end === true}
-              onClick={() => setMenuOpen(false)}
-              className={({ isActive }) =>
-                [
-                  'flex items-center rounded-xl px-3 py-2.5 text-sm font-medium transition-colors',
-                  isActive
-                    ? 'bg-wyndell-orange/15 text-wyndell-orange-dark'
-                    : 'text-wyndell-ink hover:bg-wyndell-cream-dark/60',
-                ].join(' ')
-              }
-            >
-              {item.label}
-            </NavLink>
-          ))}
-        </nav>
-        <div className="border-t border-wyndell-cream-dark/70 px-3 py-3">
-          <div className="flex items-center gap-2">
-            <Link to="/" className="text-xs text-wyndell-ink hover:text-wyndell-orange-dark">View public site</Link>
-            <span className="text-neutral-300">·</span>
-            <button type="button" onClick={handleSignOut} className="text-xs text-red-600 hover:text-red-800">
-              Sign out
-            </button>
-          </div>
-        </div>
-      </aside>
+    <SidebarProvider>
+      <Sidebar collapsible="icon">
+        <SidebarHeader>
+          <SidebarMenu>
+            <SidebarMenuItem>
+              <SidebarMenuButton size="lg" asChild tooltip="Wyndell's staff portal">
+                <Link to="/staff">
+                  <BrandMark className="size-8" />
+                  <div className="grid flex-1 text-left leading-tight">
+                    <Wordmark />
+                    <span className="truncate text-xs text-muted-foreground">Staff portal</span>
+                  </div>
+                </Link>
+              </SidebarMenuButton>
+            </SidebarMenuItem>
+          </SidebarMenu>
+        </SidebarHeader>
 
-      {/* Top bar + content */}
-      <div className="flex-1">
-        <header className="z-40 flex items-center justify-between gap-3 border-b border-wyndell-cream-dark/70 bg-wyndell-sand px-4 py-3 lg:hidden">
-          <div className="flex items-center gap-2">
-            <BrandMark className="h-8 w-8" />
-            <span className="text-sm font-semibold text-wyndell-ink">{user.name}</span>
-          </div>
-          <button type="button" onClick={() => setMenuOpen(!menuOpen)} aria-label="Toggle menu" className="rounded-lg border border-wyndell-ink/20 p-2 text-sm text-wyndell-ink">
-            {menuOpen ? '✕' : '☰'}
-          </button>
-        </header>
-        {menuOpen ? (
-          <nav className="space-y-1 rounded-xl border border-wyndell-cream-dark bg-white p-3">
-            {items.map((item) => (
-              <NavLink
-                key={item.to}
-                to={item.to}
-                end={item.end === true}
-                onClick={() => setMenuOpen(false)}
-                className={({ isActive }) =>
-                  [
-                    'block rounded-lg px-3 py-2 text-sm font-medium',
-                    isActive ? 'bg-wyndell-orange/15 text-wyndell-orange-dark' : 'text-wyndell-ink hover:bg-wyndell-cream-dark/60',
-                  ].join(' ')
-                }
+        <SidebarContent>
+          <SidebarGroup>
+            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
+            <SidebarGroupContent>
+              <SidebarMenu>
+                {items.map((item) => (
+                  <SidebarMenuItem key={item.to}>
+                    <SidebarMenuButton asChild isActive={isActive(item)} tooltip={item.label}>
+                      <NavLink to={item.to} end={item.end === true}>
+                        <item.icon />
+                        <span>{item.label}</span>
+                      </NavLink>
+                    </SidebarMenuButton>
+                  </SidebarMenuItem>
+                ))}
+              </SidebarMenu>
+            </SidebarGroupContent>
+          </SidebarGroup>
+        </SidebarContent>
+
+        <SidebarFooter>
+          <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
+            <div className="flex items-center gap-2">
+              <span className="flex h-2 w-2 shrink-0 rounded-full bg-wyndell-green" />
+              <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{user.name}</span>
+              <Badge variant="secondary">{isAdmin ? 'Administrator' : 'Manager'}</Badge>
+            </div>
+            <div className="flex items-center justify-between gap-1">
+              <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
+                <Link to="/">
+                  <ExternalLinkIcon />
+                  Public site
+                </Link>
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
+                className="text-destructive hover:text-destructive"
+                onClick={handleSignOut}
               >
-                {item.label}
-              </NavLink>
-            ))}
-            <button type="button" onClick={handleSignOut} className="text-left text-sm text-red-600">Sign out</button>
-          </nav>
-        ) : null}
-        <main className="px-4 py-6 sm:px-6 lg:px-8">
+                <LogOutIcon />
+                Sign out
+              </Button>
+            </div>
+          </div>
+          <Button
+            variant="ghost"
+            size="icon"
+            className="hidden text-destructive group-data-[collapsible=icon]:flex hover:text-destructive"
+            onClick={handleSignOut}
+            aria-label="Sign out"
+          >
+            <LogOutIcon />
+          </Button>
+        </SidebarFooter>
+        <SidebarRail />
+      </Sidebar>
+
+      <SidebarInset>
+        <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4">
+          <SidebarTrigger className="-ml-1" />
+          <Separator orientation="vertical" className="mr-2 !h-4" />
+          <span className="truncate text-sm font-medium text-muted-foreground">
+            Wyndell&rsquo;s · Staff portal
+          </span>
+        </header>
+        <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />
         </main>
-      </div>
-    </div>
+      </SidebarInset>
+    </SidebarProvider>
   )
 }

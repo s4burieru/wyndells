@@ -1,5 +1,6 @@
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { AuthProvider } from './lib/auth'
+import { Toaster } from '@/components/ui/sonner'
 import { PublicLayout } from './components/public/PublicLayout'
 import { DashboardLayout } from './components/dashboard/DashboardLayout'
 import { RequireAuth } from './components/RequireAuth'
@@ -26,6 +27,7 @@ import { ManageUsersPage } from './pages/dashboard/Users'
 function App() {
   return (
     <AuthProvider>
+      <Toaster />
       <BrowserRouter>
         <Routes>
           <Route element={<PublicLayout />}>

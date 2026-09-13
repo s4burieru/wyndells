@@ -1,67 +1,78 @@
 import { type ReactNode } from 'react'
+import { Loader2Icon } from 'lucide-react'
+import { cn } from '@/lib/utils'
+import { Badge as ShadcnBadge } from './badge'
+import {
+  Card as ShadcnCard,
+  CardAction,
+  CardDescription,
+  CardHeader as ShadcnCardHeader,
+  CardTitle,
+} from './card'
+import { Button } from './button'
 
+/** App card surface built on the shadcn/ui card primitives. */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
   return (
-    <div className={['rounded-2xl bg-white border border-wyndell-cream-dark shadow-sm', className].join(' ')}>
+    <ShadcnCard className={cn('gap-0 py-0', className)}>
       {children}
-    </div>
+    </ShadcnCard>
   )
 }
 
-export function CardHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
+export function CardHeader({
+  title,
+  subtitle,
+  action,
+}: {
+  title: string
+  subtitle?: string
+  action?: ReactNode
+}) {
   return (
-    <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-3">
-      <div>
-        <h3 className="text-base font-semibold text-wyndell-ink">{title}</h3>
-        {subtitle ? <p className="text-xs text-neutral-500">{subtitle}</p> : null}
-      </div>
-      {action}
-    </div>
+    <ShadcnCardHeader>
+      <CardTitle className="text-base">{title}</CardTitle>
+      {subtitle ? <CardDescription>{subtitle}</CardDescription> : null}
+      {action ? <CardAction>{action}</CardAction> : null}
+    </ShadcnCardHeader>
   )
 }
 
 export function Badge({ children, className = '' }: { children: ReactNode; className?: string }) {
-  return (
-    <span className={['inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium', className].join(' ')}>
-      {children}
-    </span>
-  )
+  return <ShadcnBadge className={className}>{children}</ShadcnBadge>
 }
 
 export function Spinner({ label = 'Loading…' }: { label?: string }) {
   return (
-    <div className="flex items-center justify-center gap-3 py-12 text-wyndell-ink">
-      <span
-        className="h-7 w-7 animate-spin rounded-full border-[3px] border-wyndell-orange border-r-transparent"
-        aria-hidden
-      />
-      <span className="text-sm">{label}</span>
+    <div className="flex items-center justify-center gap-2 py-12" role="status">
+      <Loader2Icon className="size-6 animate-spin text-primary" aria-hidden />
+      <span className="text-sm text-muted-foreground">{label}</span>
     </div>
   )
 }
 
 export function EmptyState({ title, message, action }: { title: string; message?: string; action?: ReactNode }) {
   return (
-    <div className="mx-auto rounded-2xl border border-dashed border-wyndell-cream-dark bg-white px-6 py-10 text-center">
-      <p className="text-base font-semibold text-wyndell-ink">{title}</p>
-      {message ? <p className="mt-1 text-sm text-neutral-500">{message}</p> : null}
-      {action ? <div className="mt-4">{action}</div> : null}
+    <div className="mx-auto rounded-xl border border-dashed bg-card px-6 py-10 text-center">
+      <p className="text-base font-semibold text-foreground">{title}</p>
+      {message ? <p className="mt-1 text-sm text-muted-foreground">{message}</p> : null}
+      {action ? <div className="mt-4 flex justify-center">{action}</div> : null}
     </div>
   )
 }
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="rounded-2xl border border-red-200 bg-red-50 px-6 py-8 text-center">
-      <p className="text-sm font-semibold text-red-800">{message}</p>
+    <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-6 py-8 text-center">
+      <p className="text-sm font-semibold text-destructive">{message}</p>
       {onRetry ? (
-        <button
-          type="button"
+        <Button
+          variant="outline"
           onClick={onRetry}
-          className="mt-3 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-100"
+          className="mt-3 border-destructive/40 text-destructive hover:bg-destructive/10"
         >
           Try again
-        </button>
+        </Button>
       ) : null}
     </div>
   )
@@ -70,9 +81,9 @@ export function ErrorState({ message, onRetry }: { message: string; onRetry?: ()
 export function PageHeader({ title, subtitle, action }: { title: string; subtitle?: string; action?: ReactNode }) {
   return (
     <div className="flex flex-wrap items-center justify-between gap-3">
-      <div>
+      <div className="grid gap-1">
         <h1 className="font-display text-2xl font-bold text-wyndell-forest">{title}</h1>
-        {subtitle ? <p className="mt-1 text-sm text-neutral-500">{subtitle}</p> : null}
+        {subtitle ? <p className="text-sm text-muted-foreground">{subtitle}</p> : null}
       </div>
       {action}
     </div>

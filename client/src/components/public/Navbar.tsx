@@ -1,7 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
+import { ChevronDownIcon, MenuIcon, XIcon } from 'lucide-react'
 import { fetchBranches } from '../../api/branches'
 import type { Branch } from '../../lib/types'
+import { cn } from '@/lib/utils'
+import { Button } from '../ui/button'
 import { BrandLogo } from './Brand'
 
 const NAV_LINKS: { to: string; label: string }[] = [
@@ -46,8 +49,9 @@ export function PublicNavbar() {
               </NavLink>
             ))}
             <div className="relative">
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 onClick={() => setBranchesOpen(!branchesOpen)}
                 onKeyDown={(event) => {
                   if (event.key === 'Escape') {
@@ -57,14 +61,15 @@ export function PublicNavbar() {
                 aria-haspopup="true"
                 aria-expanded={branchesOpen}
                 aria-label="Branches"
-                className={[
-                  'inline-flex items-center gap-1 rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                  branchesActive ? 'bg-wyndell-orange/15 text-wyndell-orange-dark' : 'text-wyndell-ink hover:bg-wyndell-cream-dark/60',
-                ].join(' ')}
+                className={cn(
+                  'px-3 text-foreground hover:text-foreground',
+                  branchesActive &&
+                    'bg-wyndell-orange/15 text-wyndell-orange-dark hover:bg-wyndell-orange/15 hover:text-wyndell-orange-dark'
+                )}
               >
                 Branches
-                <span aria-hidden className="text-[10px] leading-none">{branchesOpen ? '▴' : '▾'}</span>
-              </button>
+                <ChevronDownIcon className="size-3 opacity-70" />
+              </Button>
               {branchesOpen ? (
                 <>
                   <button
@@ -100,26 +105,21 @@ export function PublicNavbar() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Link
-              to="/check"
-              className="hidden rounded-lg border border-wyndell-ink/20 px-3 py-2 text-sm font-medium text-wyndell-ink hover:bg-wyndell-cream-dark sm:inline-flex"
-            >
-              Check Reservation
-            </Link>
-            <Link
-              to="/reserve"
-              className="rounded-lg bg-wyndell-orange px-4 py-2 text-sm font-semibold text-white hover:bg-wyndell-orange-dark"
-            >
-              Book a Reservation
-            </Link>
-            <button
-              type="button"
+            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
+              <Link to="/check">Check Reservation</Link>
+            </Button>
+            <Button asChild>
+              <Link to="/reserve">Book a Reservation</Link>
+            </Button>
+            <Button
+              variant="outline"
+              size="icon"
               onClick={() => setOpen(!open)}
               aria-label={open ? 'Close menu' : 'Open menu'}
-              className="rounded-lg border border-wyndell-ink/20 p-2 text-sm text-wyndell-ink lg:hidden"
+              className="lg:hidden"
             >
-              {open ? '✕' : '☰'}
-            </button>
+              {open ? <XIcon /> : <MenuIcon />}
+            </Button>
           </div>
         </nav>
         {open ? (

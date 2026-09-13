@@ -1,5 +1,19 @@
 import { type ReactNode } from 'react'
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from './dialog'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from './alert-dialog'
 
+/**
+ * Application modal built on the shadcn/ui dialog primitives.
+ */
 export function Modal({
   open,
   title,
@@ -13,36 +27,30 @@ export function Modal({
   children: ReactNode
   footer?: ReactNode
 }) {
-  if (!open) {
-    return null
-  }
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-      role="dialog"
-      aria-modal="true"
-      aria-label={title}
-      onClick={onClose}
+    <Dialog
+      open={open}
+      onOpenChange={(next) => {
+        if (!next) {
+          onClose()
+        }
+      }}
     >
-      <div className="w-full max-w-lg rounded-2xl bg-white shadow-lg" onClick={(event) => event.stopPropagation()}>
-        <div className="flex items-center justify-between px-4 py-3">
-          <h3 className="text-base font-semibold text-wyndell-ink">{title}</h3>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded-full p-1 text-neutral-400 hover:bg-neutral-100 hover:text-neutral-600"
-          >
-            ✕
-          </button>
-        </div>
-        <div className="px-4 py-4">{children}</div>
-        {footer ? <div className="flex justify-end gap-2 px-4 py-3">{footer}</div> : null}
-      </div>
-    </div>
+      <DialogContent className="sm:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>{title}</DialogTitle>
+          <DialogDescription className="sr-only">{title}</DialogDescription>
+        </DialogHeader>
+        <div className="max-h-[70vh] overflow-y-auto pr-1">{children}</div>
+        {footer ? <DialogFooter>{footer}</DialogFooter> : null}
+      </DialogContent>
+    </Dialog>
   )
 }
 
+/**
+ * Confirmation prompt built on the shadcn/ui alert-dialog primitives.
+ */
 export function ConfirmDialog({
   open,
   title,
@@ -58,34 +66,25 @@ export function ConfirmDialog({
   onConfirm: () => void
   onCancel: () => void
 }) {
-  if (!open) {
-    return null
-  }
   return (
-    <Modal
+    <AlertDialog
       open={open}
-      title={title}
-      onClose={onCancel}
-      footer={
-        <>
-          <button
-            type="button"
-            onClick={onCancel}
-            className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100"
-          >
-            Cancel
-          </button>
-          <button
-            type="button"
-            onClick={onConfirm}
-            className="rounded-lg bg-wyndell-orange px-4 py-2 text-sm font-semibold text-white hover:bg-wyndell-orange-dark"
-          >
-            {confirmLabel}
-          </button>
-        </>
-      }
+      onOpenChange={(next) => {
+        if (!next) {
+          onCancel()
+        }
+      }}
     >
-      <p className="text-sm text-neutral-700">{message}</p>
-    </Modal>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>{title}</AlertDialogTitle>
+          <AlertDialogDescription>{message}</AlertDialogDescription>
+        </AlertDialogHeader>
+        <AlertDialogFooter>
+          <AlertDialogCancel onClick={onCancel}>Cancel</AlertDialogCancel>
+          <AlertDialogAction onClick={onConfirm}>{confirmLabel}</AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
