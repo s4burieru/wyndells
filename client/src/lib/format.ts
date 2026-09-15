@@ -1,4 +1,4 @@
-import type {  MenuCategory, ReservationStatus, TableStatus  } from './types'
+import type {  ApplicationStatus, CareerDepartment, MenuCategory, ReservationStatus, TableStatus  } from './types'
 
 export function formatPrice(value: number): string {
   return `₱ ${value.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
@@ -115,6 +115,61 @@ const CATEGORIES: MenuCategory[] = [
 ]
 
 export const MENU_CATEGORIES = CATEGORIES
+
+const DEPARTMENT_LABELS: Record<CareerDepartment, string> = {
+  restaurant: 'Restaurant',
+  cafe: 'Café',
+}
+
+export function departmentLabel(department: CareerDepartment): string {
+  return DEPARTMENT_LABELS[department] ?? department
+}
+
+const APPLICATION_LABELS: Record<ApplicationStatus, string> = {
+  new: 'New',
+  reviewed: 'Reviewed',
+  shortlisted: 'Shortlisted',
+  hired: 'Hired',
+  rejected: 'Rejected',
+}
+
+export function applicationLabel(status: ApplicationStatus): string {
+  return APPLICATION_LABELS[status] ?? status
+}
+
+const APPLICATION_STYLES: Record<ApplicationStatus, string> = {
+  new: 'bg-wyndell-sun/20 text-yellow-800',
+  reviewed: 'bg-neutral-100 text-neutral-700',
+  shortlisted: 'bg-wyndell-orange/15 text-wyndell-orange-dark',
+  hired: 'bg-wyndell-green/15 text-wyndell-green-dark',
+  rejected: 'bg-neutral-200 text-neutral-600',
+}
+
+export function applicationBadgeClass(status: ApplicationStatus): string {
+  return APPLICATION_STYLES[status] ?? 'bg-neutral-100 text-neutral-700'
+}
+
+const APPLICATION_NEXT: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
+  new: ['reviewed', 'rejected'],
+  reviewed: ['shortlisted', 'rejected'],
+  shortlisted: ['hired', 'rejected'],
+  hired: [],
+  rejected: [],
+}
+
+/** Statuses an application can move to next (mirrors the server pipeline). */
+export function applicationNextStatuses(status: ApplicationStatus): readonly ApplicationStatus[] {
+  return APPLICATION_NEXT[status] ?? []
+}
+
+const POSTING_LABELS: Record<'open' | 'closed', string> = {
+  open: 'Open',
+  closed: 'Closed',
+}
+
+export function postingLabel(status: 'open' | 'closed'): string {
+  return POSTING_LABELS[status] ?? status
+}
 
 /** A short, human-friendly description of an error. */
 export function friendlyError(error: unknown, fallback = 'Something went wrong. Please try again.'): string {

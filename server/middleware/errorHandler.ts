@@ -1,4 +1,5 @@
 import { type NextFunction, type Request, type Response } from 'express'
+import multer from 'multer'
 import { DUPLICATE_KEY_CODE, isApiError } from '../utils/ApiError'
 
 type PostgrestErrorLike = { code?: unknown; message?: unknown; details?: unknown }
@@ -45,6 +46,18 @@ export function errorHandler(
       message: error.message,
       ...(error.details ? { details: error.details } : {}),
     })
+    return
+  }
+
+  // Multer multipart upload errors (raised by the careers application route).
+  if (error instanceof multer.MulterError) {
+    if (error.code === 'LIMIT_FILE_SIZE') {
+      res
+        .status(413)
+        .json({ message: 'The resume file is too large. Please upload a PDF, DOC, or DOCX up to 5 MB.' })
+      return
+    }
+    res.status(400).json({ message: 'Could not process the uploaded resume. Please try again.' })
     return
   }
 
