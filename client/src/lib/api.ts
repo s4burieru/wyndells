@@ -11,7 +11,7 @@ export class ApiError extends Error {
 
 type RequestOptions = {
   method?: 'GET' | 'POST' | 'PUT' | 'PATCH' | 'DELETE'
-  body?: Record<string, unknown>
+  body?: Record<string, unknown> | FormData
   auth?: boolean
 }
 
@@ -38,7 +38,10 @@ export async function apiRequest<T>(
   path: string,
   options: RequestOptions = {},
 ): Promise<T> {
-  const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+  const headers: Record<string, string> = {}
+  if (!(options.body instanceof FormData)) {
+    headers['Content-Type'] = 'application/json'
+  }
   if (options.auth !== false) {
     const token = getToken()
     if (token) {
@@ -51,7 +54,11 @@ export async function apiRequest<T>(
     response = await fetch(path, {
       method: options.method ?? 'GET',
       headers,
-      body: options.body ? JSON.stringify(options.body) : undefined,
+      body: options.body
+        ? options.body instanceof FormData
+          ? options.body
+          : JSON.stringify(options.body)
+        : undefined,
     })
   } catch {
     throw new ApiError(0, 'Unable to reach the server. Please check your connection.')

@@ -43,7 +43,7 @@ wyndells/
    ```
 
 2. Create a Supabase project (https://supabase.com/dashboard) and run the schema
-   migration. Either use the Supabase CLI:
+   migrations. Either use the Supabase CLI:
 
    ```bash
    supabase link --project-ref <project-ref>
@@ -51,9 +51,11 @@ wyndells/
    ```
 
    or open **SQL Editor → New query**, paste the contents of
-   `supabase/migrations/0001_initial_schema.sql`, and run it. This creates the
+   `supabase/migrations/0001_initial_schema.sql` followed by
+   `supabase/migrations/0002_careers.sql`, and run each. This creates the
    tables, indexes, row-level security, and the report functions the dashboard
-   depends on.
+   depends on, plus the `career_postings` / `job_applications` tables powering
+   the Careers feature.
 
 3. Configure environment variables:
 
@@ -115,6 +117,12 @@ The Express server exposes the same routes the client uses today:
 | GET    | `/api/menu` `/api/menu/:id`   | Public (QR menu)    |
 | POST   | `/api/reservations` `/api/reservations/slots` `/api/reservations/verify` | Public |
 | GET    | `/api/feedback` `/api/feedback/manage` | Public / Staff |
+| GET    | `/api/careers/postings` | Public (open positions) |
+| POST   | `/api/careers/applications` | Public (job applications; `multipart/form-data` with a `resume` PDF/DOC/DOCX file, up to 5 MB) |
+| GET/POST/PUT/DELETE | `/api/careers/postings` `/api/careers/postings/manage` `/api/careers/postings/:id` | Staff (positions) |
+| GET   | `/api/careers/applications` | Staff (applications inbox) |
+| PATCH  | `/api/careers/applications/:id/status` | Staff (pipeline updates) |
+| DELETE | `/api/careers/applications/:id` | Admin |
 | GET    | `/api/tables` `/api/reservations` `/api/reports/overview` | Staff |
 | POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Admin / Manager |
 

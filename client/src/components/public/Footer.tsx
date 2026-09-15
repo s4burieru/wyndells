@@ -21,6 +21,7 @@ export function PublicFooter() {
               <li><Link to="/reserve" className="hover:text-wyndell-orange-dark">Book a Reservation</Link></li>
               <li><Link to="/check" className="hover:text-wyndell-orange-dark">Check Reservation</Link></li>
               <li><Link to="/feedback" className="hover:text-wyndell-orange-dark">Share Feedback</Link></li>
+              <li><Link to="/careers" className="hover:text-wyndell-orange-dark">Careers</Link></li>
             </ul>
           </div>
           <div>

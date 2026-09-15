@@ -13,6 +13,7 @@ import menuRouter from './routes/menu'
 import tablesRouter from './routes/tables'
 import reservationsRouter from './routes/reservations'
 import feedbackRouter from './routes/feedback'
+import careersRouter from './routes/careers'
 import reportsRouter from './routes/reports'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 
@@ -46,6 +47,7 @@ app.use('/api/menu', menuRouter)
 app.use('/api/tables', tablesRouter)
 app.use('/api/reservations', reservationsRouter)
 app.use('/api/feedback', feedbackRouter)
+app.use('/api/careers', careersRouter)
 app.use('/api/reports', reportsRouter)
 
 app.use(notFoundHandler)

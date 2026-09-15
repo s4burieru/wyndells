@@ -1,6 +1,7 @@
 import { Link, NavLink, Outlet, useLocation, useNavigate } from 'react-router-dom'
 import {
   ArmchairIcon,
+  BriefcaseBusinessIcon,
   CalendarCheckIcon,
   ChartColumnIcon,
   ExternalLinkIcon,
@@ -48,6 +49,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/staff/tables', label: 'Tables', icon: ArmchairIcon },
   { to: '/staff/menu', label: 'Menu', icon: UtensilsCrossedIcon },
   { to: '/staff/feedback', label: 'Feedback', icon: MessageSquareTextIcon },
+  { to: '/staff/applications', label: 'Careers', icon: BriefcaseBusinessIcon },
   { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon },
   { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, adminOnly: true },
   { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, adminOnly: true },
@@ -152,7 +154,7 @@ export function DashboardLayout() {
       <SidebarInset>
         <header className="sticky top-0 z-10 flex h-12 shrink-0 items-center gap-2 border-b bg-background px-4">
           <SidebarTrigger className="-ml-1" />
-          <Separator orientation="vertical" className="mr-2 !h-4" />
+          <Separator orientation="vertical" className="mr-2 h-4!" />
           <span className="truncate text-sm font-medium text-muted-foreground">
             Wyndell&rsquo;s · Staff portal
           </span>

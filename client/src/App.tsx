@@ -12,6 +12,7 @@ import { BranchDetailPage } from './pages/public/BranchDetail'
 import { ReservePage } from './pages/public/Reserve'
 import { CheckReservationPage } from './pages/public/CheckReservation'
 import { FeedbackPage } from './pages/public/Feedback'
+import { CareersPage } from './pages/public/Careers'
 import { ContactPage } from './pages/public/Contact'
 
 import { StaffLoginPage } from './pages/auth/Login'
@@ -20,6 +21,7 @@ import { ManageReservationsPage } from './pages/dashboard/Reservations'
 import { ManageTablesPage } from './pages/dashboard/Tables'
 import { ManageMenuPage } from './pages/dashboard/Menu'
 import { ManageFeedbackPage } from './pages/dashboard/Feedback'
+import { ManageApplicationsPage } from './pages/dashboard/Applications'
 import { ReportsPage } from './pages/dashboard/Reports'
 import { ManageBranchesPage } from './pages/dashboard/Branches'
 import { ManageUsersPage } from './pages/dashboard/Users'
@@ -38,6 +40,7 @@ function App() {
             <Route path="/reserve" element={<ReservePage />} />
             <Route path="/check" element={<CheckReservationPage />} />
             <Route path="/feedback" element={<FeedbackPage />} />
+            <Route path="/careers" element={<CareersPage />} />
             <Route path="/contact" element={<ContactPage />} />
           </Route>
 
@@ -50,6 +53,7 @@ function App() {
               <Route path="/staff/tables" element={<ManageTablesPage />} />
               <Route path="/staff/menu" element={<ManageMenuPage />} />
               <Route path="/staff/feedback" element={<ManageFeedbackPage />} />
+              <Route path="/staff/applications" element={<ManageApplicationsPage />} />
               <Route path="/staff/reports" element={<ReportsPage />} />
               <Route element={<RequireAuth role="admin" />}>
                 <Route path="/staff/branches" element={<ManageBranchesPage />} />

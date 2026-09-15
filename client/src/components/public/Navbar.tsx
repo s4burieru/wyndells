@@ -11,6 +11,7 @@ const NAV_LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },
   { to: '/menu', label: 'Menu' },
   { to: '/reserve', label: 'Reservations' },
+  { to: '/careers', label: 'Careers' },
   { to: '/contact', label: 'Contact' },
 ]
 

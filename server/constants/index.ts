@@ -48,3 +48,30 @@ export type MenuCategory = (typeof MENU_CATEGORIES)[number]
 export const MAX_GUESTS_PER_RESERVATION = 50
 export const MAX_RESERVATIONS_PER_CONTACT_PER_DAY = 3
 export const FEEDBACK_MAX_SUBMISSIONS_PER_CLIENT_PER_HOUR = 3
+
+export const CAREER_DEPARTMENTS = ['restaurant', 'cafe'] as const
+export type CareerDepartment = (typeof CAREER_DEPARTMENTS)[number]
+
+export const POSTING_STATUSES = ['open', 'closed'] as const
+export type PostingStatus = (typeof POSTING_STATUSES)[number]
+
+export const APPLICATION_STATUSES = ['new', 'reviewed', 'shortlisted', 'hired', 'rejected'] as const
+export type ApplicationStatus = (typeof APPLICATION_STATUSES)[number]
+
+/**
+ * Valid one-step transitions for the application pipeline.
+ * New -> Reviewed / Rejected
+ * Reviewed -> Shortlisted / Rejected
+ * Shortlisted -> Hired / Rejected
+ * Hired / Rejected are terminal.
+ */
+export const APPLICATION_TRANSITIONS: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
+  new: ['reviewed', 'rejected'],
+  reviewed: ['shortlisted', 'rejected'],
+  shortlisted: ['hired', 'rejected'],
+  hired: [],
+  rejected: [],
+}
+
+export const MAX_APPLICATIONS_PER_CLIENT_PER_HOUR = 5
+export const MAX_COVER_LETTER_LENGTH = 3000

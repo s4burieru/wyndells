@@ -10,6 +10,8 @@ import { diningTablesTable } from './models/DiningTable'
 import { menuItemsTable } from './models/MenuItem'
 import { reservationsTable } from './models/Reservation'
 import { feedbackTable } from './models/Feedback'
+import { careerPostingsTable } from './models/CareerPosting'
+import { jobApplicationsTable } from './models/JobApplication'
 import { addDays, todayString } from './utils/validate'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -360,6 +362,121 @@ async function seedSamples() {
   }
 }
 
+async function seedCareers() {
+  const { data: branches } = await getDb().from(branchesTable).select('*')
+
+  const POSTING_TEMPLATE = [
+    {
+      title: 'Service Crew (Restaurant)',
+      department: 'restaurant',
+      employment_type: 'Full-time',
+      summary: 'Welcoming guests, taking orders, and keeping garden tables running smoothly.',
+      description:
+        'Our restaurant team is the heart of the Wyndell’s experience. You’ll greet guests, take orders,\nshare menu recommendations, and work as a team to keep every table happy across busy lunch and dinner services.',
+      requirements:
+        'Friendly personality, good spoken English and Filipino, able to stand for long shifts,\nand available to work weekends. Experience in food service is a plus but not required — we train new crew.',
+    },
+    {
+      title: 'Line Cook (Restaurant)',
+      department: 'restaurant',
+      employment_type: 'Full-time',
+      summary: 'Preparing our inihaw grill and kitchen staples during service.',
+      description:
+        'Join the kitchen behind our signature inihaw na baboy and crispy pata. You’ll handle prep,\ngrill station work, plating, and keep the line clean and ready for each service.',
+      requirements:
+        'At least 1 year of kitchen experience, comfortable with a charcoal grill,\nand able to work evenings and weekends. Must follow food safety and hygiene standards.',
+    },
+    {
+      title: 'Barista (Cafe)',
+      department: 'cafe',
+      employment_type: 'Part-time',
+      summary: 'Brewing espresso drinks and serving fresh dessert plates at our cafe counter.',
+      description:
+        'Run the cafe counter — pulling shots, steaming milk, and plating our turón and leche flan.\nYou’ll also help with opening and closing duties and keep the cafe corner spotless.',
+      requirements:
+        'Comfortable learning espresso and milk texturing (training provided),\nsmiling customer service, and reliable morning availability on weekdays.',
+    },
+    {
+      title: 'Guest Relations Assistant (Restaurant)',
+      department: 'restaurant',
+      employment_type: 'Full-time',
+      summary: 'Supporting reservations, walk-ins, and guest check-in at the front desk.',
+      description:
+        'Be the first face guests see: manage the reservations list, seat walk-ins, answer phone\ninquiries, and support the floor team during peak hours.',
+      requirements:
+        'Organised and calm under pressure, good phone etiquette, fluent in Filipino and English,\nand comfortable with basic computer / POS use.',
+    },
+  ]
+
+  const APPLICANT_NAMES = ['Katrina Lim', 'Paolo Enriquez', 'Mikaela Torres']
+  const SAMPLE_INTROS = [
+    'Hi! I’ve always loved the warm, home-style feel of Wyndell’s and would be honoured to join the team. I have two years of service experience and I’m comfortable on busy weekend shifts.',
+    'I’m a hard worker based near the branch, with kitchen experience from a family eatery. I can start immediately and am keen to learn the Wyndell’s way of doing things.',
+    'I love meeting people and keeping things organised. I’m quick to learn, available on short notice, and ready to grow with the branch.',
+  ]
+
+  for (const branch of branches as BranchRow[]) {
+    const { data: postingRows } = await getDb()
+      .from(careerPostingsTable)
+      .select('id')
+      .eq('branch_id', branch.id)
+    if ((postingRows ?? []).length > 0) {
+      console.log(`  ${branch.name}: career postings already present`)
+      continue
+    }
+
+    const postings = POSTING_TEMPLATE.map((sample) => ({
+      branch_id: branch.id,
+      title: sample.title,
+      department: sample.department,
+      employment_type: sample.employment_type,
+      summary: sample.summary,
+      description: sample.description,
+      requirements: sample.requirements,
+      // Keep the second template role closed so staff can see the open/closed states.
+      status: sample.title.includes('Line Cook') ? 'closed' : 'open',
+    }))
+
+    const { error: insertError, data: insertedData } = await getDb()
+      .from(careerPostingsTable)
+      .insert(postings)
+      .select('id, status')
+    if (insertError) {
+      throw insertError
+    }
+    const inserted = insertedData ?? []
+    console.log(`  ${branch.name}: ${postings.length} career postings added`)
+
+    // Sample applications for a couple of the open postings only.
+    const openIds = inserted
+      .filter((row) => row.status === 'open')
+      .map((row) => row.id)
+      .slice(0, 2)
+    const applications = []
+    for (const [index, applicant] of APPLICANT_NAMES.entries()) {
+      if (openIds.length === 0) {
+        break
+      }
+      applications.push({
+        posting_id: openIds[index % openIds.length],
+        full_name: applicant,
+        email: `${applicant.split(' ')[0].toLowerCase()}.${applicant.split(' ')[1]?.toLowerCase() ?? 'x'}@example.com`,
+        contact_number: `0917 555 90${index}${index}`,
+        cover_letter: SAMPLE_INTROS[index % SAMPLE_INTROS.length],
+        resume_url: `https://example.com/resumes/${applicant.split(' ')[0].toLowerCase()}-resume.pdf`,
+        status: index === 0 ? 'reviewed' : 'new',
+      })
+    }
+    if (applications.length > 0) {
+      const { error: appError } = await getDb().from(jobApplicationsTable).insert(applications)
+      if (appError) {
+        throw appError
+      }
+      console.log(`  ${branch.name}: ${applications.length} sample applications added`)
+    }
+  }
+}
+
 async function main() {
   const supabaseUrl = process.env.SUPABASE_URL
   const { data, error } = await getDb().from(branchesTable).select('id').limit(1)
@@ -372,6 +489,7 @@ async function main() {
   await seedBranchesAndUsers()
   await seedBranchContent()
   await seedSamples()
+  await seedCareers()
 
   console.log('Seed complete ✔')
 }

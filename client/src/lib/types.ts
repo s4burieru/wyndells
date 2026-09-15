@@ -169,3 +169,43 @@ export type AdminOverview = {
 export type Overview = ManagerOverview | AdminOverview
 
 export type ReservationListResult = { reservations: Reservation[]; total: number }
+
+export type CareerDepartment = 'restaurant' | 'cafe'
+export type PostingStatus = 'open' | 'closed'
+export type ApplicationStatus = 'new' | 'reviewed' | 'shortlisted' | 'hired' | 'rejected'
+
+/** Job posting as shown on the public careers page. */
+export type CareerPosting = {
+  _id: string
+  branch: BranchRef
+  title: string
+  department: CareerDepartment
+  employmentType: string
+  summary: string
+  description: string
+  requirements: string
+  createdAt: string
+}
+
+/** Staff view of a posting — includes the moderation status. */
+export type ManageableCareerPosting = CareerPosting & {
+  status: PostingStatus
+  updatedAt: string
+}
+
+export type CareerPostingRef = { _id: string; title: string; department: CareerDepartment }
+
+export type JobApplication = {
+  _id: string
+  posting: CareerPostingRef
+  branch: BranchRef
+  fullName: string
+  email: string
+  contactNumber: string
+  coverLetter: string
+  resumeUrl: string
+  status: ApplicationStatus
+  notes: string
+  createdAt: string
+  updatedAt: string
+}
