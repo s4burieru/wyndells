@@ -1,9 +1,10 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
 import { fetchBranches } from '../../api/branches'
 import { createReservation, fetchTimeSlots } from '../../api/reservations'
 import type {  Branch, Reservation, TimeSlot  } from '../../lib/types'
 import { friendlyError } from '../../lib/format'
+import { downloadReservationReceipt } from '../../lib/receipt'
 import { ReservationForm } from './ReservationForm'
 import { ReservationConfirmationPage } from './ReservationConfirmation'
 
@@ -40,6 +41,7 @@ export function ReservePage() {
   const [error, setError] = useState('')
   const [slotError, setSlotError] = useState('')
   const [searchParams] = useSearchParams()
+  const downloadedRef = useRef<string | null>(null)
 
   useEffect(() => {
     void fetchBranches()
@@ -104,6 +106,10 @@ export function ReservePage() {
         specialRequests: form.specialRequests,
       })
       setConfirmation(reservation)
+      // Auto-download the receipt right after a successful reservation —
+      // still inside the submit click handler so browsers allow the download.
+      downloadReservationReceipt(reservation)
+      downloadedRef.current = reservation.reference
     } catch (reason: unknown) {
       setError(friendlyError(reason))
     } finally {
@@ -112,7 +118,7 @@ export function ReservePage() {
   }
 
   if (confirmation) {
-    return <ReservationConfirmationPage reservation={confirmation} />
+    return <ReservationConfirmationPage reservation={confirmation} autoDownloadedRef={downloadedRef} />
   }
 
   return (

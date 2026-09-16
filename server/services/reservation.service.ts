@@ -136,12 +136,13 @@ export async function findAvailableTables(
     .eq('branch_id', branchId)
     .eq('is_active', true)
     .gte('capacity', guests)
-    .not('status', 'in', [...UNBOOKABLE_TABLE_STATUSES])
+    .notIn('status', [...UNBOOKABLE_TABLE_STATUSES])
   if (occupied.length > 0) {
-    query = query.not('id', 'in', occupied)
+    query = query.notIn('id', occupied)
   }
   const { data, error } = await query.order('capacity').order('table_number')
   if (error) {
+    console.error('findAvailableTables failed:', error)
     throw new ApiError(500, 'Could not check table availability.')
   }
   return (data ?? []).map((row) => toDiningTable(row as DiningTableRow))
@@ -163,7 +164,7 @@ export async function canUseTable(
     .eq('branch_id', branchId)
     .eq('is_active', true)
     .gte('capacity', guests)
-    .not('status', 'in', [...UNBOOKABLE_TABLE_STATUSES])
+    .notIn('status', [...UNBOOKABLE_TABLE_STATUSES])
     .maybeSingle()
   if (error || !table) {
     return false
@@ -393,8 +394,9 @@ export async function createReservation(payload: Record<string, unknown>) {
     .select('id', { count: 'exact', head: true })
     .eq('branch_id', branchId)
     .eq('is_active', true)
-    .not('status', 'in', [...UNBOOKABLE_TABLE_STATUSES])
+    .notIn('status', [...UNBOOKABLE_TABLE_STATUSES])
   if (tableCountError) {
+    console.error('countBookableTables failed:', tableCountError)
     throw new ApiError(500, 'Could not check table availability.')
   }
   const activeBookings = await activeBookingsAtTime(branchId, date, time)
