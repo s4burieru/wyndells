@@ -1,13 +1,15 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
 import { fetchMe } from '../api/auth'
 import { getToken, setToken } from './api'
-import type {  SafeUser  } from './types'
+import type { SafeUser } from './types'
 
 export type AuthState = {
   user: SafeUser | null
   loading: boolean
   signIn: (user: SafeUser, token: string) => void
   signOut: () => void
+  /** Replaces the cached profile after the user edits their own details. */
+  updateUser: (user: SafeUser) => void
 }
 
 const AuthContext = createContext<AuthState | null>(null)
@@ -51,8 +53,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setUser(null)
   }
 
+  const updateUser = (nextUser: SafeUser) => {
+    setUser(nextUser)
+  }
+
   return (
-    <AuthContext.Provider value={{ user, loading, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, loading, signIn, signOut, updateUser }}>
       {children}
     </AuthContext.Provider>
   )

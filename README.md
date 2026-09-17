@@ -51,11 +51,21 @@ wyndells/
    ```
 
    or open **SQL Editor → New query**, paste the contents of
-   `supabase/migrations/0001_initial_schema.sql` followed by
-   `supabase/migrations/0002_careers.sql`, and run each. This creates the
+   `supabase/migrations/0001_initial_schema.sql`, then
+   `supabase/migrations/0002_careers.sql`, then
+   `supabase/migrations/0003_user_profiles.sql`, and run each. This creates the
    tables, indexes, row-level security, and the report functions the dashboard
    depends on, plus the `career_postings` / `job_applications` tables powering
-   the Careers feature.
+   the Careers feature and the staff profile columns (job title, contact number,
+   address, avatar and bio) used by **Users & Managers**.
+
+   > Profile photos are uploaded to a public Supabase Storage bucket (`avatars`)
+   > that the API creates automatically on the first upload, so no extra SQL is
+   > required for the photo upload itself.
+
+   > The API reads the profile columns on every staff login, so an existing
+   > project must run `0003_user_profiles.sql` before deploying this code —
+   > otherwise sign-in fails with `Invalid email or password.`.
 
 3. Configure environment variables:
 
@@ -113,6 +123,7 @@ The Express server exposes the same routes the client uses today:
 | GET    | `/api/health`                 | Public              |
 | POST   | `/api/auth/login`             | Public              |
 | GET    | `/api/auth/me`                | Staff               |
+| PATCH  | `/api/auth/me`                | Staff (own profile: `name`, `position`, `contactNumber`, `address`, `avatarUrl`, `bio`; see *Staff profile photos*) |
 | GET    | `/api/branches` `/api/branches/:codeOrId` | Public  |
 | GET    | `/api/menu` `/api/menu/:id`   | Public (QR menu)    |
 | POST   | `/api/reservations` `/api/reservations/slots` `/api/reservations/verify` | Public |
@@ -125,6 +136,34 @@ The Express server exposes the same routes the client uses today:
 | DELETE | `/api/careers/applications/:id` | Admin |
 | GET    | `/api/tables` `/api/reservations` `/api/reports/overview` | Staff |
 | POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Admin / Manager |
+
+### Staff profile photos
+
+Profile photos live in a public Supabase Storage bucket (`avatars`) that the API
+creates on the first upload — no SQL migration is needed for it.
+
+- `PATCH /api/auth/me` (own profile) and `POST`/`PUT /api/users` (admin) accept
+  the profile fields as JSON **or** as `multipart/form-data`.
+- Send the photo as the `avatar` file field (JPG, PNG, or WEBP, up to 2 MB). The
+  uploaded file's public URL is stored in `avatarUrl`.
+- Send `avatarUrl` as an empty string to remove a photo: the column is cleared
+  and the file is deleted from storage.
+- Replacing or removing a photo deletes the file it replaced, and deleting a
+  staff account cleans up its photo, so no orphan files are left behind.
+- In the dashboard the photo is managed with **Upload photo** / **Change photo**
+  / **Remove** in the staff form — **Users & Managers → Edit details** for
+  admins, or **My profile** from the sidebar for your own account.
+
+```bash
+# Upload a photo for your own account (staff).
+curl -X PATCH http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer <token>" \
+  -F "name=Wyndell's Administrator" -F "position=Owner" -F "avatar=@photo.jpg"
+
+# Remove it again.
+curl -X PATCH http://localhost:5000/api/auth/me \
+  -H "Authorization: Bearer <token>" -F "avatarUrl="
+```
 
 The response shapes are kept identical to the previous MongoDB version (ids are
 serialized as `_id`, fields stay camelCase), so the React client did not need

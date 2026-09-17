@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom'
 import { cn } from '@/lib/utils'
 import { Button as ShadcnButton } from './button'
 import { Input } from './input'
+import { Label } from './label'
 import { Textarea } from './textarea'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'green'
@@ -54,11 +55,11 @@ export function ButtonLink({
 
 export function Field({ label, hint, children }: { label: string; hint?: string; children: ReactNode }) {
   return (
-    <label className="grid gap-2">
-      <span className="text-sm leading-none font-medium select-none">{label}</span>
+    <Label className="grid items-start gap-2 leading-normal select-text">
+      <span>{label}</span>
       {children}
-      {hint ? <span className="text-xs text-muted-foreground">{hint}</span> : null}
-    </label>
+      {hint ? <span className="text-xs font-normal text-muted-foreground">{hint}</span> : null}
+    </Label>
   )
 }
 

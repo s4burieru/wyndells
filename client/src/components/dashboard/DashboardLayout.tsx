@@ -9,12 +9,15 @@ import {
   LogOutIcon,
   MapPinIcon,
   MessageSquareTextIcon,
+  UserIcon,
   UsersIcon,
   UtensilsCrossedIcon,
 } from 'lucide-react'
-import type { ComponentType } from 'react'
+import { useState, type ComponentType } from 'react'
+import { toast } from 'sonner'
+import { updateProfile } from '../../api/auth'
 import { useAuth } from '../../lib/auth'
-import { Badge } from '../ui/badge'
+import { friendlyError, roleLabel } from '../../lib/format'
 import { Button } from '../ui/button'
 import { Separator } from '../ui/separator'
 import {
@@ -34,6 +37,9 @@ import {
   SidebarTrigger,
 } from '../ui/sidebar'
 import { BrandMark, Wordmark } from '../public/Brand'
+import { UserAvatar } from './UserAvatar'
+import { UserFormModal } from '../../pages/dashboard/UserFormModal'
+import { UserProfileSheet } from '../../pages/dashboard/UserProfileSheet'
 
 type NavItem = {
   to: string
@@ -56,18 +62,31 @@ const NAV_ITEMS: NavItem[] = [
 ]
 
 export function DashboardLayout() {
-  const { user, signOut } = useAuth()
+  const { user, signOut, updateUser } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
-  const isAdmin = user?.role === 'admin'
+  const [profileOpen, setProfileOpen] = useState(false)
+  const [editingSelf, setEditingSelf] = useState(false)
 
   if (!user) {
     return null
   }
 
+  const isAdmin = user.role === 'admin'
+
   const handleSignOut = () => {
     signOut()
     navigate('/')
+  }
+
+  const handleProfileSave = (payload: Record<string, unknown> | FormData) => {
+    void updateProfile(payload)
+      .then((updated) => {
+        updateUser(updated)
+        setEditingSelf(false)
+        toast.success('Your profile has been updated.')
+      })
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
   const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
@@ -114,30 +133,59 @@ export function DashboardLayout() {
         </SidebarContent>
 
         <SidebarFooter>
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            className="flex w-full items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-accent group-data-[collapsible=icon]:hidden"
+          >
+            <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} size="xs" />
+            <span className="min-w-0 flex-1">
+              <span className="block truncate text-xs font-medium text-foreground">
+                {user.name}
+              </span>
+              <span className="block truncate text-[0.7rem] text-muted-foreground">
+                {user.position || roleLabel(user.role)}
+              </span>
+            </span>
+          </button>
+
           <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
-            <div className="flex items-center gap-2">
-              <span className="flex h-2 w-2 shrink-0 rounded-full bg-wyndell-green" />
-              <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">{user.name}</span>
-              <Badge variant="secondary">{isAdmin ? 'Administrator' : 'Manager'}</Badge>
-            </div>
             <div className="flex items-center justify-between gap-1">
+              <Button
+                variant="ghost"
+                size="xs"
+                className="text-muted-foreground"
+                onClick={() => setProfileOpen(true)}
+              >
+                <UserIcon />
+                My profile
+              </Button>
               <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
                 <Link to="/">
                   <ExternalLinkIcon />
                   Public site
                 </Link>
               </Button>
-              <Button
-                variant="ghost"
-                size="xs"
-                className="text-destructive hover:text-destructive"
-                onClick={handleSignOut}
-              >
-                <LogOutIcon />
-                Sign out
-              </Button>
             </div>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="justify-start text-destructive hover:text-destructive"
+              onClick={handleSignOut}
+            >
+              <LogOutIcon />
+              Sign out
+            </Button>
           </div>
+
+          <button
+            type="button"
+            onClick={() => setProfileOpen(true)}
+            className="hidden justify-center group-data-[collapsible=icon]:flex"
+            aria-label="My profile"
+          >
+            <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} size="xs" />
+          </button>
           <Button
             variant="ghost"
             size="icon"
@@ -163,6 +211,25 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </SidebarInset>
+
+      <UserProfileSheet
+        user={user}
+        open={profileOpen}
+        onClose={() => setProfileOpen(false)}
+        onEdit={() => {
+          setProfileOpen(false)
+          setEditingSelf(true)
+        }}
+      />
+
+      {editingSelf ? (
+        <UserFormModal
+          user={user}
+          self
+          onClose={() => setEditingSelf(false)}
+          onSave={handleProfileSave}
+        />
+      ) : null}
     </SidebarProvider>
   )
 }

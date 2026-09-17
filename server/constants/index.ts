@@ -1,6 +1,13 @@
 export const USER_ROLES = ['admin', 'manager'] as const
 export type UserRole = (typeof USER_ROLES)[number]
 
+/** Staff profile limits (the profile columns added to the `users` table). */
+export const MAX_NAME_LENGTH = 120
+export const MAX_POSITION_LENGTH = 80
+export const MAX_PROFILE_TEXT_LENGTH = 160
+export const MAX_AVATAR_URL_LENGTH = 500
+export const MAX_BIO_LENGTH = 500
+
 export const RESERVATION_STATUSES = [
   'pending',
   'confirmed',

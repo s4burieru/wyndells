@@ -1,6 +1,7 @@
 import { type ReactNode } from 'react'
-import { Loader2Icon } from 'lucide-react'
+import { CircleAlert, Loader2Icon } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { Alert, AlertDescription } from './alert'
 import { Badge as ShadcnBadge } from './badge'
 import {
   Card as ShadcnCard,
@@ -63,18 +64,21 @@ export function EmptyState({ title, message, action }: { title: string; message?
 
 export function ErrorState({ message, onRetry }: { message: string; onRetry?: () => void }) {
   return (
-    <div className="rounded-xl border border-destructive/30 bg-destructive/10 px-6 py-8 text-center">
-      <p className="text-sm font-semibold text-destructive">{message}</p>
-      {onRetry ? (
-        <Button
-          variant="outline"
-          onClick={onRetry}
-          className="mt-3 border-destructive/40 text-destructive hover:bg-destructive/10"
-        >
-          Try again
-        </Button>
-      ) : null}
-    </div>
+    <Alert variant="destructive">
+      <CircleAlert />
+      <AlertDescription>
+        <span>{message}</span>
+        {onRetry ? (
+          <Button
+            variant="outline"
+            onClick={onRetry}
+            className="w-fit border-destructive/40 text-destructive hover:bg-destructive/10 hover:text-destructive"
+          >
+            Try again
+          </Button>
+        ) : null}
+      </AlertDescription>
+    </Alert>
   )
 }
 

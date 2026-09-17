@@ -1,10 +1,15 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, CircleAlert, Loader2, Search } from 'lucide-react'
 import { cancelReservation, verifyReservation } from '../../api/reservations'
-import type {  Reservation  } from '../../lib/types'
+import type { Reservation } from '../../lib/types'
 import { friendlyError } from '../../lib/format'
-import { Button, Field, TextInput } from '../../components/ui/controls'
-import { Card, Spinner } from '../../components/ui/display'
+import { Field, TextInput } from '../../components/ui/controls'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Skeleton } from '@/components/ui/skeleton'
+import { PageHeader } from '../../components/ui/display'
 import { ConfirmDialog } from '../../components/ui/Modal'
 import { ReservationDetail } from './ReservationDetail'
 
@@ -46,13 +51,19 @@ export function CheckReservationPage() {
 
   return (
     <div className="container-wyndell py-10">
-      <h1 className="font-display text-3xl font-bold text-wyndell-forest">Check your reservation</h1>
-      <p className="mt-2 max-w-2xl text-wyndell-ink">
-        Enter the reservation reference from your confirmation and the contact number you used to book.
-      </p>
+      <PageHeader
+        title="Check your reservation"
+        subtitle="Enter the reservation reference from your confirmation and the contact number you used to book."
+      />
 
-      <Card className="mx-auto mt-6 max-w-lg p-6">
-        <div className="grid gap-4">
+      <Card className="mx-auto mt-6 max-w-lg">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-wyndell-forest">
+            <Search className="size-5 text-wyndell-orange-dark" aria-hidden />
+            Find your booking
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="grid gap-4">
           <Field label="Reservation reference">
             <TextInput
               value={reference}
@@ -78,15 +89,32 @@ export function CheckReservationPage() {
               }}
             />
           </Field>
-          <Button onClick={check} disabled={loading}>
-            {loading ? 'Checking…' : 'Check reservation'}
+          <Button onClick={check} disabled={loading} className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+            {loading ? (
+              <>
+                <Loader2 className="animate-spin" />
+                Checking…
+              </>
+            ) : (
+              'Check reservation'
+            )}
           </Button>
-          {error ? <p className="rounded-lg bg-red-50 px-3 py-2 text-sm text-red-800">{error}</p> : null}
-        </div>
+          {error ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
+        </CardContent>
       </Card>
 
       {loading ? (
-        <div className="mt-4"><Spinner label="Verifying reservation…" /></div>
+        <Card className="mx-auto mt-4 max-w-2xl">
+          <CardContent className="grid gap-2 pt-6">
+            <Skeleton className="h-6 w-1/3" />
+            <Skeleton className="h-4 w-full" />
+          </CardContent>
+        </Card>
       ) : null}
 
       {result ? (
@@ -97,11 +125,13 @@ export function CheckReservationPage() {
         />
       ) : null}
 
-      <div className="mt-10 text-center">
-        <p className="text-sm text-neutral-500">
-          Looking to book a new table?{' '}
-          <Link to="/reserve" className="font-medium text-wyndell-orange-dark hover:underline">Book a reservation</Link>
-        </p>
+      <div className="mt-10 flex justify-center">
+        <Button asChild variant="link" className="text-wyndell-orange-dark">
+          <Link to="/reserve">
+            Looking to book a new table? Book a reservation
+            <ArrowRight />
+          </Link>
+        </Button>
       </div>
 
       <ConfirmDialog

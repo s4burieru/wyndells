@@ -1,8 +1,12 @@
 import { useEffect, useState } from 'react'
+import { Star } from 'lucide-react'
 import { fetchPublicFeedback } from '../../api/feedback'
-import type {  FeedbackSummary  } from '../../lib/types'
+import type { FeedbackSummary } from '../../lib/types'
 import { formatDateTime } from '../../lib/format'
-import { ErrorState, Spinner } from '../../components/ui/display'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState, ErrorState } from '../../components/ui/display'
 import { StarRating } from '../../components/ui/badges'
 
 export function ReviewList({
@@ -29,39 +33,62 @@ export function ReviewList({
 
   return (
     <div>
-      <h2 className="text-lg font-semibold text-wyndell-forest">Recent reviews</h2>
-      {loading ? <Spinner label="Loading reviews…" /> : null}
-      {error ? <ErrorState message="Unable to load reviews right now." onRetry={load} /> : null}
+      <div className="flex items-center gap-2">
+        <Star className="size-5 text-wyndell-orange-dark" aria-hidden />
+        <h2 className="text-lg font-semibold text-wyndell-forest">Recent reviews</h2>
+      </div>
+      {loading ? (
+        <div className="mt-4 space-y-4">
+          {[0, 1].map((key) => (
+            <Card key={key}>
+              <CardHeader>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-full" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+      {error ? (
+        <div className="mt-4">
+          <ErrorState message="Unable to load reviews right now." onRetry={load} />
+        </div>
+      ) : null}
       {!loading && !error && shown.length === 0 ? (
-        <div className="mt-4 rounded-2xl border border-dashed border-wyndell-cream-dark bg-white p-6 text-center">
-          <p className="text-sm text-neutral-500">No reviews yet — be the first to share your experience.</p>
+        <div className="mt-4">
+          <EmptyState title="No reviews yet" message="Be the first to share your experience." />
         </div>
       ) : null}
       <div className="mt-4 space-y-4">
         {(reviews.length > 0 ? reviews : shown).slice(0, 10).map((review) => (
-          <figure key={review._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
-            <div className="flex items-center justify-between gap-2">
-              <StarRating value={review.rating} size="sm" />
-              <span className="text-[10px] text-neutral-400">{formatDateTime(review.createdAt)}</span>
-            </div>
-            <blockquote className="mt-2 text-sm leading-relaxed text-wyndell-ink">&ldquo;{review.comment}&rdquo;</blockquote>
-            <figcaption className="mt-2 text-xs font-medium text-neutral-500">
-              — {review.customerName}{review.branch ? ` · ${review.branch.name}` : ''}
-            </figcaption>
-          </figure>
+          <Card key={review._id}>
+            <CardHeader>
+              <div className="flex items-center justify-between gap-2">
+                <StarRating value={review.rating} size="sm" />
+                <span className="text-[10px] text-muted-foreground">{formatDateTime(review.createdAt)}</span>
+              </div>
+              <CardDescription className="text-sm leading-relaxed text-foreground">&ldquo;{review.comment}&rdquo;</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <CardTitle className="text-xs font-medium text-muted-foreground">
+                — {review.customerName}{review.branch ? ` · ${review.branch.name}` : ''}
+              </CardTitle>
+            </CardContent>
+          </Card>
         ))}
       </div>
       {error ? (
-        <button
+        <Button
           type="button"
+          variant="outline"
           onClick={() => {
             void onRetry()
             load()
           }}
-          className="mt-4 rounded-lg border border-red-300 px-4 py-2 text-sm font-medium text-red-700 hover:bg-red-50"
+          className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
         >
           Try again
-        </button>
+        </Button>
       ) : null}
     </div>
   )

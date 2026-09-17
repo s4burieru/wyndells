@@ -1,11 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
+import { ArrowLeft, ArrowRight, CalendarCheck, Clock3, Mail, MapPin, Phone, UtensilsCrossed } from 'lucide-react'
 import { fetchBranch, fetchBranches } from '../../api/branches'
 import { fetchMenuItems } from '../../api/menu'
 import type { Branch, MenuItem } from '../../lib/types'
 import { formatPrice } from '../../lib/format'
 import { ApiError } from '../../lib/api'
-import { Badge, ErrorState, Spinner } from '../../components/ui/display'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
+import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
 
 export function BranchDetailPage() {
   const { code } = useParams()
@@ -48,44 +54,55 @@ export function BranchDetailPage() {
   }, [code])
 
   if (loading) {
-    return <div className="container-wyndell"><Spinner label="Loading branch…" /></div>
+    return (
+      <div className="container-wyndell py-8">
+        <Skeleton className="h-9 w-full max-w-xl" />
+        <Skeleton className="mt-6 h-64 w-full" />
+      </div>
+    )
   }
   if (notFound) {
     return (
       <div className="container-wyndell py-12">
-        <div className="rounded-2xl border border-dashed border-wyndell-cream-dark bg-white px-6 py-10 text-center">
-          <p className="font-display text-2xl font-bold text-wyndell-forest">Branch not found</p>
-          <p className="mt-2 text-sm text-neutral-500">We couldn’t find that location. It may have been renamed or removed.</p>
-          <Link
-            to="/branches"
-            className="mt-4 inline-flex items-center gap-2 rounded-lg bg-wyndell-orange px-4 py-2 text-sm font-semibold text-white hover:bg-wyndell-orange-dark"
-          >
-            View all branches
-          </Link>
-        </div>
+        <Card className="border-dashed text-center">
+          <CardHeader>
+            <CardTitle className="font-display text-2xl font-bold text-wyndell-forest">Branch not found</CardTitle>
+            <CardDescription>We couldn’t find that location. It may have been renamed or removed.</CardDescription>
+          </CardHeader>
+          <CardContent className="flex justify-center">
+            <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+              <Link to="/branches">View all branches</Link>
+            </Button>
+          </CardContent>
+        </Card>
       </div>
     )
   }
   if (error || !branch) {
     return (
-      <div className="container-wyndell">
+      <div className="container-wyndell grid gap-4 py-8">
         <ErrorState message="Unable to load this branch right now." />
-        <Link to="/branches" className="mt-4 inline-block text-sm font-medium text-wyndell-orange-dark hover:underline">
-          ← Back to all branches
-        </Link>
+        <Button asChild variant="link" className="w-fit text-wyndell-orange-dark">
+          <Link to="/branches">
+            <ArrowLeft />
+            Back to all branches
+          </Link>
+        </Button>
       </div>
     )
   }
   return (
     <div className="container-wyndell py-8">
-      <nav aria-label="Breadcrumb" className="text-sm text-neutral-500">
-        <Link to="/branches" className="hover:text-wyndell-orange-dark hover:underline">All branches</Link>
-        <span className="mx-1.5">/</span>
-        <span className="text-wyndell-ink">{branch.name}</span>
+      <nav aria-label="Breadcrumb" className="flex items-center gap-1.5 text-sm text-muted-foreground">
+        <Button asChild variant="link" className="h-auto p-0 text-muted-foreground">
+          <Link to="/branches">All branches</Link>
+        </Button>
+        <span aria-hidden>/</span>
+        <span className="text-foreground">{branch.name}</span>
       </nav>
 
-      <div className="mt-6 overflow-hidden rounded-3xl border border-wyndell-cream-dark bg-white shadow-sm">
-        <div className="flex flex-col gap-6 md:flex-row md:items-center">
+      <Card className="mt-6 overflow-hidden py-0">
+        <div className="flex flex-col gap-0 md:flex-row md:items-stretch">
           <div className="h-48 w-full shrink-0 overflow-hidden md:h-72 md:w-96">
             {branch.image ? (
               <img
@@ -103,60 +120,74 @@ export function BranchDetailPage() {
             )}
           </div>
           <div className="flex-1 p-6 md:p-8">
-            <p className="text-sm font-medium text-wyndell-green-dark">{branch.city || 'Wyndell’s'}</p>
-            <h1 className="mt-1 font-display text-3xl font-bold text-wyndell-forest">{branch.name}</h1>
-            {branch.hours ? <p className="mt-1 text-sm font-medium text-wyndell-ink">🕐 {branch.hours}</p> : null}
-            <p className="mt-4 max-w-xl leading-relaxed text-wyndell-ink">
+            <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+              {branch.city || 'Wyndell’s'}
+            </Badge>
+            <PageHeader title={branch.name} subtitle={branch.hours || undefined} />
+            <p className="mt-4 max-w-xl leading-relaxed">
               {branch.description || 'A warm Wyndell’s garden dining experience.'}
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Link
-                to={`/reserve?branch=${branch._id}`}
-                className="inline-flex items-center gap-2 rounded-lg bg-wyndell-orange px-4 py-2 text-sm font-semibold text-white hover:bg-wyndell-orange-dark"
-              >
-                Reserve at {branch.name.split(',')[0]}
-              </Link>
-              <Link
-                to={`/menu?branch=${branch._id}`}
-                className="inline-flex items-center gap-2 rounded-lg border border-wyndell-green-dark/30 px-4 py-2 text-sm font-semibold text-wyndell-green-dark hover:bg-wyndell-green/10"
-              >
-                View full menu
-              </Link>
+              <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+                <Link to={`/reserve?branch=${branch._id}`}>
+                  <CalendarCheck />
+                  Reserve at {branch.name.split(',')[0]}
+                </Link>
+              </Button>
+              <Button asChild variant="outline">
+                <Link to={`/menu?branch=${branch._id}`}>
+                  <UtensilsCrossed />
+                  View full menu
+                </Link>
+              </Button>
             </div>
           </div>
         </div>
-      </div>
+      </Card>
 
       <div className="mt-8 grid gap-4 md:grid-cols-3">
-        <DetailCard label="Address">📍 {branch.address || '—'}</DetailCard>
-        <DetailCard label="Phone">📞 {branch.contactNumber || '—'}</DetailCard>
-        <DetailCard label="Email">✉️ {branch.email || '—'}</DetailCard>
+        <DetailCard icon={<MapPin className="size-4 text-wyndell-orange-dark" aria-hidden />} label="Address">{branch.address || '—'}</DetailCard>
+        <DetailCard icon={<Phone className="size-4 text-wyndell-orange-dark" aria-hidden />} label="Phone">{branch.contactNumber || '—'}</DetailCard>
+        <DetailCard icon={<Mail className="size-4 text-wyndell-orange-dark" aria-hidden />} label="Email">{branch.email || '—'}</DetailCard>
       </div>
+      {branch.hours ? (
+        <p className="mt-4 flex items-center gap-2 text-sm text-muted-foreground">
+          <Clock3 className="size-4 text-wyndell-orange-dark" aria-hidden />
+          {branch.hours}
+        </p>
+      ) : null}
 
       <section className="mt-10">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="font-display text-2xl font-bold text-wyndell-forest">Featured at {branch.name.split(',')[0]}</h2>
-          <Link to={`/menu?branch=${branch._id}`} className="text-sm font-medium text-wyndell-orange-dark hover:underline">
-            See the full menu →
-          </Link>
+          <PageHeader title={`Featured at ${branch.name.split(',')[0]}`} />
+          <Button asChild variant="link" className="text-wyndell-orange-dark">
+            <Link to={`/menu?branch=${branch._id}`}>
+              See the full menu
+              <ArrowRight />
+            </Link>
+          </Button>
         </div>
         {items.length === 0 ? (
-          <p className="mt-5 text-sm text-neutral-500">Browse the full menu for this branch.</p>
+          <div className="mt-5">
+            <EmptyState title="No featured dishes" message="Browse the full menu for this branch." />
+          </div>
         ) : (
           <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {items.map((item) => (
-              <article key={item._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
-                <div className="flex items-start justify-between gap-2">
-                  <h3 className="font-semibold text-wyndell-forest">{item.name}</h3>
-                  <span className="shrink-0 rounded-full bg-wyndell-green/10 px-2.5 py-1 text-xs font-bold text-wyndell-green-dark">
-                    {formatPrice(item.price)}
-                  </span>
-                </div>
-                <p className="mt-2 text-sm leading-relaxed text-neutral-600">{item.description}</p>
-                <div className="mt-2">
-                  <Badge className="bg-wyndell-cream-dark/60 text-wyndell-ink">{item.category}</Badge>
-                </div>
-              </article>
+              <Card key={item._id}>
+                <CardHeader>
+                  <div className="flex items-start justify-between gap-2">
+                    <CardTitle className="text-wyndell-forest">{item.name}</CardTitle>
+                    <Badge variant="secondary" className="shrink-0 bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+                      {formatPrice(item.price)}
+                    </Badge>
+                  </div>
+                  <CardDescription>{item.description}</CardDescription>
+                </CardHeader>
+                <CardContent>
+                  <Badge variant="outline">{item.category}</Badge>
+                </CardContent>
+              </Card>
             ))}
           </div>
         )}
@@ -164,16 +195,15 @@ export function BranchDetailPage() {
 
       {others.length > 0 ? (
         <section className="mt-10">
-          <h2 className="font-display text-2xl font-bold text-wyndell-forest">Other Wyndell’s branches</h2>
-          <div className="mt-4 flex flex-wrap gap-2">
+          <PageHeader title="Other Wyndell’s branches" />
+          <Separator className="my-4" />
+          <div className="flex flex-wrap gap-2">
             {others.map((other) => (
-              <Link
-                key={other._id}
-                to={`/branches/${other.code}`}
-                className="rounded-full border border-wyndell-cream-dark bg-white px-3.5 py-1.5 text-sm font-medium text-wyndell-ink hover:border-wyndell-orange/40 hover:bg-wyndell-cream-dark/60"
-              >
-                {other.name}
-              </Link>
+              <Button key={other._id} asChild variant="outline" size="sm">
+                <Link to={`/branches/${other.code}`}>
+                  {other.name}
+                </Link>
+              </Button>
             ))}
           </div>
         </section>
@@ -182,11 +212,18 @@ export function BranchDetailPage() {
   )
 }
 
-function DetailCard({ label, children }: { label: string; children: ReactNode }) {
+function DetailCard({ icon, label, children }: { icon?: ReactNode; label: string; children: ReactNode }) {
   return (
-    <div className="rounded-2xl border border-wyndell-cream-dark bg-white p-5 shadow-sm">
-      <h3 className="text-xs font-semibold uppercase tracking-wide text-neutral-500">{label}</h3>
-      <p className="mt-2 text-sm leading-relaxed text-wyndell-ink">{children}</p>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center gap-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+          {icon}
+          {label}
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm leading-relaxed">{children}</p>
+      </CardContent>
+    </Card>
   )
 }

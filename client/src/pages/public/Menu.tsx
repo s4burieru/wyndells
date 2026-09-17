@@ -1,16 +1,26 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
+import { ArrowRight, CalendarCheck, Search, UtensilsCrossed } from 'lucide-react'
 import { fetchBranches } from '../../api/branches'
 import { fetchMenuItems } from '../../api/menu'
-import type {  Branch, MenuCategory, MenuItem  } from '../../lib/types'
+import type { Branch, MenuCategory, MenuItem } from '../../lib/types'
 import { formatPrice, MENU_CATEGORIES } from '../../lib/format'
-import { Badge, ErrorState, Spinner } from '../../components/ui/display'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Skeleton } from '@/components/ui/skeleton'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
 
 export function MenuPage() {
   const [branches, setBranches] = useState<Branch[]>([])
   const [selectedBranch, setSelectedBranch] = useState<string>('')
   const [items, setItems] = useState<MenuItem[]>([])
   const [category, setCategory] = useState<MenuCategory | 'All'>('All')
+  const [query, setQuery] = useState('')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [searchParams] = useSearchParams()
@@ -40,76 +50,112 @@ export function MenuPage() {
   }, [selectedBranch])
 
   const categories: (MenuCategory | 'All')[] = ['All', ...MENU_CATEGORIES]
-  const visibleItems = category === 'All' ? items : items.filter((item) => item.category === category)
+  const visibleItems = items.filter((item) => {
+    const matchesCategory = category === 'All' || item.category === category
+    const needle = query.trim().toLowerCase()
+    return matchesCategory && (!needle || item.name.toLowerCase().includes(needle) || item.description.toLowerCase().includes(needle))
+  })
 
   return (
     <div className="container-wyndell py-8">
-      <h1 className="font-display text-3xl font-bold text-wyndell-forest">Wyndell&rsquo;s menu</h1>
-      <p className="mt-1 text-sm text-neutral-500">
-        Scan at the table or browse here. No account needed — the menu is always open.
-      </p>
+      <PageHeader
+        title="Wyndell's menu"
+        subtitle="Scan at the table or browse here. No account needed — the menu is always open."
+        action={
+          selectedBranch ? (
+            <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+              <Link to={`/reserve?branch=${selectedBranch}`}>
+                <CalendarCheck />
+                Reserve at this branch
+              </Link>
+            </Button>
+          ) : undefined
+        }
+      />
 
-      <div className="mt-5 flex items-center gap-2 overflow-x-auto rounded-xl border border-wyndell-cream-dark bg-white p-2">
-        <label htmlFor="menu-branch" className="sr-only">
-          Choose branch
-        </label>
-        <select
-          id="menu-branch"
-          value={selectedBranch}
-          onChange={(event) => setSelectedBranch(event.target.value)}
-          className="min-w-52 rounded-lg border border-wyndell-ink/20 bg-white px-3 py-2 text-sm focus:border-wyndell-orange"
-        >
-          <option value="">Choose a branch…</option>
-          {branches.map((branch) => (
-            <option key={branch._id} value={branch._id}>
-              {branch.name}
-            </option>
-          ))}
-        </select>
-        {selectedBranch ? (
-          <Link
-            to={`/reserve?branch=${selectedBranch}`}
-            className="ml-auto shrink-0 rounded-lg bg-wyndell-orange px-3 py-2 text-sm font-semibold text-white hover:bg-wyndell-orange-dark"
-          >
-            Reserve at this branch
-          </Link>
-        ) : null}
-      </div>
+      <Card className="mt-6">
+        <CardContent className="flex flex-col gap-3 pt-6 sm:flex-row sm:items-end">
+          <div className="grid w-full gap-2 sm:max-w-xs">
+            <Label htmlFor="menu-branch">Branch</Label>
+            <Select value={selectedBranch || undefined} onValueChange={(value) => setSelectedBranch(value)}>
+              <SelectTrigger id="menu-branch" className="w-full">
+                <SelectValue placeholder="Choose a branch…" />
+              </SelectTrigger>
+              <SelectContent>
+                {branches.map((branch) => (
+                  <SelectItem key={branch._id} value={branch._id}>
+                    {branch.name}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div className="grid w-full gap-2 sm:max-w-sm">
+            <Label htmlFor="menu-search">Search dishes</Label>
+            <div className="relative">
+              <Search className="pointer-events-none absolute left-3 top-1/2 size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+              <Input
+                id="menu-search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Search sisig, halo-halo…"
+                className="pl-9"
+              />
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {loading ? (
-        <div className="mt-8"><Spinner label="Loading menu…" /></div>
+        <div className="mt-8 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2, 3, 4, 5].map((key) => (
+            <Card key={key}>
+              <CardHeader>
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-full" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
       ) : error ? (
         <div className="mt-8"><ErrorState message="Unable to load the menu right now." /></div>
       ) : !selectedBranch ? (
-        <div className="mt-10 rounded-2xl border border-dashed border-wyndell-cream-dark bg-white p-8 text-center">
-          <p className="text-base font-semibold text-wyndell-ink">Choose a branch to view its menu</p>
-          <p className="mt-1 text-sm text-neutral-500">Each Wyndell&rsquo;s branch serves the same garden favourites with branch-specific specials.</p>
-        </div>
+        <Card className="mt-10 border-dashed text-center">
+          <CardHeader>
+            <UtensilsCrossed className="mx-auto size-8 text-wyndell-orange-dark" aria-hidden />
+            <CardTitle className="text-wyndell-forest">Choose a branch to view its menu</CardTitle>
+            <CardDescription>Each branch serves garden favourites plus specials.</CardDescription>
+          </CardHeader>
+        </Card>
       ) : (
         <>
-          <nav aria-label="Menu categories" className="mt-4 flex flex-wrap gap-2">
-            {categories.map((value) => (
-              <button
-                key={value}
-                type="button"
-                onClick={() => setCategory(value)}
-                className={[
-                  'rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
-                  category === value ? 'bg-wyndell-orange text-white' : 'bg-white text-wyndell-ink border border-wyndell-cream-dark hover:bg-wyndell-cream-dark/60',
-                ].join(' ')}
-              >
-                {value}
-              </button>
-            ))}
-          </nav>
+          <Tabs value={category} onValueChange={(value) => setCategory(value as MenuCategory | 'All')} className="mt-6">
+            <TabsList className="h-auto flex-wrap justify-start">
+              {categories.map((value) => (
+                <TabsTrigger key={value} value={value}>
+                  {value}
+                </TabsTrigger>
+              ))}
+            </TabsList>
+          </Tabs>
 
           <div className="mt-6 grid gap-4 md:grid-cols-2 lg:grid-cols-3">
             {visibleItems.map((item) => <MenuItemCard key={item._id} item={item} />)}
           </div>
 
           {visibleItems.length === 0 ? (
-            <p className="mt-10 text-center text-sm text-neutral-500">No items in this category yet.</p>
+            <div className="mt-10">
+              <EmptyState title="No dishes match this filter" message="Try another category or clear your search." />
+            </div>
           ) : null}
+          <div className="mt-6 flex justify-center">
+            <Button asChild variant="link" className="text-wyndell-orange-dark">
+              <Link to={selectedBranch ? `/reserve?branch=${selectedBranch}` : '/reserve'}>
+                Hungry? Book a table
+                <ArrowRight />
+              </Link>
+            </Button>
+          </div>
         </>
       )}
     </div>
@@ -119,21 +165,25 @@ export function MenuPage() {
 function MenuItemCard({ item }: { item: MenuItem }) {
   const unavailable = item.status === 'unavailable'
   return (
-    <article className={['rounded-2xl border bg-white p-4 shadow-sm', unavailable ? 'border-red-200 opacity-70' : 'border-wyndell-cream-dark'].join(' ')}>
-      <div className="flex items-start justify-between gap-2">
-        <div>
-          <h2 className="font-semibold text-wyndell-forest">{item.name}</h2>
-          <p className="mt-0.5 text-xs font-medium text-neutral-500">{item.category}</p>
+    <Card className={unavailable ? 'opacity-70' : undefined}>
+      <CardHeader>
+        <div className="flex items-start justify-between gap-2">
+          <div>
+            <CardTitle className="text-wyndell-forest">{item.name}</CardTitle>
+            <CardDescription>{item.category}</CardDescription>
+          </div>
+          {unavailable ? (
+            <Badge variant="destructive">Unavailable</Badge>
+          ) : (
+            <Badge variant="secondary" className="shrink-0 bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+              {formatPrice(item.price)}
+            </Badge>
+          )}
         </div>
-        {unavailable ? (
-          <Badge className="bg-red-100 text-red-700">Unavailable</Badge>
-        ) : (
-          <span className="shrink-0 rounded-full bg-wyndell-green/10 px-2.5 py-1 text-xs font-bold text-wyndell-green-dark">
-            {formatPrice(item.price)}
-          </span>
-        )}
-      </div>
-      <p className="mt-2 text-sm leading-relaxed text-neutral-600">{item.description}</p>
-    </article>
+      </CardHeader>
+      <CardContent>
+        <p className="text-sm leading-relaxed text-muted-foreground">{item.description}</p>
+      </CardContent>
+    </Card>
   )
 }
