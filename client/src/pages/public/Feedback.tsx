@@ -1,10 +1,15 @@
 import { useEffect, useState } from 'react'
+import { CircleAlert, CircleCheck, Loader2, MessageSquare, Star } from 'lucide-react'
 import { fetchBranches } from '../../api/branches'
 import { fetchPublicFeedback, submitFeedback } from '../../api/feedback'
-import type {  Branch, FeedbackSummary  } from '../../lib/types'
+import type { Branch, FeedbackSummary } from '../../lib/types'
 import { friendlyError } from '../../lib/format'
-import { Button, Field, SelectInput, TextArea, TextInput } from '../../components/ui/controls'
-import { Card } from '../../components/ui/display'
+import { Field, TextArea, TextInput } from '../../components/ui/controls'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { PageHeader } from '../../components/ui/display'
 import { ReviewList } from './FeedbackReviews'
 
 export function FeedbackPage() {
@@ -55,27 +60,44 @@ export function FeedbackPage() {
 
   return (
     <div className="container-wyndell py-10">
-      <h1 className="font-display text-3xl font-bold text-wyndell-forest">Share your feedback</h1>
-      <p className="mt-2 max-w-2xl text-wyndell-ink">
-        Tell us about your experience at Wyndell&rsquo;s — your rating helps each branch improve.
-      </p>
-      <div className="mt-8 grid gap-8 lg:grid-cols-2">
-        <Card className="p-6">
-          <h2 className="text-lg font-semibold text-wyndell-forest">Your visit</h2>
+      <PageHeader
+        title="Share your feedback"
+        subtitle="Tell us about your experience at Wyndell's — your rating helps each branch improve."
+      />
+      <div className="mt-8 grid items-start gap-8 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <div className="flex items-center gap-2">
+              <MessageSquare className="size-5 text-wyndell-orange-dark" aria-hidden />
+              <CardTitle className="text-wyndell-forest">Your visit</CardTitle>
+            </div>
+            <CardDescription>Fields marked optional can be left blank.</CardDescription>
+          </CardHeader>
+          <CardContent>
+          <div className="grid gap-4">
           {submitted ? (
-            <p className="mt-4 rounded-lg bg-wyndell-green/15 px-4 py-3 text-sm font-medium text-wyndell-green-dark">
-              Thank you! Your feedback has been received. 🌿
-            </p>
+            <Alert>
+              <CircleCheck />
+              <AlertDescription>Thank you! Your feedback has been received.</AlertDescription>
+            </Alert>
           ) : null}
-          {error ? <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
-          <div className="mt-4 grid gap-4">
+          {error ? (
+            <Alert variant="destructive">
+              <CircleAlert />
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          ) : null}
             <Field label="Branch">
-              <SelectInput value={branch} onChange={(event) => setBranch(event.target.value)}>
-                <option value="">Choose a branch…</option>
-                {branches.map((item) => (
-                  <option key={item._id} value={item._id}>{item.name}</option>
-                ))}
-              </SelectInput>
+              <Select value={branch || undefined} onValueChange={(value) => setBranch(value)}>
+                <SelectTrigger className="w-full">
+                  <SelectValue placeholder="Choose a branch…" />
+                </SelectTrigger>
+                <SelectContent>
+                  {branches.map((item) => (
+                    <SelectItem key={item._id} value={item._id}>{item.name}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </Field>
             <Field label="Your name">
               <TextInput value={customerName} onChange={(event) => setCustomerName(event.target.value)} placeholder="e.g. Maria Santos" />
@@ -91,9 +113,9 @@ export function FeedbackPage() {
             <Field label="Reservation reference (optional)">
               <TextInput value={reservationReference} onChange={(event) => setReservationReference(event.target.value)} placeholder="WYN-XXXXX" />
             </Field>
-            <div>
-              <span className="mb-1 block text-sm font-medium text-wyndell-ink">How many stars?</span>
-              <div className="mt-1 flex items-center gap-1">
+            <div className="grid gap-2" role="group" aria-label="Rating">
+              <span className="text-sm font-medium">How many stars?</span>
+              <div className="flex items-center gap-1">
                 {[1, 2, 3, 4, 5].map((star) => (
                   <StarButton key={star} filled={star <= rating} onClick={() => setRating(star)} label={`${star} star${star === 1 ? '' : 's'}`} />
                 ))}
@@ -108,10 +130,18 @@ export function FeedbackPage() {
                 placeholder="What did you enjoy? What could be better?"
               />
             </Field>
-            <Button onClick={() => void submit()} disabled={submitting}>
-              {submitting ? 'Submitting…' : 'Submit feedback'}
+            <Button onClick={() => void submit()} disabled={submitting} className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+              {submitting ? (
+                <>
+                  <Loader2 className="animate-spin" />
+                  Submitting…
+                </>
+              ) : (
+                'Submit feedback'
+              )}
             </Button>
-            </div>
+          </div>
+          </CardContent>
         </Card>
         <ReviewList reviews={reviews} onRetry={() => fetchPublicFeedback().then(setReviews).catch(() => undefined)} />
       </div>
@@ -121,16 +151,16 @@ export function FeedbackPage() {
 
 function StarButton({ filled, onClick, label }: { filled: boolean; onClick: () => void; label: string }) {
   return (
-    <button type="button" onClick={onClick} aria-label={label} className="rounded-full p-1 hover:scale-110">
-      <StarGlyph filled={filled} />
-    </button>
-  )
-}
-
-function StarGlyph({ filled }: { filled: boolean }) {
-  return (
-    <svg viewBox="0 0 20 20" fill={filled ? '#f9c515' : 'none'} stroke={filled ? '#f9c515' : '#d6d3d1'} strokeWidth="1.6" className="h-8 w-8" aria-hidden>
-      <path d="M9.94 16.056l-5.97 4.527a.75.75 0 0 0-1.84-1.326 0 0 0-2.68-3.186c.124-.084.384-.432.55-.98 0 0-.821.41-.41.821-.82 0-1.643 0 0 .21-.131.5-.383.82 0 0-.5-.383-.21-.131-1.644-.41-.41-1.643-.82.82 0 0-0.821.41-.41.821-.82 0 0-2.68-3.184 0 0 -.384-.432-.55-.98V8.388c-.067.146-.812 1.25-1.254 1.513l1.448 1.093 1.882.91" />
-    </svg>
+    <Button
+      type="button"
+      variant="ghost"
+      size="icon"
+      onClick={onClick}
+      aria-label={label}
+      aria-pressed={filled}
+      className="rounded-full hover:scale-110"
+    >
+      <Star className={filled ? 'fill-wyndell-sun text-wyndell-sun' : 'text-muted-foreground'} aria-hidden />
+    </Button>
   )
 }

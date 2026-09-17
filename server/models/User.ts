@@ -11,6 +11,12 @@ export type UserRow = {
   role: UserRole
   assigned_branch_id: string | null
   is_active: boolean
+  /** Profile details (see supabase/migrations/0003_user_profiles.sql). */
+  position: string
+  contact_number: string
+  address: string
+  avatar_url: string
+  bio: string
   created_at: string
   updated_at: string
 }

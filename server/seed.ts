@@ -146,10 +146,59 @@ async function getOrCreateBranch(data: (typeof BRANCH_DATA)[number]): Promise<Br
   return created as BranchRow
 }
 
-async function getOrCreateUser(data: { name: string; email: string; password: string; role: 'admin' | 'manager'; branchId?: string }) {
+/**
+ * Fills in profile details (migration 0003 columns) on accounts that were
+ * seeded before the migration existed. Empty columns only, so a staff member's
+ * own edits are never overwritten when the seed is re-run.
+ */
+async function backfillProfile(
+  existing: Record<string, unknown> & { id: string; email?: unknown },
+  data: { position?: string; contactNumber?: string; address?: string; avatarUrl?: string; bio?: string },
+) {
+  const pairs: [string, string | undefined][] = [
+    ['position', data.position],
+    ['contact_number', data.contactNumber],
+    ['address', data.address],
+    ['avatar_url', data.avatarUrl],
+    ['bio', data.bio],
+  ]
+  const updates: Record<string, string> = {}
+  for (const [column, value] of pairs) {
+    if (value && !String(existing[column] ?? '')) {
+      updates[column] = value
+    }
+  }
+  if (Object.keys(updates).length === 0) {
+    return existing
+  }
+  const { data: updated, error } = await getDb()
+    .from(usersTable)
+    .update(updates)
+    .eq('id', String(existing.id))
+    .select('*')
+    .single()
+  if (error) {
+    throw error
+  }
+  console.log(`Profile backfilled: ${String(existing.email ?? existing.id)}`)
+  return updated
+}
+
+async function getOrCreateUser(data: {
+  name: string
+  email: string
+  password: string
+  role: 'admin' | 'manager'
+  branchId?: string
+  position?: string
+  contactNumber?: string
+  address?: string
+  avatarUrl?: string
+  bio?: string
+}) {
   const { data: existing } = await getDb().from(usersTable).select('*').eq('email', data.email).maybeSingle()
   if (existing) {
-    return existing
+    return await backfillProfile(existing, data)
   }
   const { data: created, error } = await getDb()
     .from(usersTable)
@@ -160,6 +209,11 @@ async function getOrCreateUser(data: { name: string; email: string; password: st
       role: data.role,
       assigned_branch_id: data.branchId ?? null,
       is_active: true,
+      position: data.position ?? '',
+      contact_number: data.contactNumber ?? '',
+      address: data.address ?? '',
+      avatar_url: data.avatarUrl ?? '',
+      bio: data.bio ?? '',
     })
     .select('*')
     .single()
@@ -181,6 +235,10 @@ async function seedBranchesAndUsers() {
     email: ADMIN_EMAIL,
     password: ADMIN_PASSWORD,
     role: 'admin',
+    position: 'Operations Administrator',
+    contactNumber: '0917 000 0001',
+    address: 'Wyndell\'s Head Office, Tanay, Rizal',
+    bio: 'Owns staff accounts, branches and reporting for every Wyndell\'s location.',
   })
   console.log(`Admin ready: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
 
@@ -191,6 +249,10 @@ async function seedBranchesAndUsers() {
       password: MANAGER_PASSWORD,
       role: 'manager',
       branchId: String(branch.id),
+      position: `Branch Manager — ${branch.name}`,
+      contactNumber: branch.contact_number,
+      address: branch.address,
+      bio: `Runs day-to-day operations for the ${branch.name} branch.`,
     })
     console.log(`Manager ready: ${manager.email} / ${MANAGER_PASSWORD}`)
   }

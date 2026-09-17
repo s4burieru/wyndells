@@ -1,31 +1,76 @@
 import { useEffect, useState } from 'react'
+import { EllipsisIcon, PlusIcon } from 'lucide-react'
 import { createUser, fetchUsers, setUserActive, updateUser } from '../../api/users'
-import type {  SafeUser  } from '../../lib/types'
+import type { SafeUser } from '../../lib/types'
+import { friendlyError, roleBadgeClass, roleLabel } from '../../lib/format'
 import { Button } from '../../components/ui/controls'
-import { PageHeader, Spinner, EmptyState, ErrorState } from '../../components/ui/display'
+import { Badge } from '../../components/ui/badge'
+import { Button as IconButton } from '../../components/ui/button'
+import { Card } from '../../components/ui/card'
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../../components/ui/dropdown-menu'
+import { Skeleton } from '../../components/ui/skeleton'
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from '../../components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
 import { ConfirmDialog } from '../../components/ui/Modal'
+import { UserAvatar } from '../../components/dashboard/UserAvatar'
 import { UserFormModal } from './UserFormModal'
+import { UserProfileSheet } from './UserProfileSheet'
+
+type UserTab = 'all' | 'admin' | 'manager' | 'inactive'
+
+const TABS: { value: UserTab; label: string }[] = [
+  { value: 'all', label: 'All staff' },
+  { value: 'admin', label: 'Administrators' },
+  { value: 'manager', label: 'Managers' },
+  { value: 'inactive', label: 'Deactivated' },
+]
+
+function matchesTab(user: SafeUser, tab: UserTab): boolean {
+  if (tab === 'all') {
+    return true
+  }
+  if (tab === 'inactive') {
+    return !user.isActive
+  }
+  return user.role === tab
+}
 
 export function ManageUsersPage() {
   const [users, setUsers] = useState<SafeUser[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(false)
-  const [editing, setEditing] = useState<SafeUser | null>(null)
+  const [error, setError] = useState('')
+  const [tab, setTab] = useState<UserTab>('all')
   const [creating, setCreating] = useState(false)
+  const [editing, setEditing] = useState<SafeUser | null>(null)
+  const [viewing, setViewing] = useState<SafeUser | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<SafeUser | null>(null)
 
   const load = () => {
     setLoading(true)
-    setError(false)
+    setError('')
     void fetchUsers()
       .then(setUsers)
-      .catch(() => setError(true))
+      .catch((reason: unknown) => setError(friendlyError(reason)))
       .finally(() => setLoading(false))
   }
 
   useEffect(load, [])
 
-  const handleSave = (payload: Record<string, unknown>) => {
+  const handleSave = (payload: Record<string, unknown> | FormData) => {
     const request = editing ? updateUser(editing.id, payload) : createUser(payload)
     void request
       .then(() => {
@@ -33,71 +78,172 @@ export function ManageUsersPage() {
         setEditing(null)
         load()
       })
-      .catch(() => setError(true))
+      .catch((reason: unknown) => setError(friendlyError(reason)))
   }
 
-  if (loading) {
-    return <Spinner label="Loading users…" />
+  const handleToggleActive = () => {
+    const target = confirmToggle
+    setConfirmToggle(null)
+    if (!target) {
+      return
+    }
+    void setUserActive(target.id, !target.isActive)
+      .then(load)
+      .catch((reason: unknown) => setError(friendlyError(reason)))
   }
-  if (error) {
-    return <ErrorState message="Unable to load users right now." onRetry={load} />
-  }
+
+  const visible = users.filter((user) => matchesTab(user, tab))
+  const countFor = (value: UserTab) => users.filter((user) => matchesTab(user, value)).length
 
   return (
     <div>
       <PageHeader
         title="Users & Managers"
-        subtitle="Create manager accounts, assign branches, and control access."
-        action={<Button onClick={() => setCreating(true)}>+ Add user</Button>}
+        subtitle="Create manager accounts, assign branches, and manage staff profiles."
+        action={
+          <Button onClick={() => setCreating(true)}>
+            <PlusIcon />
+            Add user
+          </Button>
+        }
       />
 
-      {users.length === 0 ? (
+      {error ? (
         <div className="mt-6">
-          <EmptyState title="No users yet" message="Add an administrator or a branch manager." />
+          <ErrorState message={error} onRetry={load} />
         </div>
-      ) : (
-        <div className="mt-6 overflow-x-auto">
-          <table className="w-full min-w-140 border-collapse text-sm">
-            <thead>
-              <tr className="border-b border-wyndell-cream-dark bg-wyndell-cream/60 text-left text-xs uppercase tracking-wide text-neutral-500">
-                <th className="px-3 py-2.5">Name</th>
-                <th className="px-3 py-2.5">Email</th>
-                <th className="px-3 py-2.5">Role</th>
-                <th className="px-3 py-2.5">Assigned branch</th>
-                <th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5 text-right">Actions</th>
-              </tr>
-            </thead>
-            <tbody className="divide-y divide-wyndell-cream-dark/60">
-              {users.map((user) => (
-                <tr key={user.id} className="hover:bg-wyndell-cream-dark/30">
-                  <td className="px-3 py-2.5 font-medium text-wyndell-ink">{user.name}</td>
-                  <td className="px-3 py-2.5 text-neutral-600">{user.email}</td>
-                  <td className="px-3 py-2.5">
-                    <span className={['rounded-full px-2.5 py-0.5 text-xs font-medium', user.role === 'admin' ? 'bg-wyndell-orange/15 text-wyndell-orange-dark' : 'bg-wyndell-green/15 text-wyndell-green-dark'].join(' ')}>
-                      {user.role === 'admin' ? 'Admin' : 'Manager'}
-                    </span>
-                  </td>
-                  <td className="px-3 py-2.5 text-neutral-500">{user.assignedBranch?.name ?? '—'}</td>
-                  <td className="px-3 py-2.5 text-neutral-500">{user.isActive ? 'Active' : 'Inactive'}</td>
-                  <td className="px-3 py-2.5 text-right">
-                    <div className="flex items-center gap-2">
-                      <button type="button" onClick={() => setEditing(user)} className="text-xs font-medium text-wyndell-orange-dark hover:underline">
-                        Edit
-                      </button>
-                      {user.role !== 'admin' ? (
-                        <button type="button" onClick={() => setConfirmToggle(user)} className="text-xs font-medium text-neutral-500 hover:underline">
-                          {user.isActive ? 'Deactivate' : 'Activate'}
-                        </button>
-                      ) : null}
+      ) : null}
+
+      <Tabs
+        value={tab}
+        onValueChange={(next) => setTab(next as UserTab)}
+        className="mt-6"
+      >
+        <TabsList>
+          {TABS.map((item) => (
+            <TabsTrigger key={item.value} value={item.value}>
+              {item.label}
+              <span className="text-xs text-muted-foreground">{countFor(item.value)}</span>
+            </TabsTrigger>
+          ))}
+        </TabsList>
+      </Tabs>
+
+      <Card className="mt-4 overflow-hidden">
+        {loading ? (
+          <div className="grid gap-4 p-4" role="status" aria-busy>
+            <span className="sr-only">Loading staff accounts</span>
+            {[0, 1, 2, 3].map((row) => (
+              <div key={row} className="flex items-center gap-3">
+                <Skeleton className="size-10 rounded-full" />
+                <div className="grid flex-1 gap-2">
+                  <Skeleton className="h-4 w-40" />
+                  <Skeleton className="h-3 w-56" />
+                </div>
+                <Skeleton className="h-6 w-24 rounded-full" />
+              </div>
+            ))}
+          </div>
+        ) : visible.length === 0 ? (
+          <div className="p-4">
+            <EmptyState
+              title="No staff to show"
+              message={
+                users.length === 0
+                  ? 'Add an administrator or a branch manager.'
+                  : 'Nobody matches this filter yet.'
+              }
+              action={<Button onClick={() => setCreating(true)}>Add user</Button>}
+            />
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow>
+                <TableHead className="pl-4">Staff member</TableHead>
+                <TableHead>Role</TableHead>
+                <TableHead>Assigned branch</TableHead>
+                <TableHead>Contact</TableHead>
+                <TableHead>Status</TableHead>
+                <TableHead className="pr-4 text-right">Actions</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {visible.map((user) => (
+                <TableRow key={user.id} className="cursor-pointer" onClick={() => setViewing(user)}>
+                  <TableCell className="pl-4 whitespace-normal">
+                    <div className="flex items-center gap-3">
+                      <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} />
+                      <div className="grid gap-0.5">
+                        <span className="font-medium text-foreground">{user.name}</span>
+                        <span className="text-xs text-muted-foreground">
+                          {user.position || user.email}
+                        </span>
+                      </div>
                     </div>
-                  </td>
-                </tr>
+                  </TableCell>
+                  <TableCell>
+                    <Badge className={roleBadgeClass(user.role)}>{roleLabel(user.role)}</Badge>
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {user.assignedBranch?.name ?? 'No branch'}
+                  </TableCell>
+                  <TableCell className="text-muted-foreground">
+                    {user.contactNumber || 'Not provided'}
+                  </TableCell>
+                  <TableCell>
+                    <Badge variant={user.isActive ? 'secondary' : 'outline'}>
+                      {user.isActive ? 'Active' : 'Inactive'}
+                    </Badge>
+                  </TableCell>
+                  <TableCell
+                    className="pr-4 text-right"
+                    onClick={(event) => event.stopPropagation()}
+                  >
+                    <DropdownMenu>
+                      <DropdownMenuTrigger asChild>
+                        <IconButton
+                          variant="ghost"
+                          size="icon-sm"
+                          aria-label={`Actions for ${user.name}`}
+                        >
+                          <EllipsisIcon />
+                        </IconButton>
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent align="end" className="w-52">
+                        <DropdownMenuItem onSelect={() => setViewing(user)}>
+                          View profile
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onSelect={() => {
+                            setCreating(false)
+                            setEditing(user)
+                          }}
+                        >
+                          Edit details
+                        </DropdownMenuItem>
+                        {user.role === 'admin' ? null : (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem
+                              className="text-destructive focus:text-destructive"
+                              onSelect={() => setConfirmToggle(user)}
+                            >
+                              {user.isActive ? 'Deactivate account' : 'Activate account'}
+                            </DropdownMenuItem>
+                          </>
+                        )}
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </TableCell>
+                </TableRow>
               ))}
-            </tbody>
-          </table>
-        </div>
-      )}
+            </TableBody>
+          </Table>
+        )}
+      </Card>
+
+      <UserProfileSheet user={viewing} open={viewing !== null} onClose={() => setViewing(null)} />
 
       {creating || editing ? (
         <UserFormModal
@@ -115,12 +261,7 @@ export function ManageUsersPage() {
         title={confirmToggle?.isActive ? 'Deactivate this account?' : 'Activate this account?'}
         message={`${confirmToggle?.name ?? ''} will ${confirmToggle?.isActive ? 'lose access to the staff portal.' : 'regain access to the staff portal.'}`}
         confirmLabel={confirmToggle?.isActive ? 'Deactivate' : 'Activate'}
-        onConfirm={() => {
-          if (confirmToggle) {
-            void setUserActive(confirmToggle.id, !confirmToggle.isActive).then(load)
-          }
-          setConfirmToggle(null)
-        }}
+        onConfirm={handleToggleActive}
         onCancel={() => setConfirmToggle(null)}
       />
     </div>

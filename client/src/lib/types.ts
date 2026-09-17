@@ -23,6 +23,12 @@ export type SafeUser = {
   role: Role
   isActive: boolean
   assignedBranch: { id: string; name: string } | null
+  /** Profile details — job title, contact number, address, photo and bio. */
+  position: string
+  contactNumber: string
+  address: string
+  avatarUrl: string
+  bio: string
   createdAt: string
   updatedAt: string
 }

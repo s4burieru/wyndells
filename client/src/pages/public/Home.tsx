@@ -1,12 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
+import { ArrowRight, CalendarCheck, MapPin, MessageSquare, Star, UtensilsCrossed } from 'lucide-react'
 import { fetchBranches } from '../../api/branches'
 import { fetchMenuItems } from '../../api/menu'
 import { fetchPublicFeedback } from '../../api/feedback'
 import type { Branch, FeedbackSummary, MenuItem } from '../../lib/types'
 import { formatPrice } from '../../lib/format'
-import { Badge } from '../../components/ui/display'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Separator } from '@/components/ui/separator'
+import { Skeleton } from '@/components/ui/skeleton'
 import { StarRating } from '../../components/ui/badges'
+import { EmptyState } from '../../components/ui/display'
 
 export function HomePage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -56,9 +62,10 @@ function HeroSection() {
       />
       <div className="container-wyndell py-20 sm:py-28">
         <div className="max-w-2xl">
-          <p className="text-sm font-medium text-wyndell-green-dark">
+          <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+            <UtensilsCrossed />
             Al fresco dining · Garden grills · Home-style Filipino food
-          </p>
+          </Badge>
           <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-wyndell-forest sm:text-5xl">
             Fresh. Natural. Warm.
             <br />
@@ -69,18 +76,18 @@ function HeroSection() {
             seasonal freshness, and tables made for sharing.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Link
-              to="/reserve"
-              className="rounded-xl bg-wyndell-orange px-6 py-3 text-base font-semibold text-white shadow-md hover:bg-wyndell-orange-dark"
-            >
-              Book a Reservation
-            </Link>
-            <Link
-              to="/menu"
-              className="rounded-xl border border-wyndell-green-dark/30 bg-white/70 px-6 py-3 text-base font-semibold text-wyndell-green-dark hover:bg-white"
-            >
-              Browse the Menu
-            </Link>
+            <Button asChild size="lg" className="bg-wyndell-orange text-white shadow-md hover:bg-wyndell-orange-dark">
+              <Link to="/reserve">
+                <CalendarCheck />
+                Book a Reservation
+              </Link>
+            </Button>
+            <Button asChild size="lg" variant="outline" className="border-wyndell-green-dark/30 bg-white/70 text-wyndell-green-dark hover:bg-white hover:text-wyndell-green-dark">
+              <Link to="/menu">
+                Browse the Menu
+                <ArrowRight />
+              </Link>
+            </Button>
           </div>
         </div>
       </div>
@@ -91,15 +98,17 @@ function HeroSection() {
 function AboutSection() {
   return (
     <section className="container-wyndell py-16">
-      <div className="mx-auto max-w-3xl text-center">
-        <h2 className="font-display text-3xl font-bold text-wyndell-forest">Rooted in Rizal, grown for family</h2>
-        <p className="mt-5 text-lg leading-relaxed text-wyndell-ink">
-          Wyndell&rsquo;s started as a single al fresco kitchen in Sampaloc, Tanay — a small garden where
-          neighbours gathered around the grill. Today our branches in Sampaloc, Bayan, Antipolo, and Masinag
-          share the same promise: ingredients dialed toward fresh, plates full of warmth, and a setting that
-          always feels like outdoors.
-        </p>
-      </div>
+      <Card className="mx-auto max-w-3xl border-wyndell-cream-dark bg-card text-center">
+        <CardHeader>
+          <CardTitle className="font-display text-3xl font-bold text-wyndell-forest">Rooted in Rizal, grown for family</CardTitle>
+          <CardDescription className="text-lg leading-relaxed">
+            Wyndell&rsquo;s started as a single al fresco kitchen in Sampaloc, Tanay — a small garden where
+            neighbours gathered around the grill. Today our branches in Sampaloc, Bayan, Antipolo, and Masinag
+            share the same promise: ingredients dialed toward fresh, plates full of warmth, and a setting that
+            always feels like outdoors.
+          </CardDescription>
+        </CardHeader>
+      </Card>
     </section>
   )
 }
@@ -108,27 +117,51 @@ function BranchesSection({ branches, loaded }: { branches: Branch[]; loaded: boo
   return (
     <section className="container-wyndell py-16">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-bold text-wyndell-forest">Our branches</h2>
-        <Link to="/branches" className="text-sm font-medium text-wyndell-orange-dark hover:underline">
-          View all branches →
-        </Link>
+        <div className="flex items-center gap-2">
+          <MapPin className="size-5 text-wyndell-orange-dark" aria-hidden />
+          <h2 className="font-display text-2xl font-bold text-wyndell-forest">Our branches</h2>
+        </div>
+        <Button asChild variant="link" className="text-wyndell-orange-dark">
+          <Link to="/branches">
+            View all branches
+            <ArrowRight />
+          </Link>
+        </Button>
       </div>
-      {!loaded ? <p className="mt-6 text-sm text-neutral-500">Loading branches…</p> : null}
-      {loaded && branches.length === 0 ? <p className="mt-6 text-sm text-neutral-500">No branches published yet.</p> : null}
+      {!loaded ? (
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
+          {[0, 1, 2, 3].map((key) => (
+            <Card key={key}>
+              <CardHeader>
+                <Skeleton className="size-10 rounded-full" />
+                <Skeleton className="mt-2 h-5 w-3/4" />
+                <Skeleton className="h-4 w-1/2" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+      {loaded && branches.length === 0 ? <p className="mt-6 text-sm text-muted-foreground">No branches published yet.</p> : null}
       <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
         {branches.slice(0, 4).map((branch) => (
-          <Link
-            key={branch._id}
-            to={`/branches/${branch.code}`}
-            className="rounded-2xl border border-wyndell-cream-dark bg-white p-5 shadow-sm transition-shadow hover:shadow-md"
-          >
-            <span className="flex h-10 w-10 items-center justify-center rounded-full bg-wyndell-orange/10 text-sm font-bold text-wyndell-orange-dark">
-              {(branch.name || 'W').charAt(0)}
-            </span>
-            <h3 className="mt-3 font-semibold text-wyndell-forest">{branch.name}</h3>
-            <p className="mt-1 text-xs text-neutral-500">{branch.city ?? branch.address}</p>
-            <p className="mt-2 text-xs font-medium text-wyndell-green-dark">{branch.hours}</p>
-          </Link>
+          <Card key={branch._id} className="transition-shadow hover:shadow-md">
+            <CardHeader>
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-wyndell-orange/10 text-sm font-bold text-wyndell-orange-dark">
+                {(branch.name || 'W').charAt(0)}
+              </span>
+              <CardTitle className="mt-2 text-wyndell-forest">
+                <Link to={`/branches/${branch.code}`} className="hover:underline">
+                  {branch.name}
+                </Link>
+              </CardTitle>
+              <CardDescription>{branch.city ?? branch.address}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+                {branch.hours}
+              </Badge>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </section>
@@ -139,27 +172,47 @@ function FeaturedMenuSection({ items, loaded }: { items: MenuItem[]; loaded: boo
   return (
     <section className="container-wyndell py-16">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="font-display text-2xl font-bold text-wyndell-forest">Featured from the grill</h2>
-        <Link to="/menu" className="text-sm font-medium text-wyndell-orange-dark hover:underline">
-          See the full menu →
-        </Link>
+        <div className="flex items-center gap-2">
+          <UtensilsCrossed className="size-5 text-wyndell-orange-dark" aria-hidden />
+          <h2 className="font-display text-2xl font-bold text-wyndell-forest">Featured from the grill</h2>
+        </div>
+        <Button asChild variant="link" className="text-wyndell-orange-dark">
+          <Link to="/menu">
+            See the full menu
+            <ArrowRight />
+          </Link>
+        </Button>
       </div>
-      {!loaded ? <p className="mt-6 text-sm text-neutral-500">Loading menu…</p> : null}
-      {loaded && items.length === 0 ? <p className="mt-6 text-sm text-neutral-500">No featured dishes yet.</p> : null}
+      {!loaded ? (
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((key) => (
+            <Card key={key}>
+              <CardHeader>
+                <Skeleton className="h-5 w-2/3" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-1/3" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+      {loaded && items.length === 0 ? <p className="mt-6 text-sm text-muted-foreground">No featured dishes yet.</p> : null}
       <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {items.map((item) => (
-          <div key={item._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-5 shadow-sm">
-            <div className="flex items-start justify-between gap-2">
-              <h3 className="font-semibold text-wyndell-forest">{item.name}</h3>
-              <span className="rounded-full bg-wyndell-green/10 px-2.5 py-0.5 text-xs font-semibold text-wyndell-green-dark">
-                {formatPrice(item.price)}
-              </span>
-            </div>
-            <p className="mt-2 text-sm text-neutral-500">{item.description}</p>
-            <div className="mt-2">
-              <Badge className="bg-wyndell-cream-dark/60 text-wyndell-ink">{item.category}</Badge>
-            </div>
-          </div>
+          <Card key={item._id}>
+            <CardHeader>
+              <div className="flex items-start justify-between gap-2">
+                <CardTitle className="text-wyndell-forest">{item.name}</CardTitle>
+                <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+                  {formatPrice(item.price)}
+                </Badge>
+              </div>
+              <CardDescription>{item.description}</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <Badge variant="outline">{item.category}</Badge>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </section>
@@ -169,20 +222,43 @@ function FeaturedMenuSection({ items, loaded }: { items: MenuItem[]; loaded: boo
 function ReviewsSection({ reviews, loaded }: { reviews: FeedbackSummary[]; loaded: boolean }) {
   return (
     <section className="container-wyndell py-16">
-      <h2 className="font-display text-2xl font-bold text-wyndell-forest">What our guests say</h2>
-      {!loaded ? <p className="mt-6 text-sm text-neutral-500">Loading reviews…</p> : null}
-      {loaded && reviews.length === 0 ? <p className="mt-6 text-sm text-neutral-500">Be the first to leave a review.</p> : null}
+      <div className="flex items-center gap-2">
+        <Star className="size-5 text-wyndell-orange-dark" aria-hidden />
+        <h2 className="font-display text-2xl font-bold text-wyndell-forest">What our guests say</h2>
+      </div>
+      {!loaded ? (
+        <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
+          {[0, 1, 2].map((key) => (
+            <Card key={key}>
+              <CardHeader>
+                <Skeleton className="h-4 w-24" />
+                <Skeleton className="h-4 w-full" />
+                <Skeleton className="h-4 w-2/3" />
+              </CardHeader>
+            </Card>
+          ))}
+        </div>
+      ) : null}
+      {loaded && reviews.length === 0 ? (
+        <div className="mt-6">
+          <EmptyState title="No reviews yet" message="Be the first to leave a review." />
+        </div>
+      ) : null}
       <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
         {reviews.map((review) => (
-          <figure key={review._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-5 shadow-sm">
-            <StarRating value={review.rating} size="sm" />
-            <blockquote className="mt-3 text-sm leading-relaxed text-wyndell-ink">
-              &ldquo;{review.comment}&rdquo;
-            </blockquote>
-            <figcaption className="mt-3 text-xs font-medium text-neutral-500">
-              — {review.customerName} · {review.branch?.name}
-            </figcaption>
-          </figure>
+          <Card key={review._id}>
+            <CardHeader>
+              <StarRating value={review.rating} size="sm" />
+              <CardDescription className="text-sm leading-relaxed text-foreground">
+                &ldquo;{review.comment}&rdquo;
+              </CardDescription>
+            </CardHeader>
+            <CardContent>
+              <p className="text-xs font-medium text-muted-foreground">
+                — {review.customerName} · {review.branch?.name}
+              </p>
+            </CardContent>
+          </Card>
         ))}
       </div>
     </section>
@@ -192,19 +268,27 @@ function ReviewsSection({ reviews, loaded }: { reviews: FeedbackSummary[]; loade
 function ReservationCtaSection() {
   return (
     <section className="container-wyndell py-16">
-      <div className="rounded-3xl bg-linear-to-r from-wyndell-orange/15 via-wyndell-cream to-wyndell-green/10 p-8 sm:p-12">
-        <h2 className="font-display text-3xl font-bold text-wyndell-forest">Plan your visit</h2>
-        <p className="mt-3 max-w-2xl text-wyndell-ink">
-          Reserve a table online in under a minute — no account needed. Pick a branch, a time that suits you,
-          and we&rsquo;ll have the grill ready.
-        </p>
-        <Link
-          to="/reserve"
-          className="mt-6 inline-flex items-center gap-2 rounded-xl bg-wyndell-orange px-6 py-3 text-base font-semibold text-white shadow-md hover:bg-wyndell-orange-dark"
-        >
-          Book a Reservation
-        </Link>
-      </div>
+      <Card className="border-0 bg-linear-to-r from-wyndell-orange/15 via-wyndell-cream to-wyndell-green/10 p-8 sm:p-12">
+        <CardHeader className="px-0">
+          <Badge variant="secondary" className="w-fit bg-white/70 text-wyndell-orange-dark hover:bg-white">
+            <CalendarCheck />
+            Online reservations
+          </Badge>
+          <CardTitle className="font-display text-3xl font-bold text-wyndell-forest">Plan your visit</CardTitle>
+          <CardDescription className="max-w-2xl text-base text-wyndell-ink">
+            Reserve a table online in under a minute — no account needed. Pick a branch, a time that suits you,
+            and we&rsquo;ll have the grill ready.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="px-0">
+          <Button asChild size="lg" className="bg-wyndell-orange text-white shadow-md hover:bg-wyndell-orange-dark">
+            <Link to="/reserve">
+              Book a Reservation
+              <ArrowRight />
+            </Link>
+          </Button>
+        </CardContent>
+      </Card>
     </section>
   )
 }
@@ -212,12 +296,26 @@ function ReservationCtaSection() {
 function ContactTeaserSection() {
   return (
     <section className="container-wyndell py-16">
-      <h2 className="font-display text-2xl font-bold text-wyndell-forest">Reach us</h2>
-      <p className="mt-3 text-wyndell-ink">
-        Questions, large groups, or feedback? Find a branch&rsquo;s contact details on our{' '}
-        <Link to="/branches" className="font-medium text-wyndell-orange-dark hover:underline">branches page</Link>, or visit our{' '}
-        <Link to="/contact" className="font-medium text-wyndell-orange-dark hover:underline">contact page</Link>.
-      </p>
+      <Card>
+        <CardHeader>
+          <div className="flex items-center gap-2">
+            <MessageSquare className="size-5 text-wyndell-orange-dark" aria-hidden />
+            <CardTitle className="font-display text-2xl font-bold text-wyndell-forest">Reach us</CardTitle>
+          </div>
+          <CardDescription className="text-base text-wyndell-ink">
+            Questions, large groups, or feedback? Find a branch&rsquo;s contact details on our{' '}
+            <Button asChild variant="link" className="h-auto p-0 text-wyndell-orange-dark">
+              <Link to="/branches">branches page</Link>
+            </Button>
+            , or visit our{' '}
+            <Button asChild variant="link" className="h-auto p-0 text-wyndell-orange-dark">
+              <Link to="/contact">contact page</Link>
+            </Button>
+            .
+          </CardDescription>
+        </CardHeader>
+      </Card>
+      <Separator className="mt-16" />
     </section>
   )
 }

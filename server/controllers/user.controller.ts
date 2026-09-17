@@ -8,6 +8,7 @@ import {
   updateUser,
 } from '../services/user.service'
 import type { AuthedRequest } from '../middleware/auth'
+import { uploadedAvatar } from '../middleware/uploads'
 
 export const listUsersController = asyncHandler(async (req: AuthedRequest, res: Response) => {
   const role = req.query.role ? String(req.query.role) : undefined
@@ -16,12 +17,16 @@ export const listUsersController = asyncHandler(async (req: AuthedRequest, res: 
 })
 
 export const createUserController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const user = await createUser(req.body as Record<string, unknown>)
+  const user = await createUser(req.body as Record<string, unknown>, uploadedAvatar(req))
   res.status(201).json({ user })
 })
 
 export const updateUserController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const user = await updateUser(String(req.params.id), req.body as Record<string, unknown>)
+  const user = await updateUser(
+    String(req.params.id),
+    req.body as Record<string, unknown>,
+    uploadedAvatar(req),
+  )
   res.json({ user })
 })
 

@@ -11,11 +11,21 @@ export type SafeUser = {
   role: 'admin' | 'manager'
   isActive: boolean
   assignedBranch: { id: string; name: string } | null
+  /** Profile details managed from the admin "Users & Managers" page / own profile. */
+  position: string
+  contactNumber: string
+  address: string
+  avatarUrl: string
+  bio: string
   createdAt: string
   updatedAt: string
 }
 
 const SALT_ROUNDS = 10
+
+/** Shared column list (without the password hash) used by every user read. */
+const USER_COLUMNS =
+  'id, name, email, role, assigned_branch_id, is_active, position, contact_number, address, avatar_url, bio, created_at, updated_at'
 
 /**
  * Select string used for all user reads. Always embeds the assigned branch
@@ -23,8 +33,7 @@ const SALT_ROUNDS = 10
  * second query. `password_hash` is deliberately excluded — it is only selected
  * in the login flow.
  */
-export const USER_SELECT =
-  'id, name, email, role, assigned_branch_id, is_active, created_at, updated_at, assigned_branch:assigned_branch_id(name)'
+export const USER_SELECT = `${USER_COLUMNS}, assigned_branch:assigned_branch_id(name)`
 
 export function hashPassword(password: string): Promise<string> {
   return bcrypt.hash(password, SALT_ROUNDS)
@@ -55,8 +64,18 @@ type UserLikeInput = {
   is_active: boolean
   assigned_branch_id?: string | null
   assigned_branch?: AssignedBranchRef | null
+  position?: unknown
+  contact_number?: unknown
+  address?: unknown
+  avatar_url?: unknown
+  bio?: unknown
   created_at?: unknown
   updated_at?: unknown
+}
+
+/** Profile columns are stored as `not null default ''`; coerce defensively. */
+function toProfileText(value: unknown): string {
+  return typeof value === 'string' ? value : ''
 }
 
 function embeddedBranchName(user: UserLikeInput): string | null {
@@ -80,6 +99,11 @@ function toSafeUser(user: UserLikeInput): SafeUser {
     role: user.role,
     isActive: user.is_active,
     assignedBranch: branchId ? { id: branchId, name: embeddedBranchName(user) ?? 'Unknown branch' } : null,
+    position: toProfileText(user.position),
+    contactNumber: toProfileText(user.contact_number),
+    address: toProfileText(user.address),
+    avatarUrl: toProfileText(user.avatar_url),
+    bio: toProfileText(user.bio),
     createdAt: toIso(user.created_at),
     updatedAt: toIso(user.updated_at),
   }
@@ -104,9 +128,7 @@ export async function login(email: string, password: string): Promise<{ token: s
 
   const { data: user, error } = await getDb()
     .from(usersTable)
-    .select(
-      'id, name, email, password_hash, role, assigned_branch_id, is_active, created_at, updated_at, assigned_branch:assigned_branch_id(name)',
-    )
+    .select(`${USER_COLUMNS}, password_hash, assigned_branch:assigned_branch_id(name)`)
     .eq('email', email.trim().toLowerCase())
     .maybeSingle()
   if (error || !user) {

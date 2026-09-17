@@ -1,8 +1,8 @@
 import { StarIcon } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { reservationBadgeClass, reservationLabel, tableDotClass, tableLabel } from '../../lib/format'
-import type {  ReservationStatus, TableStatus  } from '../../lib/types'
-import { Badge } from './display'
+import type { ReservationStatus, TableStatus } from '../../lib/types'
+import { Badge } from './badge'
 
 const STAR_SIZES = { sm: 'size-3.5', md: 'size-5', lg: 'size-7' } as const
 

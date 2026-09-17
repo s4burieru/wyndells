@@ -1,9 +1,13 @@
 import { useState } from 'react'
+import { CircleAlert, CircleCheck, FileUp, Loader2, Send } from 'lucide-react'
 import { submitApplication } from '../../api/careers'
-import type {  CareerPosting  } from '../../lib/types'
+import type { CareerPosting } from '../../lib/types'
 import { departmentLabel, friendlyError } from '../../lib/format'
-import { Button, Field, TextArea, TextInput } from '../../components/ui/controls'
-import { Card } from '../../components/ui/display'
+import { Field, TextArea, TextInput } from '../../components/ui/controls'
+import { Button } from '@/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge } from '@/components/ui/badge'
 
 export function CareerApplicationForm({
   posting,
@@ -88,24 +92,38 @@ export function CareerApplicationForm({
   }
 
   return (
-    <Card className="p-6">
-      <div id="apply-form" tabIndex={-1} className="outline-none">
-        <h2 className="text-lg font-semibold text-wyndell-forest">
-          {posting ? `Apply for ${posting.title}` : 'Send us your application'}
-        </h2>
-        <p className="mt-1 text-sm text-wyndell-ink">
-          {posting
-            ? `Application for ${posting.branch.name} — ${departmentLabel(posting.department)}.`
-            : 'Choose an open position above and the form will be pre-filled for it.'}
-        </p>
-      </div>
-      {submitted ? (
-        <p className="mt-4 rounded-lg bg-wyndell-green/15 px-4 py-3 text-sm font-medium text-wyndell-green-dark">
-          Your application was received! Our team will review it and reach out if there is a good fit. 🌿
-        </p>
+    <Card>
+      <CardHeader>
+        <div id="apply-form" tabIndex={-1} className="outline-none">
+          <CardTitle className="text-wyndell-forest">
+            {posting ? `Apply for ${posting.title}` : 'Send us your application'}
+          </CardTitle>
+          <CardDescription>
+            {posting
+              ? `Application for ${posting.branch.name} — ${departmentLabel(posting.department)}.`
+              : 'Choose an open position above and the form will be pre-filled for it.'}
+          </CardDescription>
+        </div>
+      </CardHeader>
+      <CardContent>
+      <div className="grid gap-4">
+      {posting ? (
+        <Badge variant="secondary" className="w-fit bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+          {posting.branch.name} · {departmentLabel(posting.department)}
+        </Badge>
       ) : null}
-      {error ? <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
-      <div className="mt-4 grid gap-4">
+      {submitted ? (
+        <Alert>
+          <CircleCheck />
+          <AlertDescription>Your application was received! Our team will review it and reach out if there is a good fit.</AlertDescription>
+        </Alert>
+      ) : null}
+      {error ? (
+        <Alert variant="destructive">
+          <CircleAlert />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
         <Field label="Full name *">
           <TextInput value={fullName} onChange={(event) => setFullName(event.target.value)} placeholder="e.g. Maria Santos" required />
         </Field>
@@ -149,12 +167,30 @@ export function CareerApplicationForm({
               setResume(file)
             }}
           />
-          {resume ? <span className="text-xs text-muted-foreground">Selected: {resume.name}</span> : null}
+          {resume ? (
+            <span className="inline-flex items-center gap-1.5 text-xs text-muted-foreground">
+              <FileUp className="size-3.5" aria-hidden />
+              Selected: {resume.name}
+            </span>
+          ) : null}
         </Field>
-        <Button onClick={() => void submit()} disabled={submitting || !posting}>
-          {posting ? (submitting ? 'Submitting…' : 'Submit application') : 'Select a position above'}
+        <Button onClick={() => void submit()} disabled={submitting || !posting} className="bg-wyndell-green text-white hover:bg-wyndell-green-dark">
+          {submitting ? (
+            <>
+              <Loader2 className="animate-spin" />
+              Submitting…
+            </>
+          ) : posting ? (
+            <>
+              <Send />
+              Submit application
+            </>
+          ) : (
+            'Select a position above'
+          )}
         </Button>
       </div>
+      </CardContent>
     </Card>
   )
 }

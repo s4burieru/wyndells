@@ -1,4 +1,11 @@
-import type {  ApplicationStatus, CareerDepartment, MenuCategory, ReservationStatus, TableStatus  } from './types'
+import type {
+  ApplicationStatus,
+  CareerDepartment,
+  MenuCategory,
+  ReservationStatus,
+  Role,
+  TableStatus,
+} from './types'
 
 export function formatPrice(value: number): string {
   return `₱ ${value.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`
@@ -177,4 +184,32 @@ export function friendlyError(error: unknown, fallback = 'Something went wrong. 
     return String((error as { message: unknown }).message)
   }
   return fallback
+}
+
+const ROLE_LABELS: Record<Role, string> = {
+  admin: 'Administrator',
+  manager: 'Manager',
+}
+
+export function roleLabel(role: Role): string {
+  return ROLE_LABELS[role] ?? role
+}
+
+const ROLE_BADGE_STYLES: Record<Role, string> = {
+  admin: 'bg-wyndell-orange/15 text-wyndell-orange-dark',
+  manager: 'bg-wyndell-green/15 text-wyndell-green-dark',
+}
+
+export function roleBadgeClass(role: Role): string {
+  return ROLE_BADGE_STYLES[role] ?? 'bg-neutral-100 text-neutral-700'
+}
+
+const ROLE_AVATAR_STYLES: Record<Role, string> = {
+  admin: 'bg-wyndell-orange/20 text-wyndell-orange-dark',
+  manager: 'bg-wyndell-green/15 text-wyndell-green-dark',
+}
+
+/** Avatar fallback colours, matching the role badge palette. */
+export function roleAvatarClass(role: Role): string {
+  return ROLE_AVATAR_STYLES[role] ?? 'bg-muted text-muted-foreground'
 }
