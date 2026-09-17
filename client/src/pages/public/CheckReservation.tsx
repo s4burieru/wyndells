@@ -93,6 +93,7 @@ export function CheckReservationPage() {
         <ReservationDetail
           reservation={result}
           onCancelRequest={() => setConfirmCancel(true)}
+          showReceiptButton
         />
       ) : null}
 
