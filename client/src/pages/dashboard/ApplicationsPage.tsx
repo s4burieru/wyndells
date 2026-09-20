@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { fetchBranches } from '../../api/branches'
+import { fetchBranches } from '@/services/api/branches'
 import {
   createPosting,
   deleteApplication,
@@ -8,21 +8,21 @@ import {
   fetchManageablePostings,
   setApplicationStatus,
   updatePosting,
-} from '../../api/careers'
+} from '@/services/api/careers'
 import type {
   ApplicationStatus,
   Branch,
   JobApplication,
   ManageableCareerPosting,
-} from '../../lib/types'
-import { departmentLabel, formatDateTime, postingLabel } from '../../lib/format'
-import { Button } from '../../components/ui/controls'
-import { Badge, EmptyState, ErrorState, PageHeader, Spinner } from '../../components/ui/display'
-import { StatCard } from '../../components/dashboard/widgets'
-import { ConfirmDialog } from '../../components/ui/Modal'
-import { useAuth } from '../../lib/auth'
-import { ApplicationCard } from './ApplicationCard'
-import { PostingFormModal } from './PostingFormModal'
+} from '@/types'
+import { departmentLabel, formatDateTime, postingLabel } from '@/utils/format'
+import { Button } from '@/components/common/FormControls'
+import { Badge, EmptyState, ErrorState, PageHeader, Spinner } from '@/components/common/PageHeader'
+import { StatCard } from '@/components/common/StatCard'
+import { ConfirmDialog } from '@/components/common/Modal'
+import { useAuth } from '@/contexts/AuthContext'
+import { ApplicationCard } from '@/features/careers/components/ApplicationCard'
+import { PostingFormModal } from '@/features/careers/components/PostingFormModal'
 
 export function ManageApplicationsPage() {
   const { user } = useAuth()

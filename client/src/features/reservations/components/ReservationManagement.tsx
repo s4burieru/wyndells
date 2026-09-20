@@ -1,7 +1,7 @@
-import type { Reservation, ReservationStatus } from '../../lib/types'
-import { formatDate, formatTime12 } from '../../lib/format'
-import { Modal } from '../../components/ui/Modal'
-import { ReservationStatusBadge } from '../../components/ui/badges'
+import type { Reservation, ReservationStatus } from '@/types'
+import { formatDate, formatTime12 } from '@/utils/format'
+import { Modal } from '@/components/common/Modal'
+import { ReservationStatusBadge } from '@/components/common/StatusBadges'
 
 export const RESERVATION_STATUS_FILTERS: ['all' | ReservationStatus, string][] = [
   ['all', 'All'],

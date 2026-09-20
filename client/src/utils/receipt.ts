@@ -1,5 +1,5 @@
-import type { Reservation } from './types'
-import { formatDate, formatDateTime, formatTime12 } from './format'
+import type { Reservation } from '@/types'
+import { formatDate, formatDateTime, formatTime12 } from '@/utils/format'
 const PW = 595; const PH = 842; const MG = 56; const VX = 210; const BT = 80
 const cl = (v: string): string => v.replaceAll(' ', ' ').replaceAll('‘', "'").replaceAll('’', "'").replaceAll('“', '"').replaceAll('”', '"').replaceAll('–', '-').replaceAll('—', '-').replaceAll('•', '-').replaceAll('…', '...').replaceAll('₱', 'PHP ').replaceAll(/[^\x20-\x7e\xa0-\xff]/g, '?')
 const es = (v: string): string => cl(v).replaceAll('\\', '\\\\').replaceAll('(', '\\(').replaceAll(')', '\\)')

@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
-import { createTable, fetchTables, setTableStatus, updateTable } from '../../api/tables'
-import type { DiningTable, TableStatus } from '../../lib/types'
-import { tableLabel } from '../../lib/format'
-import { Button } from '../../components/ui/controls'
-import { PageHeader, Spinner, EmptyState, ErrorState } from '../../components/ui/display'
-import { TableStatusBadge } from '../../components/ui/badges'
-import { ConfirmDialog } from '../../components/ui/Modal'
-import { useAuth } from '../../lib/auth'
-import { TableFormModal } from './TableFormModal'
+import { createTable, fetchTables, setTableStatus, updateTable } from '@/services/api/tables'
+import type { DiningTable, TableStatus } from '@/types'
+import { tableLabel } from '@/utils/format'
+import { Button } from '@/components/common/FormControls'
+import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { TableStatusBadge } from '@/components/common/StatusBadges'
+import { ConfirmDialog } from '@/components/common/Modal'
+import { useAuth } from '@/contexts/AuthContext'
+import { TableFormModal } from '@/features/tables/components/TableFormModal'
 
 const TABLE_STATUSES: TableStatus[] = ['available', 'reserved', 'occupied', 'cleaning', 'unavailable']
 

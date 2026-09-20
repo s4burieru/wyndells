@@ -1,7 +1,7 @@
 import { type ReactNode } from 'react'
 import { Building2Icon, CalendarDaysIcon, MailIcon, MapPinIcon, PhoneIcon } from 'lucide-react'
-import { Badge } from '../../components/ui/badge'
-import { Button } from '../../components/ui/controls'
+import { Badge } from '@/components/ui/badge'
+import { Button } from '@/components/common/FormControls'
 import {
   Sheet,
   SheetContent,
@@ -9,10 +9,10 @@ import {
   SheetFooter,
   SheetHeader,
   SheetTitle,
-} from '../../components/ui/sheet'
-import { UserAvatar } from '../../components/dashboard/UserAvatar'
-import { formatDateTime, roleBadgeClass, roleLabel } from '../../lib/format'
-import type { SafeUser } from '../../lib/types'
+} from '@/components/ui/sheet'
+import { UserAvatar } from '@/components/common/UserAvatar'
+import { formatDateTime, roleBadgeClass, roleLabel } from '@/utils/format'
+import type { SafeUser } from '@/types'
 
 function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (

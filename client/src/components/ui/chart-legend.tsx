@@ -1,6 +1,6 @@
 "use client"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@/utils/cn"
 import { getPayloadConfigFromPayload, useChart } from "./chart"
 
 export function ChartLegendContent({

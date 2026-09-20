@@ -1,6 +1,6 @@
 import { StarIcon } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Card } from '../ui/card'
+import { Card } from '@/components/ui/card'
 
 export function StatCard({
   label,

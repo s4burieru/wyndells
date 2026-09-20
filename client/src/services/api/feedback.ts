@@ -1,5 +1,5 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import type {  Feedback, FeedbackSummary  } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import type {  Feedback, FeedbackSummary  } from '@/types'
 
 export async function fetchPublicFeedback(branch?: string): Promise<FeedbackSummary[]> {
   const data = await apiRequest<{ feedback: FeedbackSummary[] }>(

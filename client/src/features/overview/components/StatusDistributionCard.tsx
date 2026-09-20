@@ -1,11 +1,11 @@
 import { useMemo } from "react"
 import { Bar, BarChart, CartesianGrid, Cell, LabelList, XAxis, YAxis } from "recharts"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card"
-import { ChartContainer, ChartTooltip, type ChartConfig } from "../ui/chart"
-import { ChartTooltipContent } from "../ui/chart-tooltip"
-import { reservationLabel } from "@/lib/format"
-import type { ReservationStatus } from "@/lib/types"
-import { STATUS_FILL } from "./charts"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
+import { ChartTooltipContent } from "@/components/ui/chart-tooltip"
+import { reservationLabel } from "@/utils/format"
+import type { ReservationStatus } from "@/types"
+import { STATUS_FILL } from "@/features/overview/components/chart-colors"
 
 const ORDER: ReservationStatus[] = ["pending", "confirmed", "completed", "cancelled", "rejected", "no-show"]
 

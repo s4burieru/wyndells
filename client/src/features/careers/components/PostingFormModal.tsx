@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type {  CareerDepartment, ManageableCareerPosting, PostingStatus  } from '../../lib/types'
-import { Button, Field, SelectInput, TextArea, TextInput } from '../../components/ui/controls'
-import { Modal } from '../../components/ui/Modal'
+import type {  CareerDepartment, ManageableCareerPosting, PostingStatus  } from '@/types'
+import { Button, Field, SelectInput, TextArea, TextInput } from '@/components/common/FormControls'
+import { Modal } from '@/components/common/Modal'
 
 export function PostingFormModal({
   posting,

@@ -1,11 +1,13 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import type {  MenuItem  } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import type {  MenuItem  } from '@/types'
 
 export async function fetchMenuItems(options: {
   branch?: string
   category?: string
   featuredOnly?: boolean
   includeUnavailable?: boolean
+  /** Staff screens set this so a deactivated branch's menu stays manageable. */
+  includeInactiveBranches?: boolean
   limit?: number
 } = {}): Promise<MenuItem[]> {
   const data = await apiRequest<{ items: MenuItem[] }>(
@@ -14,6 +16,7 @@ export async function fetchMenuItems(options: {
       category: options.category,
       featured: options.featuredOnly,
       includeUnavailable: options.includeUnavailable,
+      includeInactiveBranches: options.includeInactiveBranches,
       limit: options.limit,
     }),
   )

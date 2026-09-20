@@ -5,7 +5,7 @@ import type {
   ReservationStatus,
   Role,
   TableStatus,
-} from './types'
+} from '@/types'
 
 export function formatPrice(value: number): string {
   return `₱ ${value.toLocaleString('en-PH', { minimumFractionDigits: 0, maximumFractionDigits: 2 })}`

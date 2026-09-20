@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, Mail, MapPin, Phone, UtensilsCrossed } from 'lucide-react'
-import { fetchBranches } from '../../api/branches'
-import type { Branch } from '../../lib/types'
+import { fetchBranches } from '@/services/api/branches'
+import type { Branch } from '@/types'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
+import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
 
 export function BranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -51,7 +51,7 @@ export function BranchesPage() {
     <div className="container-wyndell py-12">
       <PageHeader
         title="Our branches"
-        subtitle="Four garden locations across Rizal. Choose the branch nearest you, then book a table online."
+        subtitle="Seven Wyndell's locations across Rizal and Metro Manila. Choose the branch nearest you, then book a table online."
         action={
           <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
             <Link to="/reserve">
@@ -82,7 +82,7 @@ export function BranchesPage() {
                       {branch.name}
                     </Link>
                   </CardTitle>
-                  <CardDescription>{branch.hours}</CardDescription>
+                  <CardDescription>{branch.hours || branch.city}</CardDescription>
                 </div>
               </div>
             </CardHeader>

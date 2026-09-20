@@ -1,23 +1,14 @@
 import { useEffect, useRef, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchBranches } from '../../api/branches'
-import { createReservation, fetchTimeSlots } from '../../api/reservations'
-import type {  Branch, Reservation, TimeSlot  } from '../../lib/types'
-import { friendlyError } from '../../lib/format'
-import { downloadReservationReceipt } from '../../lib/receipt'
-import { ReservationForm } from './ReservationForm'
-import { ReservationConfirmationPage } from './ReservationConfirmation'
+import { fetchBranches } from '@/services/api/branches'
+import { createReservation, fetchTimeSlots } from '@/services/api/reservations'
+import type {  Branch, Reservation, TimeSlot  } from '@/types'
+import { friendlyError } from '@/utils/format'
+import { downloadReservationReceipt } from '@/utils/receipt'
+import { ReservationForm, type ReservationFormValues } from '@/features/reservations/components/ReservationForm'
+import { ReservationConfirmationPage } from '@/features/reservations/components/ReservationConfirmation'
 
-export type ReservationFormData = {
-  branch: string
-  date: string
-  time: string
-  guests: string
-  customerName: string
-  email: string
-  contactNumber: string
-  specialRequests: string
-}
+export type ReservationFormData = ReservationFormValues
 
 const EMPTY_FORM: ReservationFormData = {
   branch: '',

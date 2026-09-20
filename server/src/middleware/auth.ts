@@ -1,6 +1,6 @@
 import { type NextFunction, type Request, type RequestHandler, type Response } from 'express'
 import jwt from 'jsonwebtoken'
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { ApiError } from '../utils/ApiError'
 
 export type UserRole = 'admin' | 'manager'

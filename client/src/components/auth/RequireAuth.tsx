@@ -1,6 +1,6 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
-import { useAuth } from '../lib/auth'
-import type { Role } from '../lib/types'
+import { useAuth } from '@/contexts/AuthContext'
+import type { Role } from '@/types'
 
 /**
  * Guards a staff route group. Renders the nested routes (via Outlet) when the

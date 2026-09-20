@@ -1,4 +1,4 @@
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { menuItemsTable, toMenuItem, toMenuItemWithBranch, type MenuItemRow, type MenuItemWithBranchRow } from '../models/MenuItem'
 import { branchesTable } from '../models/Branch'
 import { ApiError } from '../utils/ApiError'
@@ -11,6 +11,12 @@ const MENU_EDITABLE_FIELDS = ['name', 'description', 'price', 'category', 'image
 
 /** Select used for reads that embed the branch reference (mirrors mongoose `.populate`). */
 const MENU_SELECT = '*, branch:branch_id(id, name, code)'
+
+/**
+ * Select used for public reads. The inner join lets us filter on the branch, so
+ * dishes from a deactivated branch stay out of the public menu.
+ */
+const PUBLIC_MENU_SELECT = '*, branch:branch_id!inner(id, name, code)'
 
 async function assertMenuItemBranchAccess(id: string, actor: AuthUser): Promise<void> {
   const { data: match, error } = await getDb()
@@ -30,8 +36,16 @@ export async function listMenuItems(options: {
   includeUnavailable?: boolean
   featuredOnly?: boolean
   limit?: number
+  /** Staff views set this so a deactivated branch's menu stays manageable. */
+  includeInactiveBranches?: boolean
 }) {
-  let query = getDb().from(menuItemsTable).select(MENU_SELECT)
+  const publicRead = !options.includeInactiveBranches
+  const select: string = publicRead ? PUBLIC_MENU_SELECT : MENU_SELECT
+  let query = getDb().from(menuItemsTable).select(select)
+  if (publicRead) {
+    // Deactivated branches are hidden from the public QR menu (and the home page).
+    query = query.eq('branch.is_active', true)
+  }
   if (options.branch) {
     query = query.eq('branch_id', assertUuid(options.branch, 'branch'))
   }
@@ -52,7 +66,9 @@ export async function listMenuItems(options: {
   if (error) {
     throw new ApiError(500, 'Could not load menu items.')
   }
-  return (data ?? []).map((row) => toMenuItemWithBranch(row as MenuItemWithBranchRow))
+  // `select` is a runtime string (the public/staff selects differ), so the row
+  // type is widened by the client — cast as the model row before serializing.
+  return (data ?? []).map((row) => toMenuItemWithBranch(row as unknown as MenuItemWithBranchRow))
 }
 
 export async function getMenuItem(id: string) {

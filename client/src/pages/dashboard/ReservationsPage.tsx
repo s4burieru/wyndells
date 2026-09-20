@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { fetchReservations, updateReservationStatus } from '../../api/reservations'
-import type {  Reservation, ReservationStatus  } from '../../lib/types'
-import { friendlyError } from '../../lib/format'
-import { PageHeader, Spinner, EmptyState } from '../../components/ui/display'
-import { useAuth } from '../../lib/auth'
-import { RESERVATION_STATUS_FILTERS, ReservationDetailModal } from './ReservationManagement'
-import { ReservationsTable } from './ReservationsTable'
-import { TableAssignmentModal } from './TableAssignmentModal'
+import { fetchReservations, updateReservationStatus } from '@/services/api/reservations'
+import type {  Reservation, ReservationStatus  } from '@/types'
+import { friendlyError } from '@/utils/format'
+import { PageHeader, Spinner, EmptyState } from '@/components/common/PageHeader'
+import { useAuth } from '@/contexts/AuthContext'
+import { RESERVATION_STATUS_FILTERS, ReservationDetailModal } from '@/features/reservations/components/ReservationManagement'
+import { ReservationsTable } from '@/features/reservations/components/ReservationsTable'
+import { TableAssignmentModal } from '@/features/reservations/components/TableAssignmentModal'
 
 export function ManageReservationsPage() {
   const { user } = useAuth()

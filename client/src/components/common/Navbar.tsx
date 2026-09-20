@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
 import { ChevronDownIcon, MenuIcon, XIcon } from 'lucide-react'
-import { fetchBranches } from '../../api/branches'
-import type { Branch } from '../../lib/types'
-import { cn } from '@/lib/utils'
-import { Button } from '../ui/button'
-import { BrandLogo } from './Brand'
+import { fetchBranches } from '@/services/api/branches'
+import type { Branch } from '@/types'
+import { cn } from '@/utils/cn'
+import { Button } from '@/components/ui/button'
+import { BrandLogo } from '@/components/common/Brand'
 
 const NAV_LINKS: { to: string; label: string }[] = [
   { to: '/', label: 'Home' },

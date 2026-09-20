@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto'
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { feedbackTable, toFeedback, toFeedbackSummary, type FeedbackWithBranchRow } from '../models/Feedback'
 import { branchesTable } from '../models/Branch'
 import { ApiError } from '../utils/ApiError'
@@ -122,7 +122,12 @@ async function getFeedbackById(id: string) {
 
 /** Public listing — never exposes contact information. */
 export async function listPublicFeedback(branchId?: string, limit = 20) {
-  let query = getDb().from(feedbackTable).select('customer_name, rating, comment, created_at, branch:branch_id(id, name, code)')
+  // The inner join lets us filter on the branch so reviews from a deactivated
+  // branch no longer appear on the public reviews pages.
+  let query = getDb()
+    .from(feedbackTable)
+    .select('customer_name, rating, comment, created_at, branch:branch_id!inner(id, name, code)')
+    .eq('branch.is_active', true)
   if (branchId) {
     query = query.eq('branch_id', assertUuid(branchId, 'branch'))
   }

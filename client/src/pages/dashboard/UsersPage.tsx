@@ -1,20 +1,20 @@
 import { useEffect, useState } from 'react'
 import { EllipsisIcon, PlusIcon } from 'lucide-react'
-import { createUser, fetchUsers, setUserActive, updateUser } from '../../api/users'
-import type { SafeUser } from '../../lib/types'
-import { friendlyError, roleBadgeClass, roleLabel } from '../../lib/format'
-import { Button } from '../../components/ui/controls'
-import { Badge } from '../../components/ui/badge'
-import { Button as IconButton } from '../../components/ui/button'
-import { Card } from '../../components/ui/card'
+import { createUser, fetchUsers, setUserActive, updateUser } from '@/services/api/users'
+import type { SafeUser } from '@/types'
+import { friendlyError, roleBadgeClass, roleLabel } from '@/utils/format'
+import { Button } from '@/components/common/FormControls'
+import { Badge } from '@/components/ui/badge'
+import { Button as IconButton } from '@/components/ui/button'
+import { Card } from '@/components/ui/card'
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
-} from '../../components/ui/dropdown-menu'
-import { Skeleton } from '../../components/ui/skeleton'
+} from '@/components/ui/dropdown-menu'
+import { Skeleton } from '@/components/ui/skeleton'
 import {
   Table,
   TableBody,
@@ -22,13 +22,13 @@ import {
   TableHead,
   TableHeader,
   TableRow,
-} from '../../components/ui/table'
-import { Tabs, TabsList, TabsTrigger } from '../../components/ui/tabs'
-import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
-import { ConfirmDialog } from '../../components/ui/Modal'
-import { UserAvatar } from '../../components/dashboard/UserAvatar'
-import { UserFormModal } from './UserFormModal'
-import { UserProfileSheet } from './UserProfileSheet'
+} from '@/components/ui/table'
+import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
+import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
+import { ConfirmDialog } from '@/components/common/Modal'
+import { UserAvatar } from '@/components/common/UserAvatar'
+import { UserFormModal } from '@/features/users/components/UserFormModal'
+import { UserProfileSheet } from '@/features/users/components/UserProfileSheet'
 
 type UserTab = 'all' | 'admin' | 'manager' | 'inactive'
 

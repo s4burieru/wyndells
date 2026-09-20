@@ -1,4 +1,4 @@
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { diningTablesTable, toDiningTable, toDiningTableWithBranch, type DiningTableRow, type DiningTableWithBranchRow } from '../models/DiningTable'
 import { branchesTable } from '../models/Branch'
 import { ApiError, isDuplicateKeyError } from '../utils/ApiError'

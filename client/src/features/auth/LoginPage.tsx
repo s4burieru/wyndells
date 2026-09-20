@@ -1,11 +1,11 @@
 import { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { login } from '../../api/auth'
-import { useAuth } from '../../lib/auth'
-import { friendlyError } from '../../lib/format'
-import { Button, Field, TextInput } from '../../components/ui/controls'
-import { Card } from '../../components/ui/display'
-import { BrandLogo } from '../../components/public/Brand'
+import { login } from '@/services/api/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { friendlyError } from '@/utils/format'
+import { Button, Field, TextInput } from '@/components/common/FormControls'
+import { Card } from '@/components/common/PageHeader'
+import { BrandLogo } from '@/components/common/Brand'
 
 export function StaffLoginPage() {
   const { signIn } = useAuth()

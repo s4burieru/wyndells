@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { usersTable } from '../models/User'
 import { branchesTable } from '../models/Branch'
 import { ApiError, isDuplicateKeyError } from '../utils/ApiError'

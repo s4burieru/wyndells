@@ -1,5 +1,5 @@
 import { createHash, randomUUID } from 'node:crypto'
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import {
   careerPostingsTable,
   toPosting,

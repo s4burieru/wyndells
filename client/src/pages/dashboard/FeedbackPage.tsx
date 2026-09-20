@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { deleteFeedback, fetchManageableFeedback } from '../../api/feedback'
-import type {  Feedback  } from '../../lib/types'
-import { formatDateTime } from '../../lib/format'
-import { PageHeader, Spinner, EmptyState, ErrorState } from '../../components/ui/display'
-import { StarRating } from '../../components/ui/badges'
-import { useAuth } from '../../lib/auth'
+import { deleteFeedback, fetchManageableFeedback } from '@/services/api/feedback'
+import type {  Feedback  } from '@/types'
+import { formatDateTime } from '@/utils/format'
+import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { StarRating } from '@/components/common/StatusBadges'
+import { useAuth } from '@/contexts/AuthContext'
 
 export function ManageFeedbackPage() {
   const { user } = useAuth()

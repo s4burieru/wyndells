@@ -1,7 +1,7 @@
 import { useState } from 'react'
-import type {  Branch  } from '../../lib/types'
-import { Button, Field, TextInput } from '../../components/ui/controls'
-import { Modal } from '../../components/ui/Modal'
+import type {  Branch  } from '@/types'
+import { Button, Field, TextInput } from '@/components/common/FormControls'
+import { Modal } from '@/components/common/Modal'
 
 export function BranchFormModal({
   branch,
@@ -29,10 +29,10 @@ export function BranchFormModal({
       <div className="grid gap-4">
         <div className="grid gap-4 sm:grid-cols-2">
           <Field label="Branch name">
-            <TextInput value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Sampaloc, Tanay" />
+            <TextInput value={name} onChange={(event) => setName(event.target.value)} placeholder="e.g. Wyndell's Town" />
           </Field>
           <Field label="Code" hint="Used for URLs and reports.">
-            <TextInput value={code} onChange={(event) => setCode(event.target.value)} placeholder="e.g. sampaloc-tanay" />
+            <TextInput value={code} onChange={(event) => setCode(event.target.value)} placeholder="e.g. wyndells-town" />
           </Field>
         </div>
         <div className="grid gap-4 sm:grid-cols-2">
@@ -52,7 +52,7 @@ export function BranchFormModal({
           </Field>
         </div>
         <Field label="Opening hours">
-          <TextInput value={hours} onChange={(event) => setHours(event.target.value)} placeholder="10:00 AM – 10:00 PM" />
+          <TextInput value={hours} onChange={(event) => setHours(event.target.value)} placeholder="Open daily · 10:00 AM – 10:00 PM" />
         </Field>
         <Field label="Description">
           <TextInput value={description} onChange={(event) => setDescription(event.target.value)} />

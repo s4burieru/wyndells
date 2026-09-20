@@ -1,5 +1,5 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import type { Reservation, ReservationListResult, ReservationStatus, TimeSlot } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import type { Reservation, ReservationListResult, ReservationStatus, TimeSlot } from '@/types'
 
 export async function createReservation(payload: Record<string, unknown>): Promise<Reservation> {
   const data = await apiRequest<{ reservation: Reservation }>('/api/reservations', {

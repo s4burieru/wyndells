@@ -1,5 +1,5 @@
 import { Router } from 'express'
-import { getDbState } from '../config/db'
+import { getDbState } from '../config/database'
 
 const router = Router()
 

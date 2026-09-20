@@ -1,5 +1,5 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import type { ApplicationStatus, CareerPosting, JobApplication, ManageableCareerPosting } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import type { ApplicationStatus, CareerPosting, JobApplication, ManageableCareerPosting } from '@/types'
 
 export async function fetchCareers(branch?: string): Promise<CareerPosting[]> {
   const data = await apiRequest<{ postings: CareerPosting[] }>(

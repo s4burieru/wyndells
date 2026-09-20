@@ -1,6 +1,6 @@
 import { Outlet } from 'react-router-dom'
-import { PublicFooter } from './Footer'
-import { PublicNavbar } from './Navbar'
+import { PublicFooter } from '@/components/common/Footer'
+import { PublicNavbar } from '@/components/common/Navbar'
 
 export function PublicLayout() {
   return (

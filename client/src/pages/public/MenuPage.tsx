@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { Link, useSearchParams } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, Search, UtensilsCrossed } from 'lucide-react'
-import { fetchBranches } from '../../api/branches'
-import { fetchMenuItems } from '../../api/menu'
-import type { Branch, MenuCategory, MenuItem } from '../../lib/types'
-import { formatPrice, MENU_CATEGORIES } from '../../lib/format'
+import { fetchBranches } from '@/services/api/branches'
+import { fetchMenuItems } from '@/services/api/menu'
+import type { Branch, MenuCategory, MenuItem } from '@/types'
+import { formatPrice, MENU_CATEGORIES } from '@/utils/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -13,7 +13,7 @@ import { Label } from '@/components/ui/label'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
+import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
 
 export function MenuPage() {
   const [branches, setBranches] = useState<Branch[]>([])

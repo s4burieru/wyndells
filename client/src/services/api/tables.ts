@@ -1,5 +1,5 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import { type DiningTable } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import { type DiningTable } from '@/types'
 
 export async function fetchTables(options: { branch?: string } = {}): Promise<DiningTable[]> {
   const data = await apiRequest<{ tables: DiningTable[] }>(apiQuery('/api/tables', { branch: options.branch }))

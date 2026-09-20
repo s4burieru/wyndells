@@ -1,14 +1,14 @@
 import { useEffect, useState } from 'react'
 import { ArrowRight, Briefcase } from 'lucide-react'
-import { fetchCareers } from '../../api/careers'
-import type { CareerPosting } from '../../lib/types'
-import { departmentLabel } from '../../lib/format'
+import { fetchCareers } from '@/services/api/careers'
+import type { CareerPosting } from '@/types'
+import { departmentLabel } from '@/utils/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
-import { CareerApplicationForm } from './CareerApplicationForm'
+import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
+import { CareerApplicationForm } from '@/features/careers/components/CareerApplicationForm'
 
 export function CareersPage() {
   const [postings, setPostings] = useState<CareerPosting[]>([])
@@ -59,7 +59,7 @@ export function CareersPage() {
     <div className="container-wyndell py-10">
       <PageHeader
         title="Join the Wyndell's family"
-        subtitle="We're always looking for warm, hardworking people for our restaurants and cafes across Rizal. Pick a position below to get started."
+        subtitle="We're always looking for warm, hardworking people for our restaurants, cafe and farm across Rizal and Metro Manila. Pick a position below to get started."
       />
 
       {postings.length === 0 ? (

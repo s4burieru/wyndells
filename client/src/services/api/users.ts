@@ -1,5 +1,5 @@
-import { apiRequest } from '../lib/api'
-import type { SafeUser } from '../lib/types'
+import { apiRequest } from '@/services/api/client'
+import type { SafeUser } from '@/types'
 
 /** JSON for profile fields, or `multipart/form-data` when a photo is attached. */
 type UserPayload = Record<string, unknown> | FormData

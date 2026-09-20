@@ -1,7 +1,7 @@
-import type {  Reservation, ReservationStatus  } from '../../lib/types'
-import { formatDate, formatTime12 } from '../../lib/format'
-import { ReservationStatusBadge } from '../../components/ui/badges'
-import { StatusActions } from './ReservationManagement'
+import type {  Reservation, ReservationStatus  } from '@/types'
+import { formatDate, formatTime12 } from '@/utils/format'
+import { ReservationStatusBadge } from '@/components/common/StatusBadges'
+import { StatusActions } from '@/features/reservations/components/ReservationManagement'
 
 export function ReservationsTable({
   items,

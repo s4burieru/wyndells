@@ -15,11 +15,11 @@ import {
 } from 'lucide-react'
 import { useState, type ComponentType } from 'react'
 import { toast } from 'sonner'
-import { updateProfile } from '../../api/auth'
-import { useAuth } from '../../lib/auth'
-import { friendlyError, roleLabel } from '../../lib/format'
-import { Button } from '../ui/button'
-import { Separator } from '../ui/separator'
+import { updateProfile } from '@/services/api/auth'
+import { useAuth } from '@/contexts/AuthContext'
+import { friendlyError, roleLabel } from '@/utils/format'
+import { Button } from '@/components/ui/button'
+import { Separator } from '@/components/ui/separator'
 import {
   Sidebar,
   SidebarContent,
@@ -35,11 +35,11 @@ import {
   SidebarProvider,
   SidebarRail,
   SidebarTrigger,
-} from '../ui/sidebar'
-import { BrandMark, Wordmark } from '../public/Brand'
-import { UserAvatar } from './UserAvatar'
-import { UserFormModal } from '../../pages/dashboard/UserFormModal'
-import { UserProfileSheet } from '../../pages/dashboard/UserProfileSheet'
+} from '@/components/ui/sidebar'
+import { BrandMark, Wordmark } from '@/components/common/Brand'
+import { UserAvatar } from '@/components/common/UserAvatar'
+import { UserFormModal } from '@/features/users/components/UserFormModal'
+import { UserProfileSheet } from '@/features/users/components/UserProfileSheet'
 
 type NavItem = {
   to: string

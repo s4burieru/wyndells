@@ -1,4 +1,4 @@
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { branchesTable, toBranch, type BranchRow } from '../models/Branch'
 import { ApiError, isDuplicateKeyError } from '../utils/ApiError'
 import { pickFields } from '../utils/pick'
@@ -45,11 +45,16 @@ export async function listBranches(includeInactive = false) {
   return (data ?? []).map((row) => toBranch(row as BranchRow))
 }
 
-export async function getBranch(idOrCode: string) {
+export async function getBranch(idOrCode: string, includeInactive = false) {
   // Accept either a uuid (`/branches/<id>`) or the human-friendly branch
   // code used in public URLs (`/branches/<code>`).
   const lookup = isUuid(idOrCode) ? { field: 'id', value: idOrCode } : { field: 'code', value: String(idOrCode).trim().toLowerCase() }
-  const query = getDb().from(branchesTable).select('*')
+  let query = getDb().from(branchesTable).select('*')
+  if (!includeInactive) {
+    // Deactivated branches are hidden from public browsing, matching what the
+    // dashboard promises when a branch is switched off.
+    query = query.eq('is_active', true)
+  }
   const { data, error } = await (lookup.field === 'id'
     ? query.eq('id', lookup.value)
     : query.eq('code', lookup.value)).maybeSingle()

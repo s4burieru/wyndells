@@ -1,18 +1,18 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, MapPin, MessageSquare, Star, UtensilsCrossed } from 'lucide-react'
-import { fetchBranches } from '../../api/branches'
-import { fetchMenuItems } from '../../api/menu'
-import { fetchPublicFeedback } from '../../api/feedback'
-import type { Branch, FeedbackSummary, MenuItem } from '../../lib/types'
-import { formatPrice } from '../../lib/format'
+import { fetchBranches } from '@/services/api/branches'
+import { fetchMenuItems } from '@/services/api/menu'
+import { fetchPublicFeedback } from '@/services/api/feedback'
+import type { Branch, FeedbackSummary, MenuItem } from '@/types'
+import { formatPrice } from '@/utils/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { StarRating } from '../../components/ui/badges'
-import { EmptyState } from '../../components/ui/display'
+import { StarRating } from '@/components/common/StatusBadges'
+import { EmptyState } from '@/components/common/PageHeader'
 
 export function HomePage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -72,7 +72,7 @@ function HeroSection() {
             <span className="text-wyndell-orange-dark">This is Wyndell&rsquo;s.</span>
           </h1>
           <p className="mt-5 max-w-xl text-lg leading-relaxed text-wyndell-ink">
-            Four garden branches across Rizal serving charcoal-grilled favourites,
+            Seven branches across Rizal and Metro Manila serving charcoal-grilled favourites,
             seasonal freshness, and tables made for sharing.
           </p>
           <div className="mt-8 flex flex-wrap items-center gap-3">
@@ -102,10 +102,10 @@ function AboutSection() {
         <CardHeader>
           <CardTitle className="font-display text-3xl font-bold text-wyndell-forest">Rooted in Rizal, grown for family</CardTitle>
           <CardDescription className="text-lg leading-relaxed">
-            Wyndell&rsquo;s started as a single al fresco kitchen in Sampaloc, Tanay — a small garden where
-            neighbours gathered around the grill. Today our branches in Sampaloc, Bayan, Antipolo, and Masinag
-            share the same promise: ingredients dialed toward fresh, plates full of warmth, and a setting that
-            always feels like outdoors.
+            Wyndell&rsquo;s started as a single al fresco kitchen along Marilaque Highway in Tanay — a small garden
+            where neighbours gathered around the grill. Today our seven branches, from Tanay and Antipolo to
+            Arca South in Taguig, share the same promise: ingredients dialed toward fresh, plates full of
+            warmth, and a setting that always feels like outdoors.
           </CardDescription>
         </CardHeader>
       </Card>
@@ -156,11 +156,13 @@ function BranchesSection({ branches, loaded }: { branches: Branch[]; loaded: boo
               </CardTitle>
               <CardDescription>{branch.city ?? branch.address}</CardDescription>
             </CardHeader>
-            <CardContent>
-              <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
-                {branch.hours}
-              </Badge>
-            </CardContent>
+            {branch.hours ? (
+              <CardContent>
+                <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
+                  {branch.hours}
+                </Badge>
+              </CardContent>
+            ) : null}
           </Card>
         ))}
       </div>

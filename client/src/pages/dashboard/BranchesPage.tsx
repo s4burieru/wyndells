@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { createBranch, fetchBranches, setBranchActive, updateBranch } from '../../api/branches'
-import type {  Branch  } from '../../lib/types'
-import { Button } from '../../components/ui/controls'
-import { PageHeader, Spinner, EmptyState, ErrorState } from '../../components/ui/display'
-import { ConfirmDialog } from '../../components/ui/Modal'
-import { BranchFormModal } from './BranchFormModal'
+import { createBranch, fetchBranches, setBranchActive, updateBranch } from '@/services/api/branches'
+import type {  Branch  } from '@/types'
+import { Button } from '@/components/common/FormControls'
+import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { ConfirmDialog } from '@/components/common/Modal'
+import { BranchFormModal } from '@/features/branches/components/BranchFormModal'
 
 export function ManageBranchesPage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -63,8 +63,7 @@ export function ManageBranchesPage() {
                 <div>
                   <h2 className="text-lg font-bold text-wyndell-forest">{branch.name}</h2>
                   <p className="text-xs text-neutral-500">
-                    {branch.city} · {branch.hours}
-                    {!branch.isActive ? ' · Inactive' : ''}
+                    {[branch.city, branch.hours, branch.isActive ? '' : 'Inactive'].filter(Boolean).join(' · ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">

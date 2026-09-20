@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { assignTableToReservation } from '../../api/reservations'
-import { fetchTables } from '../../api/tables'
-import type {  DiningTable, Reservation  } from '../../lib/types'
-import { friendlyError, formatDate, formatTime12 } from '../../lib/format'
-import { Modal } from '../../components/ui/Modal'
+import { assignTableToReservation } from '@/services/api/reservations'
+import { fetchTables } from '@/services/api/tables'
+import type {  DiningTable, Reservation  } from '@/types'
+import { friendlyError, formatDate, formatTime12 } from '@/utils/format'
+import { Modal } from '@/components/common/Modal'
 
 export function TableAssignmentModal({
   reservation,

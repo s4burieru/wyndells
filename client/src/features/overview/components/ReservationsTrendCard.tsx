@@ -1,11 +1,11 @@
 import { useMemo } from "react"
 import { Area, AreaChart, CartesianGrid, XAxis, YAxis } from "recharts"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card"
-import { ChartContainer, ChartLegend, ChartTooltip, type ChartConfig } from "../ui/chart"
-import { ChartTooltipContent } from "../ui/chart-tooltip"
-import { ChartLegendContent } from "../ui/chart-legend"
-import { formatDate } from "@/lib/format"
-import type { ReservationTrendPoint } from "@/lib/types"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartLegend, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
+import { ChartTooltipContent } from "@/components/ui/chart-tooltip"
+import { ChartLegendContent } from "@/components/ui/chart-legend"
+import { formatDate } from "@/utils/format"
+import type { ReservationTrendPoint } from "@/types"
 
 function shortDay(date: string): string {
   return formatDate(date).replace(/, \d{4}$/, "")

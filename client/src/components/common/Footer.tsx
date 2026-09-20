@@ -1,5 +1,5 @@
 import { Link } from 'react-router-dom'
-import { BrandLogo } from './Brand'
+import { BrandLogo } from '@/components/common/Brand'
 
 export function PublicFooter() {
   return (
@@ -9,8 +9,8 @@ export function PublicFooter() {
           <div>
             <BrandLogo />
             <p className="mt-3 text-sm leading-relaxed text-wyndell-ink">
-              Warm, natural, home-style dining across Rizal. Fresh food, garden spaces,
-              and tables that feel like family.
+              Warm, natural, home-style dining across Rizal and Metro Manila. Fresh food, garden
+              spaces, and tables that feel like family.
             </p>
           </div>
           <div>
@@ -27,17 +27,21 @@ export function PublicFooter() {
           <div>
             <h3 className="text-sm font-semibold text-wyndell-forest">Branches</h3>
             <ul className="mt-3 space-y-2 text-sm text-wyndell-ink">
-              <li>Sampaloc, Tanay</li>
-              <li>Tanay Bayan</li>
-              <li>Antipolo</li>
-              <li>Masinag</li>
+              {/* Keep in sync with BRANCH_DATA in server/src/db/seed.ts. */}
+              <li>Wyndell&rsquo;s Al Fresco</li>
+              <li>Wyndell&rsquo;s at The Perch Highland Park</li>
+              <li>Wyndell&rsquo;s Town</li>
+              <li>Wyndell&rsquo;s Masinag</li>
+              <li>Wyndell&rsquo;s Arca South</li>
+              <li>Wyndell&rsquo;s Bed and Breakfast</li>
+              <li>Wyndell&rsquo;s Farm</li>
             </ul>
           </div>
           <div>
             <h3 className="text-sm font-semibold text-wyndell-forest">Find us</h3>
             <ul className="mt-3 space-y-2 text-sm text-wyndell-ink">
-              <li>Rizal, Philippines</li>
-              <li>Open daily, 10:00 AM – 10:00 PM</li>
+              <li>Rizal &amp; Metro Manila, Philippines</li>
+              <li>Opening hours vary by branch</li>
               <li>
                 <Link to="/staff/login" className="font-medium text-wyndell-green-dark hover:underline">
                   Staff sign in

@@ -1,5 +1,5 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import type {  Overview  } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import type {  Overview  } from '@/types'
 
 export async function fetchOverview(): Promise<Overview> {
   const data = await apiRequest<{ overview: Overview }>('/api/reports/overview')

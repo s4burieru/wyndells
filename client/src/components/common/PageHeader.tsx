@@ -1,16 +1,16 @@
 import { type ReactNode } from 'react'
 import { CircleAlert, Loader2Icon } from 'lucide-react'
-import { cn } from '@/lib/utils'
-import { Alert, AlertDescription } from './alert'
-import { Badge as ShadcnBadge } from './badge'
+import { cn } from '@/utils/cn'
+import { Alert, AlertDescription } from '@/components/ui/alert'
+import { Badge as ShadcnBadge } from '@/components/ui/badge'
 import {
   Card as ShadcnCard,
   CardAction,
   CardDescription,
   CardHeader as ShadcnCardHeader,
   CardTitle,
-} from './card'
-import { Button } from './button'
+} from '@/components/ui/card'
+import { Button } from '@/components/ui/button'
 
 /** App card surface built on the shadcn/ui card primitives. */
 export function Card({ children, className = '' }: { children: ReactNode; className?: string }) {

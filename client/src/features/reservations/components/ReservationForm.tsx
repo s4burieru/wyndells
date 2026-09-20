@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
 import { ArrowRight, CalendarCheck, CircleAlert, Clock3, Loader2, UserRound } from 'lucide-react'
-import type { Branch, TimeSlot } from '../../lib/types'
-import { formatDate, formatTime12, todayLocal } from '../../lib/format'
-import { Field, TextArea, TextInput } from '../../components/ui/controls'
+import type { Branch, TimeSlot } from '@/types'
+import { formatDate, formatTime12, todayLocal } from '@/utils/format'
+import { Field, TextArea, TextInput } from '@/components/common/FormControls'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
@@ -10,8 +10,18 @@ import { Badge } from '@/components/ui/badge'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { ErrorState, PageHeader } from '../../components/ui/display'
-import type { ReservationFormData } from './Reserve'
+import { ErrorState, PageHeader } from '@/components/common/PageHeader'
+
+export type ReservationFormValues = {
+  branch: string
+  date: string
+  time: string
+  guests: string
+  customerName: string
+  email: string
+  contactNumber: string
+  specialRequests: string
+}
 
 export function ReservationForm({
   branches,
@@ -26,14 +36,14 @@ export function ReservationForm({
   onSubmit,
 }: {
   branches: Branch[]
-  form: ReservationFormData
+  form: ReservationFormValues
   slots: TimeSlot[]
   loadingBranches: boolean
   loadingSlots: boolean
   slotError: string
   submitting: boolean
   error: string
-  onUpdate: (field: keyof ReservationFormData, value: string) => void
+  onUpdate: (field: keyof ReservationFormValues, value: string) => void
   onSubmit: () => void
 }) {
   return (
@@ -170,11 +180,11 @@ function SlotPicker({
   error,
   onUpdate,
 }: {
-  form: ReservationFormData
+  form: ReservationFormValues
   slots: TimeSlot[]
   loading: boolean
   error: string
-  onUpdate: (field: keyof ReservationFormData, value: string) => void
+  onUpdate: (field: keyof ReservationFormValues, value: string) => void
 }) {
   return (
     <div className="grid gap-2" role="group" aria-label="Available times">

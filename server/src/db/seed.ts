@@ -3,22 +3,26 @@ import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import bcrypt from 'bcryptjs'
-import { getDb } from './config/db'
-import { branchesTable, type BranchRow } from './models/Branch'
-import { usersTable } from './models/User'
-import { diningTablesTable } from './models/DiningTable'
-import { menuItemsTable } from './models/MenuItem'
-import { reservationsTable } from './models/Reservation'
-import { feedbackTable } from './models/Feedback'
-import { careerPostingsTable } from './models/CareerPosting'
-import { jobApplicationsTable } from './models/JobApplication'
-import { addDays, todayString } from './utils/validate'
+import { getDb } from '../config/database'
+import { branchesTable, type BranchRow } from '../models/Branch'
+import { usersTable } from '../models/User'
+import { diningTablesTable } from '../models/DiningTable'
+import { menuItemsTable } from '../models/MenuItem'
+import { reservationsTable } from '../models/Reservation'
+import { feedbackTable } from '../models/Feedback'
+import { careerPostingsTable } from '../models/CareerPosting'
+import { jobApplicationsTable } from '../models/JobApplication'
+import { addDays, todayString } from '../utils/validate'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Load env from the project root (.env), falling back to server/.env so the seed
 // works whether launched from the root or from inside the workspace.
-for (const envPath of [path.resolve(__dirname, '../.env'), path.resolve(process.cwd(), '.env')]) {
+for (const envPath of [
+  path.resolve(__dirname, '../../../.env'),
+  path.resolve(__dirname, '../../.env'),
+  path.resolve(process.cwd(), '.env'),
+]) {
   if (existsSync(envPath)) {
     dotenv.config({ path: envPath })
     break
@@ -29,54 +33,101 @@ const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@wyndells.com'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!'
 const MANAGER_PASSWORD = process.env.MANAGER_PASSWORD || 'Manager123!'
 
+/**
+ * `tsx seed.ts --sync` (npm run seed:sync) treats BRANCH_DATA as the source of
+ * truth: existing branches are refreshed to match it and any other active branch
+ * is deactivated. Without the flag the seed only ever *adds* branches, so staff
+ * edits made in the dashboard are never overwritten.
+ */
+const SYNC_BRANCHES = process.argv.includes('--sync')
+
+/**
+ * Every Wyndell's branch (restaurants, cafe, rooms and events). The seed upserts
+ * on `code`, so renaming or adding an entry here never duplicates a branch that
+ * already exists in Supabase.
+ */
 const BRANCH_DATA = [
   {
-    name: 'Sampaloc, Tanay',
-    code: 'sampaloc-tanay',
-    address: 'Sampaloc, Tanay, Rizal',
+    name: "Wyndell's Al Fresco",
+    code: 'wyndells-al-fresco',
+    address: 'Km. 58 Marikina-Infanta (Marilaque) Highway, Tanay, Rizal',
     city: 'Tanay',
-    contactNumber: '0917 123 4567',
-    email: 'sampaloc@wyndells.com',
-    hours: '10:00 AM – 10:00 PM',
+    contactNumber: '0960 294 4843',
+    email: 'wyndellsalfresco@gmail.com',
+    hours: 'Open daily · 7:00 AM – 10:00 PM',
     description:
-      'Our first home — an open-air garden restaurant surrounded by greenery, perfect for family dining and quiet afternoons.',
+      'The original open-air garden along Marilaque Highway — mountain views, a cafe, a samgyupsal area, and our home-style Filipino grill.',
   },
   {
-    name: 'Tanay Bayan',
-    code: 'tanay-bayan',
-    address: 'Bayan, Tanay, Rizal',
-    city: 'Tanay',
-    contactNumber: '0917 234 5678',
-    email: 'bayan@wyndells.com',
-    hours: '10:00 AM – 10:00 PM',
-    description:
-      'Al fresco dining under the trees with rustic wooden tables and a laid-back provincial atmosphere.',
-  },
-  {
-    name: 'Antipolo',
-    code: 'antipolo',
-    address: 'Antipolo, Rizal',
+    name: "Wyndell's at The Perch Highland Park",
+    code: 'the-perch-highland-park',
+    address: 'The Perch Highland Park, Antipolo, Rizal',
     city: 'Antipolo',
-    contactNumber: '0917 345 6789',
-    email: 'antipolo@wyndells.com',
-    hours: '10:00 AM – 9:30 PM',
+    contactNumber: '',
+    email: '',
+    hours: 'Open daily · 10:00 AM – 10:00 PM',
     description:
-      'A breezy modern branch with wide verandas, native plants, and space for large group gatherings.',
+      'Highland Park dining with sweeping sunset views over the Sierra Madre — garden tables, coffee, and plates made for sharing.',
   },
   {
-    name: 'Masinag',
+    name: "Wyndell's Town",
+    code: 'wyndells-town',
+    address: 'Tanay, Rizal',
+    city: 'Tanay',
+    contactNumber: '',
+    email: '',
+    hours: 'Open daily · 10:00 AM – 10:00 PM',
+    description:
+      'Our town centre table — Filipino comfort food and cafe favourites in the middle of Tanay, made for quick lunches and long kwentuhan.',
+  },
+  {
+    name: "Wyndell's Masinag",
     code: 'masinag',
-    address: 'Masinag, Rizal',
-    city: 'Masinag',
-    contactNumber: '0917 456 7890',
-    email: 'masinag@wyndells.com',
+    address: 'Masinag, Antipolo, Rizal',
+    city: 'Antipolo',
+    contactNumber: '',
+    email: '',
     hours: '10:00 AM – 9:30 PM',
     description:
       'Conveniently located for travellers — a warm, garden-style stop with the same home-style Filipino grill.',
   },
+  {
+    name: "Wyndell's Arca South",
+    code: 'arca-south',
+    address: 'Arca South, Taguig, Metro Manila',
+    city: 'Taguig',
+    contactNumber: '',
+    email: '',
+    hours: 'Open daily · 10:00 AM – 10:00 PM',
+    description:
+      "Our first city address in Metro Manila — the Wyndell's garden experience inside Arca South, Taguig.",
+  },
+  {
+    name: "Wyndell's Bed and Breakfast",
+    code: 'bed-and-breakfast',
+    address: 'Tanay, Rizal',
+    city: 'Tanay',
+    contactNumber: '',
+    email: '',
+    hours: '',
+    description:
+      'Rooms in the cool hills of Tanay with breakfast from our own kitchen — a quiet stay for weekenders and riders.',
+  },
+  {
+    name: "Wyndell's Farm",
+    code: 'farm',
+    address: 'Tanay, Rizal',
+    city: 'Tanay',
+    contactNumber: '',
+    email: '',
+    hours: 'Open daily · 8:00 AM – 5:00 PM',
+    description:
+      'The farm that supplies our kitchens — a working garden with farm-to-table dining and space for group events.',
+  },
 ]
 
 const TABLE_TEMPLATE = [
+  // Fallback floor plan, used only when the content-source branch has no tables.
   { tableNumber: 'T1', capacity: 2, location: 'Al Fresco' },
   { tableNumber: 'T2', capacity: 2, location: 'Al Fresco' },
   { tableNumber: 'T3', capacity: 4, location: 'Garden' },
@@ -88,6 +139,7 @@ const TABLE_TEMPLATE = [
 ]
 
 const MENU_TEMPLATE = [
+  // Fallback menu, used only when the content-source branch has no menu items.
   { name: 'Inihaw na Baboy Roll', description: 'Grilled pork rolls with tangy sawsawan dip.', price: 245, category: 'Appetizers', isFeatured: true },
   { name: 'Crispy Chicharon', description: 'Golden fried pork cracklings, garlic vinegar dip.', price: 185, category: 'Appetizers', isFeatured: false },
   { name: 'Fresh Lumpia', description: 'Crisp vegetable lumpia with sweet chilli.', price: 165, category: 'Appetizers', isFeatured: false },
@@ -123,7 +175,31 @@ const FEEDBACK_NAMES = ['Maria Santos', 'Josefina Reyes', 'Andres Cruz', 'Bianca
 async function getOrCreateBranch(data: (typeof BRANCH_DATA)[number]): Promise<BranchRow> {
   const { data: existing } = await getDb().from(branchesTable).select('*').eq('code', data.code).maybeSingle()
   if (existing) {
-    return existing as BranchRow
+    if (!SYNC_BRANCHES) {
+      return existing as BranchRow
+    }
+    // --sync refreshes the branch details (name, address, contact, hours,
+    // description) from BRANCH_DATA. Dashboard edits to these fields are lost,
+    // which is the point — the seed list is the source of truth.
+    const { data: synced, error: syncError } = await getDb()
+      .from(branchesTable)
+      .update({
+        name: data.name,
+        address: data.address,
+        city: data.city,
+        contact_number: data.contactNumber,
+        email: data.email,
+        hours: data.hours,
+        description: data.description,
+      })
+      .eq('id', existing.id)
+      .select('*')
+      .single()
+    if (syncError) {
+      throw syncError
+    }
+    console.log(`Branch synced with BRANCH_DATA: ${data.name} (${data.code})`)
+    return synced as BranchRow
   }
   const { data: created, error } = await getDb()
     .from(branchesTable)
@@ -230,6 +306,32 @@ async function seedBranchesAndUsers() {
   }
   console.log(`Branches ready: ${branches.length}`)
 
+  // Branches seeded under an older name stay in the database untouched (their
+  // tables, menus and reservations point at them). Without --sync they are only
+  // reported; with --sync they are deactivated so the public site lists exactly
+  // the branches in BRANCH_DATA. Deactivation is reversible from the dashboard.
+  const currentCodes = new Set(BRANCH_DATA.map((data) => data.code))
+  const { data: activeBranches } = await getDb().from(branchesTable).select('id, name, code').eq('is_active', true)
+  const stale = (activeBranches ?? []).filter(
+    (branch: { code: unknown }) => !currentCodes.has(String(branch.code)),
+  )
+  if (stale.length > 0) {
+    const listed = stale.map((branch: { name: unknown; code: unknown }) => `${branch.name} (${branch.code})`).join(', ')
+    if (SYNC_BRANCHES) {
+      const { error: staleError } = await getDb()
+        .from(branchesTable)
+        .update({ is_active: false })
+        .in('id', stale.map((branch: { id: unknown }) => branch.id))
+      if (staleError) {
+        throw staleError
+      }
+      console.log(`Deactivated ${stale.length} branch(es) not in BRANCH_DATA: ${listed}`)
+    } else {
+      console.log(`Note: ${stale.length} active branch(es) are not in BRANCH_DATA: ${listed}`)
+      console.log('Run npm run seed:sync --workspace server to deactivate them, or rename them from Dashboard → Branches.')
+    }
+  }
+
   await getOrCreateUser({
     name: 'Wyndell\'s Administrator',
     email: ADMIN_EMAIL,
@@ -259,19 +361,87 @@ async function seedBranchesAndUsers() {
   return branches
 }
 
+/**
+ * Branch whose tables and menu are copied into any branch that has none yet, so
+ * a newly added location starts from the same floor plan and menu. Falls back to
+ * TABLE_TEMPLATE / MENU_TEMPLATE when this branch itself is still empty.
+ */
+const CONTENT_SOURCE_CODE = 'masinag'
+
+type TableSeed = { tableNumber: string; capacity: number; location: string }
+type MenuSeed = { name: string; description: string; price: number; category: string; isFeatured: boolean }
+
+/** Tables to copy: the source branch's own tables, or the built-in template. */
+async function tableSeeds(branchId: string): Promise<TableSeed[]> {
+  const { data } = await getDb()
+    .from(diningTablesTable)
+    .select('table_number, capacity, location')
+    .eq('branch_id', branchId)
+    .order('table_number')
+  const rows = (data ?? []) as { table_number: string; capacity: number; location: string }[]
+  if (rows.length === 0) {
+    return TABLE_TEMPLATE
+  }
+  return rows.map((row) => ({
+    tableNumber: row.table_number,
+    capacity: row.capacity,
+    location: row.location,
+  }))
+}
+
+/** Menu items to copy: the source branch's own menu, or the built-in template. */
+async function menuSeeds(branchId: string): Promise<MenuSeed[]> {
+  const { data } = await getDb()
+    .from(menuItemsTable)
+    .select('name, description, price, category, is_featured')
+    .eq('branch_id', branchId)
+    .order('category')
+    .order('name')
+  const rows = (data ?? []) as {
+    name: string
+    description: string
+    price: number
+    category: string
+    is_featured: boolean
+  }[]
+  if (rows.length === 0) {
+    return MENU_TEMPLATE
+  }
+  return rows.map((row) => ({
+    name: row.name,
+    description: row.description,
+    price: row.price,
+    category: row.category,
+    isFeatured: row.is_featured,
+  }))
+}
+
+/**
+ * Makes sure every branch has a floor plan and a menu: branches that are still
+ * empty copy the source branch (`masinag`). Branches that already have tables or
+ * menu items are never modified, so re-running the seed is always safe.
+ */
 async function seedBranchContent() {
   const { data: branches, error } = await getDb().from(branchesTable).select('*')
   if (error) {
     throw error
   }
-  for (const branch of branches as BranchRow[]) {
+  const rows = (branches ?? []) as BranchRow[]
+  const source = rows.find((branch) => branch.code === CONTENT_SOURCE_CODE)
+  if (!source) {
+    console.warn(`Content source branch "${CONTENT_SOURCE_CODE}" not found — using the built-in templates.`)
+  }
+  const tables = source ? await tableSeeds(source.id) : TABLE_TEMPLATE
+  const menu = source ? await menuSeeds(source.id) : MENU_TEMPLATE
+
+  for (const branch of rows) {
     // Tables
     const { count: tableCount } = await getDb()
       .from(diningTablesTable)
       .select('id', { count: 'exact', head: true })
       .eq('branch_id', branch.id)
     if ((tableCount ?? 0) === 0) {
-      const tables = TABLE_TEMPLATE.map((table) => ({
+      const inserts = tables.map((table) => ({
         table_number: table.tableNumber,
         capacity: table.capacity,
         location: table.location,
@@ -279,11 +449,11 @@ async function seedBranchContent() {
         status: 'available',
         is_active: true,
       }))
-      const { error: insertError } = await getDb().from(diningTablesTable).insert(tables)
+      const { error: insertError } = await getDb().from(diningTablesTable).insert(inserts)
       if (insertError) {
         throw insertError
       }
-      console.log(`  ${branch.name}: ${tables.length} tables added`)
+      console.log(`  ${branch.name}: ${inserts.length} tables added`)
     } else {
       console.log(`  ${branch.name}: ${tableCount} tables already present`)
     }
@@ -294,7 +464,7 @@ async function seedBranchContent() {
       .select('id', { count: 'exact', head: true })
       .eq('branch_id', branch.id)
     if ((menuCount ?? 0) === 0) {
-      const items = MENU_TEMPLATE.map((item) => ({
+      const inserts = menu.map((item) => ({
         name: item.name,
         description: item.description,
         price: item.price,
@@ -303,16 +473,16 @@ async function seedBranchContent() {
         status: 'available',
         branch_id: branch.id,
       }))
-      const { error: insertError } = await getDb().from(menuItemsTable).insert(items)
+      const { error: insertError } = await getDb().from(menuItemsTable).insert(inserts)
       if (insertError) {
         throw insertError
       }
-      console.log(`  ${branch.name}: ${items.length} menu items added`)
+      console.log(`  ${branch.name}: ${inserts.length} menu items added`)
     } else {
       console.log(`  ${branch.name}: ${menuCount} menu items already present`)
     }
   }
-  return branches
+  return rows
 }
 
 async function seedSamples() {
@@ -511,8 +681,8 @@ async function seedCareers() {
 
     // Sample applications for a couple of the open postings only.
     const openIds = inserted
-      .filter((row) => row.status === 'open')
-      .map((row) => row.id)
+      .filter((row: { status: unknown }) => row.status === 'open')
+      .map((row: { id: unknown }) => row.id)
       .slice(0, 2)
     const applications = []
     for (const [index, applicant] of APPLICANT_NAMES.entries()) {
@@ -549,7 +719,18 @@ async function main() {
   console.log(`Connected to Supabase: ${supabaseUrl ? new URL(supabaseUrl).hostname : 'unknown host'}`)
 
   await seedBranchesAndUsers()
+
+  // Every branch gets a floor plan and a menu (copied from the source branch when
+  // it has none yet) so online reservations and the QR menu work everywhere.
   await seedBranchContent()
+
+  // `npm run seed:branches` (`tsx seed.ts --branches-only`) stops here: no sample
+  // reservations, reviews or job postings are added.
+  if (process.argv.includes('--branches-only')) {
+    console.log('Seed complete ✔ (branches, tables and menu)')
+    return
+  }
+
   await seedSamples()
   await seedCareers()
 

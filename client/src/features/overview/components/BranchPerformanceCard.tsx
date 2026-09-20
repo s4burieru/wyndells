@@ -1,10 +1,10 @@
 import { useMemo } from "react"
 import { StarIcon } from "lucide-react"
 import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card"
-import { ChartContainer, ChartTooltip, type ChartConfig } from "../ui/chart"
-import { ChartTooltipContent } from "../ui/chart-tooltip"
-import type { Overview } from "@/lib/types"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
+import { ChartTooltipContent } from "@/components/ui/chart-tooltip"
+import type { Overview } from "@/types"
 
 type BranchRow = {
   branch: { id: string; name: string }

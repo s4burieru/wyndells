@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto'
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { ApiError } from '../utils/ApiError'
 
 /** Profile photos: public Supabase Storage bucket, JPG / PNG / WEBP, max 2 MB. */

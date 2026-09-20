@@ -1,10 +1,10 @@
 import { type ComponentPropsWithoutRef, type ReactNode } from 'react'
 import { Link } from 'react-router-dom'
-import { cn } from '@/lib/utils'
-import { Button as ShadcnButton } from './button'
-import { Input } from './input'
-import { Label } from './label'
-import { Textarea } from './textarea'
+import { cn } from '@/utils/cn'
+import { Button as ShadcnButton } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
+import { Label } from '@/components/ui/label'
+import { Textarea } from '@/components/ui/textarea'
 
 type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'green'
 

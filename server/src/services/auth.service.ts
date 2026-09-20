@@ -1,5 +1,5 @@
 import bcrypt from 'bcryptjs'
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { usersTable } from '../models/User'
 import { ApiError } from '../utils/ApiError'
 import { signToken, type AuthUser } from '../middleware/auth'

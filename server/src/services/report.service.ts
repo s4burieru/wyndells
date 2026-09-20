@@ -1,4 +1,4 @@
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { reservationsTable, toReservation, type ReservationWithBranchRow } from '../models/Reservation'
 import { feedbackTable, toFeedbackSummary, type FeedbackWithBranchRow } from '../models/Feedback'
 import { branchesTable } from '../models/Branch'

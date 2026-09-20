@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from 'react'
-import { fetchMe } from '../api/auth'
-import { getToken, setToken } from './api'
-import type { SafeUser } from './types'
+import { fetchMe } from '@/services/api/auth'
+import { getToken, setToken } from '@/services/api/client'
+import type { SafeUser } from '@/types'
 
 export type AuthState = {
   user: SafeUser | null

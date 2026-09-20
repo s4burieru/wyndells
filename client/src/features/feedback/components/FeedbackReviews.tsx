@@ -1,13 +1,13 @@
 import { useEffect, useState } from 'react'
 import { Star } from 'lucide-react'
-import { fetchPublicFeedback } from '../../api/feedback'
-import type { FeedbackSummary } from '../../lib/types'
-import { formatDateTime } from '../../lib/format'
+import { fetchPublicFeedback } from '@/services/api/feedback'
+import type { FeedbackSummary } from '@/types'
+import { formatDateTime } from '@/utils/format'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState } from '../../components/ui/display'
-import { StarRating } from '../../components/ui/badges'
+import { EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { StarRating } from '@/components/common/StatusBadges'
 
 export function ReviewList({
   reviews,

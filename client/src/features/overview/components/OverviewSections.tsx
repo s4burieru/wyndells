@@ -1,8 +1,8 @@
 import { Link } from 'react-router-dom'
-import type {  FeedbackSummary, Overview, Reservation  } from '../../lib/types'
-import { formatDate, formatTime12 } from '../../lib/format'
-import { EmptyState } from '../../components/ui/display'
-import { ReservationStatusBadge } from '../../components/ui/badges'
+import type {  FeedbackSummary, Overview, Reservation  } from '@/types'
+import { formatDate, formatTime12 } from '@/utils/format'
+import { EmptyState } from '@/components/common/PageHeader'
+import { ReservationStatusBadge } from '@/components/common/StatusBadges'
 
 type AdminOverview = Extract<Overview, { role: 'admin' }>
 

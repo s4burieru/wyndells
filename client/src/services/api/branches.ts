@@ -1,5 +1,5 @@
-import { apiQuery, apiRequest } from '../lib/api'
-import type {  Branch  } from '../lib/types'
+import { apiQuery, apiRequest } from '@/services/api/client'
+import type {  Branch  } from '@/types'
 
 export async function fetchBranches(includeInactive = false): Promise<Branch[]> {
   const data = await apiRequest<{ branches: Branch[] }>(apiQuery('/api/branches', { includeInactive }))

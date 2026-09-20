@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
-import { fetchBranches } from '../../api/branches'
-import type { Branch, Role, SafeUser } from '../../lib/types'
-import { roleLabel } from '../../lib/format'
-import { AvatarPicker } from '../../components/dashboard/AvatarPicker'
-import { Button, Field, SelectInput, TextArea, TextInput } from '../../components/ui/controls'
-import { Modal } from '../../components/ui/Modal'
+import { fetchBranches } from '@/services/api/branches'
+import type { Branch, Role, SafeUser } from '@/types'
+import { roleLabel } from '@/utils/format'
+import { AvatarPicker } from '@/components/common/AvatarPicker'
+import { Button, Field, SelectInput, TextArea, TextInput } from '@/components/common/FormControls'
+import { Modal } from '@/components/common/Modal'
 
 const PHONE_PATTERN = /^[0-9+()\s.-]{7,20}$/
 
@@ -210,7 +210,7 @@ export function UserFormModal({
           <Field label="Address">
             <TextInput
               value={address}
-              placeholder="e.g. Sampaloc, Tanay, Rizal"
+              placeholder="e.g. Tanay, Rizal"
               onChange={(event) => setAddress(event.target.value)}
             />
           </Field>

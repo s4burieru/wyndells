@@ -1,11 +1,11 @@
 import { useEffect, useState } from 'react'
 import { Clock3, Mail, MapPin, MessageSquare, Phone } from 'lucide-react'
-import { fetchBranches } from '../../api/branches'
-import type { Branch } from '../../lib/types'
+import { fetchBranches } from '@/services/api/branches'
+import type { Branch } from '@/types'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, PageHeader } from '../../components/ui/display'
+import { EmptyState, PageHeader } from '@/components/common/PageHeader'
 import { Link } from 'react-router-dom'
 
 export function ContactPage() {
@@ -71,10 +71,12 @@ export function ContactPage() {
                     <span>{branch.email}</span>
                   </li>
                 ) : null}
-                <li className="flex items-start gap-2">
-                  <Clock3 className="mt-0.5 size-4 shrink-0 text-wyndell-orange-dark" aria-hidden />
-                  <span>{branch.hours}</span>
-                </li>
+                {branch.hours ? (
+                  <li className="flex items-start gap-2">
+                    <Clock3 className="mt-0.5 size-4 shrink-0 text-wyndell-orange-dark" aria-hidden />
+                    <span>{branch.hours}</span>
+                  </li>
+                ) : null}
               </ul>
             </CardContent>
           </Card>

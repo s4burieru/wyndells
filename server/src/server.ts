@@ -4,7 +4,7 @@ import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
 import express from 'express'
 import cors from 'cors'
-import { connectDB } from './config/db'
+import { connectDB } from './config/database'
 import healthRouter from './routes/health'
 import authRouter from './routes/auth'
 import usersRouter from './routes/users'
@@ -21,7 +21,7 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
 // Load env from the project root (.env), falling back to server/.env so the server
 // works whether launched from the root or from inside the workspace.
-for (const envPath of [path.resolve(__dirname, '../.env'), path.resolve(process.cwd(), '.env')]) {
+for (const envPath of [path.resolve(__dirname, '../../.env'), path.resolve(process.cwd(), '.env')]) {
   if (existsSync(envPath)) {
     dotenv.config({ path: envPath })
     break

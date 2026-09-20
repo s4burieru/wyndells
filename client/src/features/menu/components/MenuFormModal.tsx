@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { fetchBranches } from '../../api/branches'
-import type { Branch, MenuItem } from '../../lib/types'
-import { MENU_CATEGORIES } from '../../lib/format'
-import { Button, Field, SelectInput, TextArea, TextInput } from '../../components/ui/controls'
-import { Modal } from '../../components/ui/Modal'
+import { fetchBranches } from '@/services/api/branches'
+import type { Branch, MenuItem } from '@/types'
+import { MENU_CATEGORIES } from '@/utils/format'
+import { Button, Field, SelectInput, TextArea, TextInput } from '@/components/common/FormControls'
+import { Modal } from '@/components/common/Modal'
 
 export function MenuFormModal({
   item,

@@ -1,16 +1,16 @@
 import { useEffect, useState } from 'react'
 import { CircleAlert, CircleCheck, Loader2, MessageSquare, Star } from 'lucide-react'
-import { fetchBranches } from '../../api/branches'
-import { fetchPublicFeedback, submitFeedback } from '../../api/feedback'
-import type { Branch, FeedbackSummary } from '../../lib/types'
-import { friendlyError } from '../../lib/format'
-import { Field, TextArea, TextInput } from '../../components/ui/controls'
+import { fetchBranches } from '@/services/api/branches'
+import { fetchPublicFeedback, submitFeedback } from '@/services/api/feedback'
+import type { Branch, FeedbackSummary } from '@/types'
+import { friendlyError } from '@/utils/format'
+import { Field, TextArea, TextInput } from '@/components/common/FormControls'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
-import { PageHeader } from '../../components/ui/display'
-import { ReviewList } from './FeedbackReviews'
+import { PageHeader } from '@/components/common/PageHeader'
+import { ReviewList } from '@/features/feedback/components/FeedbackReviews'
 
 export function FeedbackPage() {
   const [branches, setBranches] = useState<Branch[]>([])

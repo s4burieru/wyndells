@@ -1,11 +1,11 @@
 import { Download } from 'lucide-react'
-import type { Reservation } from '../../lib/types'
-import { formatDate, formatTime12 } from '../../lib/format'
-import { downloadReservationReceipt } from '../../lib/receipt'
+import type { Reservation } from '@/types'
+import { formatDate, formatTime12 } from '@/utils/format'
+import { downloadReservationReceipt } from '@/utils/receipt'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { ReservationStatusBadge } from '../../components/ui/badges'
+import { ReservationStatusBadge } from '@/components/common/StatusBadges'
 
 export function ReservationDetail({
   reservation,

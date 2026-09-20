@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { fetchBranches } from '../../api/branches'
-import type {  Branch, DiningTable, TableStatus  } from '../../lib/types'
-import { tableLabel } from '../../lib/format'
-import { Button, Field, SelectInput, TextInput } from '../../components/ui/controls'
-import { Modal } from '../../components/ui/Modal'
+import { fetchBranches } from '@/services/api/branches'
+import type {  Branch, DiningTable, TableStatus  } from '@/types'
+import { tableLabel } from '@/utils/format'
+import { Button, Field, SelectInput, TextInput } from '@/components/common/FormControls'
+import { Modal } from '@/components/common/Modal'
 
 const TABLE_STATUSES: TableStatus[] = ['available', 'reserved', 'occupied', 'cleaning', 'unavailable']
 const LOCATIONS = ['Main Hall', 'Garden', 'Veranda', 'Al Fresco', 'Family Corner', 'Private Room']

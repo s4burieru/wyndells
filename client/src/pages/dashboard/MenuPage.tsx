@@ -1,12 +1,12 @@
 import { useEffect, useState } from 'react'
-import { createMenuItem, deleteMenuItem, fetchMenuItems, updateMenuItem } from '../../api/menu'
-import type { MenuItem } from '../../lib/types'
-import { formatPrice } from '../../lib/format'
-import { Button } from '../../components/ui/controls'
-import { PageHeader, Spinner, EmptyState, ErrorState } from '../../components/ui/display'
-import { useAuth } from '../../lib/auth'
-import { MenuFormModal } from './MenuFormModal'
-import { QRMenuModal } from './QRMenuModal'
+import { createMenuItem, deleteMenuItem, fetchMenuItems, updateMenuItem } from '@/services/api/menu'
+import type { MenuItem } from '@/types'
+import { formatPrice } from '@/utils/format'
+import { Button } from '@/components/common/FormControls'
+import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { useAuth } from '@/contexts/AuthContext'
+import { MenuFormModal } from '@/features/menu/components/MenuFormModal'
+import { QRMenuModal } from '@/features/menu/components/QRMenuModal'
 
 export function ManageMenuPage() {
   const { user } = useAuth()
@@ -20,7 +20,7 @@ export function ManageMenuPage() {
   const load = () => {
     setLoading(true)
     setError(false)
-    void fetchMenuItems({ includeUnavailable: true })
+    void fetchMenuItems({ includeUnavailable: true, includeInactiveBranches: true })
       .then(setItems)
       .catch(() => setError(true))
       .finally(() => setLoading(false))

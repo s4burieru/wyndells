@@ -1,12 +1,12 @@
 import { useMemo } from "react"
 import { Cell, Pie, PieChart } from "recharts"
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../ui/card"
-import { ChartContainer, ChartLegend, ChartTooltip, type ChartConfig } from "../ui/chart"
-import { ChartTooltipContent } from "../ui/chart-tooltip"
-import { ChartLegendContent } from "../ui/chart-legend"
-import { tableLabel } from "@/lib/format"
-import type { TableStatus } from "@/lib/types"
-import { TABLE_FILL } from "./charts"
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
+import { ChartContainer, ChartLegend, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
+import { ChartTooltipContent } from "@/components/ui/chart-tooltip"
+import { ChartLegendContent } from "@/components/ui/chart-legend"
+import { tableLabel } from "@/utils/format"
+import type { TableStatus } from "@/types"
+import { TABLE_FILL } from "@/features/overview/components/chart-colors"
 
 const ORDER: TableStatus[] = ["available", "reserved", "occupied", "cleaning", "unavailable"]
 

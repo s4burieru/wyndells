@@ -15,6 +15,7 @@ export const listMenuItemsController = asyncHandler(async (req: AuthedRequest, r
     category: req.query.category ? String(req.query.category) : undefined,
     includeUnavailable: String(req.query.includeUnavailable ?? '').toLowerCase() === 'true',
     featuredOnly: String(req.query.featured ?? '').toLowerCase() === 'true',
+    includeInactiveBranches: String(req.query.includeInactiveBranches ?? '').toLowerCase() === 'true',
   }
   const items = await listMenuItems(options)
   res.json({ items })

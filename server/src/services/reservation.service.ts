@@ -1,4 +1,4 @@
-import { getDb } from '../config/db'
+import { getDb } from '../config/database'
 import { diningTablesTable, toDiningTable, type DiningTableRow } from '../models/DiningTable'
 import { branchesTable } from '../models/Branch'
 import { reservationsTable, toReservation, type ReservationRow, type ReservationWithBranchRow } from '../models/Reservation'

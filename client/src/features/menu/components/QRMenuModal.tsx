@@ -1,10 +1,10 @@
 import { useEffect, useState } from 'react'
 import { QRCodeSVG } from 'qrcode.react'
-import { fetchBranches } from '../../api/branches'
-import type { Branch } from '../../lib/types'
-import { Button } from '../../components/ui/controls'
-import { Spinner } from '../../components/ui/display'
-import { Modal } from '../../components/ui/Modal'
+import { fetchBranches } from '@/services/api/branches'
+import type { Branch } from '@/types'
+import { Button } from '@/components/common/FormControls'
+import { Spinner } from '@/components/common/PageHeader'
+import { Modal } from '@/components/common/Modal'
 
 /**
  * Shows (and prints) a scannable QR code that opens the public digital menu

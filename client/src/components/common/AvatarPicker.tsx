@@ -1,8 +1,8 @@
 import { useRef, useState, type ChangeEvent, type ReactNode } from 'react'
 import { ImageUpIcon, Trash2Icon } from 'lucide-react'
-import { Button } from '../ui/controls'
-import { UserAvatar } from './UserAvatar'
-import type { Role } from '../../lib/types'
+import { Button } from '@/components/common/FormControls'
+import { UserAvatar } from '@/components/common/UserAvatar'
+import type { Role } from '@/types'
 
 /** Profile photos: JPG / PNG / WEBP up to 2 MB (mirrors the API limits). */
 const MAX_PHOTO_BYTES = 2 * 1024 * 1024

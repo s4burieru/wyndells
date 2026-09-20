@@ -1,17 +1,17 @@
 import { useEffect, useState, type ReactNode } from 'react'
 import { Link, useParams } from 'react-router-dom'
 import { ArrowLeft, ArrowRight, CalendarCheck, Clock3, Mail, MapPin, Phone, UtensilsCrossed } from 'lucide-react'
-import { fetchBranch, fetchBranches } from '../../api/branches'
-import { fetchMenuItems } from '../../api/menu'
-import type { Branch, MenuItem } from '../../lib/types'
-import { formatPrice } from '../../lib/format'
-import { ApiError } from '../../lib/api'
+import { fetchBranch, fetchBranches } from '@/services/api/branches'
+import { fetchMenuItems } from '@/services/api/menu'
+import type { Branch, MenuItem } from '@/types'
+import { formatPrice } from '@/utils/format'
+import { ApiError } from '@/services/api/client'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
-import { EmptyState, ErrorState, PageHeader } from '../../components/ui/display'
+import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
 
 export function BranchDetailPage() {
   const { code } = useParams()

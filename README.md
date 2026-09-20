@@ -13,25 +13,37 @@ Built with npm workspaces: the client and server are separate workspaces install
 
 ## Project layout
 
+The full annotated tree lives in [STRUCTURE.md](./STRUCTURE.md). Summary:
+
 ```
 wyndells/
-├── package.json        # root: scripts to run everything + lint tooling
-├── .env.example        # copy to .env and configure
-├── supabase/
-│   └── migrations/     # SQL migrations (schema, indexes, RLS, report functions)
-├── client/             # React frontend (Vite workspace)
-│   ├── src/            # components, pages, styles
-│   ├── public/         # static assets
+├── package.json          # root: scripts to run everything + lint tooling
+├── .env.example          # copy to .env and configure
+├── supabase/migrations/  # SQL migrations (schema, indexes, RLS, report functions)
+├── client/               # React frontend (Vite workspace)
+│   ├── src/app/          # App.tsx — routes only
+│   ├── src/pages/        # route-level pages (public/ and dashboard/)
+│   ├── src/features/     # domain folders with their own components/
+│   ├── src/components/   # ui/ (shadcn), common/, layout/, auth/
+│   ├── src/services/api/ # typed fetch client + one module per domain
+│   ├── src/contexts/     # AuthContext
+│   ├── src/types|utils|hooks|styles|assets
+│   ├── public/           # static assets served as-is
 │   ├── index.html
-│   ├── vite.config.ts  # dev proxy: /api -> http://localhost:5000
+│   ├── vite.config.ts    # dev proxy: /api -> http://localhost:5000
 │   └── package.json
-└── server/             # Express API (workspace)
-    ├── index.ts        # app entry
-    ├── config/db.ts    # Supabase client (PostgREST)
-    ├── models/         # row types + API serializers
-    ├── services/       # queries against Supabase
-    ├── routes/         # Express route handlers
-    └── package.json
+└── server/               # Express API (workspace)
+    └── src/
+        ├── server.ts     # app entry
+        ├── config/       # Supabase client (PostgREST)
+        ├── models/       # row types + API serializers
+        ├── services/     # queries against Supabase
+        ├── controllers/  # thin HTTP adapters
+        ├── routes/       # Express route handlers
+        ├── middleware/   # auth, uploads, error handler
+        ├── constants/    # enums, limits, status transitions
+        ├── utils/        # ApiError, validation helpers
+        └── db/           # seed.ts + data/branches.json
 ```
 
 ## Getting started
@@ -85,8 +97,48 @@ wyndells/
    npm run seed --workspace server
    ```
 
-   Creates the branches, an admin + one manager per branch, dining tables, menu
-   items, and sample reservations/feedback.
+   Creates the seven Wyndell&rsquo;s branches (&ldquo;Wyndell&rsquo;s Al Fresco&rdquo;, &ldquo;at The
+   Perch Highland Park&rdquo;, &ldquo;Town&rdquo;, &ldquo;Masinag&rdquo;, &ldquo;Arca South&rdquo;,
+   &ldquo;Bed and Breakfast&rdquo; and &ldquo;Farm&rdquo;), an admin + one manager per branch,
+   dining tables, menu items, and sample reservations/feedback.
+
+   Branch names live in `BRANCH_DATA` (`server/src/db/seed.ts`); the seed matches on the
+   branch `code`, so re-running it never duplicates an existing branch. Any active
+   branch whose code is no longer in `BRANCH_DATA` (for example a location seeded
+   under an older name) is listed at the end of the seed output — rename or
+   deactivate it from **Dashboard → Branches** so the public site shows only
+   current branches. Add new branches there too, or straight from the dashboard.
+
+   To set up the branches with their manager accounts, floor plan and menu only
+   (no sample reservations, reviews or job postings — handy for a live project):
+
+   ```bash
+   npm run seed:branches --workspace server
+   ```
+
+   Every branch also gets a floor plan and a menu. Branches that are still empty
+   copy the tables and menu items of the content-source branch (`CONTENT_SOURCE_CODE`
+   in `server/src/db/seed.ts`, currently `masinag`), so a new location starts from the same
+   floor plan and menu; if that branch has none either, the built-in
+   `TABLE_TEMPLATE` / `MENU_TEMPLATE` is used. Branches that already have tables or
+   menu items are never touched — re-running the seed is always safe. Edit the real
+   floor plans and dishes per branch in **Dashboard → Tables / Menu**.
+
+   To make the database match `BRANCH_DATA` exactly — refresh every listed branch
+   (name, address, city, contact number, email, hours, description) and deactivate
+   any other branch that is still active:
+
+   ```bash
+   npm run seed:sync --workspace server
+   ```
+
+   > `seed:sync` overwrites these fields for the listed branches, so dashboard
+   > edits to them are lost. Only the branch details are touched — staff profiles,
+   > tables, menus, reservations and feedback are left alone.
+
+   After changing the branch list, also refresh the public static copy that lists
+   locations by name (`client/src/components/common/Footer.tsx`) and the counts in
+   the hero copy (`HomePage.tsx`, `BranchesPage.tsx`).
 
 5. Run both dev servers from the project root:
 

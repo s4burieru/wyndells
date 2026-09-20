@@ -1,7 +1,7 @@
-import type {  ApplicationStatus, JobApplication  } from '../../lib/types'
-import { applicationBadgeClass, applicationLabel, applicationNextStatuses, departmentLabel, formatDateTime } from '../../lib/format'
-import { Badge } from '../../components/ui/display'
-import { SelectInput } from '../../components/ui/controls'
+import type {  ApplicationStatus, JobApplication  } from '@/types'
+import { applicationBadgeClass, applicationLabel, applicationNextStatuses, departmentLabel, formatDateTime } from '@/utils/format'
+import { Badge } from '@/components/common/PageHeader'
+import { SelectInput } from '@/components/common/FormControls'
 
 export function ApplicationCard({
   application,

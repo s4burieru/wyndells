@@ -1,5 +1,5 @@
-import { apiRequest } from '../lib/api'
-import type { SafeUser } from '../lib/types'
+import { apiRequest } from '@/services/api/client'
+import type { SafeUser } from '@/types'
 
 export type LoginResult = { token: string; user: SafeUser }
 

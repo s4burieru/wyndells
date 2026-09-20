@@ -1,7 +1,7 @@
-import { cn } from '@/lib/utils'
-import { roleAvatarClass } from '../../lib/format'
-import type { Role } from '../../lib/types'
-import { Avatar, AvatarFallback, AvatarImage } from '../ui/avatar'
+import { cn } from '@/utils/cn'
+import { roleAvatarClass } from '@/utils/format'
+import type { Role } from '@/types'
+import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar'
 
 const SIZE_CLASSES = {
   xs: 'size-8 text-[0.65rem]',
