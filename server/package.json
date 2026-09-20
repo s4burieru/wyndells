@@ -4,9 +4,11 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "tsx watch index.ts",
-    "start": "tsx index.ts",
-    "seed": "tsx seed.ts",
+    "dev": "tsx watch src/server.ts",
+    "start": "tsx src/server.ts",
+    "seed": "tsx src/db/seed.ts",
+    "seed:branches": "tsx src/db/seed.ts --branches-only",
+    "seed:sync": "tsx src/db/seed.ts --branches-only --sync",
     "typecheck": "tsc -b --pretty false"
   },
   "dependencies": {
