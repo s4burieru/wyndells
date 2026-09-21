@@ -7,6 +7,7 @@
   /* Wyndell's brand palette */
   --color-wyndell-orange: #f0810d;
   --color-wyndell-orange-dark: #d96f05;
+  --color-wyndell-amber: #fa9d02;
   --color-wyndell-cream: #f5edda;
   --color-wyndell-cream-dark: #ece0c4;
   --color-wyndell-green: #3db85a;
@@ -14,10 +15,12 @@
   --color-wyndell-sun: #f9c515;
   --color-wyndell-ink: #1f2a22;
   --color-wyndell-forest: #124a2b;
+  --color-wyndell-bark: #1f1207;
   --color-wyndell-sand: #faf6ec;
 
-  --font-sans: "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
-  --font-display: "Georgia", "Palatino Linotype", "Book Antiqua", serif;
+  --font-sans: "Inter", "Segoe UI", system-ui, -apple-system, "Helvetica Neue", Arial, sans-serif;
+  --font-display: "Fraunces", Georgia, "Palatino Linotype", "Book Antiqua", serif;
+
 }
 
 /* shadcn/ui design tokens (mapped to the Wyndell's brand palette) */
@@ -135,11 +138,21 @@
   * {
     @apply border-border outline-ring/50;
   }
+  html {
+    scroll-behavior: smooth;
+  }
   body {
     @apply bg-background text-foreground antialiased;
   }
+  ::selection {
+    background: var(--color-wyndell-orange);
+    color: #fff;
+  }
   h1, h2, h3 {
     @apply text-wyndell-forest;
+  }
+  h1, h2 {
+    letter-spacing: -0.01em;
   }
 }
 
