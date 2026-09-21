@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
-import { ArrowRight, CalendarCheck, MapPin, MessageSquare, Star, UtensilsCrossed } from 'lucide-react'
+import { ArrowRight, CalendarCheck } from 'lucide-react'
+import heroHome from '@/assets/images/hero-home.png'
 import { fetchBranches } from '@/services/api/branches'
 import { fetchMenuItems } from '@/services/api/menu'
 import { fetchPublicFeedback } from '@/services/api/feedback'
@@ -9,10 +10,10 @@ import { formatPrice } from '@/utils/format'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { StarRating } from '@/components/common/StatusBadges'
 import { EmptyState } from '@/components/common/PageHeader'
+import { SectionHeading } from '@/components/common/SectionHeading'
 
 export function HomePage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -51,44 +52,49 @@ export function HomePage() {
 
 function HeroSection() {
   return (
-    <section className="relative overflow-hidden bg-linear-to-br from-wyndell-cream via-wyndell-sand to-wyndell-orange/15">
-      <div
+    <section className="relative flex min-h-svh items-center overflow-hidden bg-wyndell-sand">
+      {/* full-bleed hero photo */}
+      <img
+        src={heroHome}
+        alt=""
         aria-hidden
-        className="pointer-events-none absolute inset-0 opacity-10"
-        style={{
-          backgroundImage:
-            'url("data:image/svg+xml,%3Csvg xmlns=\'http://www.w3.org/2000/svg\' width=\'40\' height=\'40\'%3E%3Cpath d=\'M20 26 q-6-6-10-14 q-14-16-4-20 q-20-16-30-12 q-26-6-30 6 q-10-8-14 14 q-18 8-16 20 z\' fill=\'%23f0810d\'/%3E%3C/svg%3E")',
-        }}
+        fetchPriority="high"
+        className="absolute inset-0 size-full object-cover"
       />
-      <div className="container-wyndell py-20 sm:py-28">
+      <div className="container-wyndell relative py-20 sm:py-28">
         <div className="max-w-2xl">
-          <Badge variant="secondary" className="bg-wyndell-green/15 text-wyndell-green-dark hover:bg-wyndell-green/20">
-            <UtensilsCrossed />
-            Al fresco dining · Garden grills · Home-style Filipino food
-          </Badge>
-          <h1 className="mt-4 font-display text-4xl font-bold leading-tight text-wyndell-forest sm:text-5xl">
-            Fresh. Natural. Warm.
-            <br />
-            <span className="text-wyndell-orange-dark">This is Wyndell&rsquo;s.</span>
-          </h1>
-          <p className="mt-5 max-w-xl text-lg leading-relaxed text-wyndell-ink">
-            Seven branches across Rizal and Metro Manila serving charcoal-grilled favourites,
-            seasonal freshness, and tables made for sharing.
-          </p>
-          <div className="mt-8 flex flex-wrap items-center gap-3">
-            <Button asChild size="lg" className="bg-wyndell-orange text-white shadow-md hover:bg-wyndell-orange-dark">
-              <Link to="/reserve">
-                <CalendarCheck />
-                Book a Reservation
-              </Link>
-            </Button>
-            <Button asChild size="lg" variant="outline" className="border-wyndell-green-dark/30 bg-white/70 text-wyndell-green-dark hover:bg-white hover:text-wyndell-green-dark">
-              <Link to="/menu">
-                Browse the Menu
-                <ArrowRight />
-              </Link>
-            </Button>
-          </div>
+            <span className="inline-flex items-center gap-2 rounded-full border border-wyndell-green-dark/20 bg-white/70 px-3 py-1 text-xs font-semibold tracking-wide text-wyndell-green-dark">
+              <span aria-hidden className="size-1.5 rounded-full bg-wyndell-green" />
+              Al fresco dining · Garden grills · Home-style Filipino food
+            </span>
+            <h1 className="mt-5 font-display text-4xl leading-[1.1] font-semibold text-wyndell-forest sm:text-6xl">
+              Fresh. Natural. Warm.
+              <br />
+              <span className="text-wyndell-orange-dark">This is Wyndell&rsquo;s.</span>
+            </h1>
+            <p className="mt-6 max-w-xl text-lg leading-relaxed text-wyndell-ink/80">
+              Seven branches across Rizal and Metro Manila serving charcoal-grilled favourites,
+              seasonal freshness, and tables made for sharing.
+            </p>
+            <div className="mt-8 flex flex-wrap items-center gap-3">
+              <Button asChild size="lg" className="rounded-full bg-wyndell-orange px-7 text-white shadow-lg shadow-wyndell-orange/25 transition-colors hover:bg-wyndell-orange-dark">
+                <Link to="/reserve">
+                  <CalendarCheck />
+                  Book a Reservation
+                </Link>
+              </Button>
+              <Button
+                asChild
+                size="lg"
+                variant="outline"
+                className="rounded-full border-wyndell-forest/15 bg-white/70 text-wyndell-forest hover:bg-white hover:text-wyndell-forest"
+              >
+                <Link to="/menu">
+                  Browse the Menu
+                  <ArrowRight />
+                </Link>
+              </Button>
+            </div>
         </div>
       </div>
     </section>
@@ -98,17 +104,19 @@ function HeroSection() {
 function AboutSection() {
   return (
     <section className="container-wyndell py-16">
-      <Card className="mx-auto max-w-3xl border-wyndell-cream-dark bg-card text-center">
-        <CardHeader>
-          <CardTitle className="font-display text-3xl font-bold text-wyndell-forest">Rooted in Rizal, grown for family</CardTitle>
-          <CardDescription className="text-lg leading-relaxed">
-            Wyndell&rsquo;s started as a single al fresco kitchen along Marilaque Highway in Tanay — a small garden
-            where neighbours gathered around the grill. Today our seven branches, from Tanay and Antipolo to
-            Arca South in Taguig, share the same promise: ingredients dialed toward fresh, plates full of
-            warmth, and a setting that always feels like outdoors.
-          </CardDescription>
-        </CardHeader>
-      </Card>
+      <div className="mx-auto max-w-3xl text-center">
+        <span className="text-xs font-semibold tracking-[0.18em] text-wyndell-orange-dark uppercase">Our story</span>
+        <h2 className="mt-2 font-display text-3xl font-semibold text-wyndell-forest sm:text-4xl">
+          Rooted in Rizal, grown for family
+        </h2>
+        <p className="mt-5 text-lg leading-relaxed text-wyndell-ink/80">
+          Wyndell&rsquo;s started as a single al fresco kitchen along Marilaque Highway in Tanay — a small garden
+          where neighbours gathered around the grill. Today our seven branches, from Tanay and Antipolo to
+          Arca South in Taguig, share the same promise: ingredients dialed toward fresh, plates full of
+          warmth, and a setting that always feels like outdoors.
+        </p>
+        <div aria-hidden className="mx-auto mt-6 h-px w-24 bg-linear-to-r from-transparent via-wyndell-orange/60 to-transparent" />
+      </div>
     </section>
   )
 }
@@ -117,16 +125,11 @@ function BranchesSection({ branches, loaded }: { branches: Branch[]; loaded: boo
   return (
     <section className="container-wyndell py-16">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <MapPin className="size-5 text-wyndell-orange-dark" aria-hidden />
-          <h2 className="font-display text-2xl font-bold text-wyndell-forest">Our branches</h2>
-        </div>
-        <Button asChild variant="link" className="text-wyndell-orange-dark">
-          <Link to="/branches">
-            View all branches
-            <ArrowRight />
-          </Link>
-        </Button>
+      <SectionHeading
+        eyebrow="Find us"
+        title="Our branches"
+        action={{ to: '/branches', label: 'View all branches' }}
+      />
       </div>
       {!loaded ? (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-4">
@@ -174,16 +177,11 @@ function FeaturedMenuSection({ items, loaded }: { items: MenuItem[]; loaded: boo
   return (
     <section className="container-wyndell py-16">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-2">
-          <UtensilsCrossed className="size-5 text-wyndell-orange-dark" aria-hidden />
-          <h2 className="font-display text-2xl font-bold text-wyndell-forest">Featured from the grill</h2>
-        </div>
-        <Button asChild variant="link" className="text-wyndell-orange-dark">
-          <Link to="/menu">
-            See the full menu
-            <ArrowRight />
-          </Link>
-        </Button>
+      <SectionHeading
+        eyebrow="The menu"
+        title="Featured from the grill"
+        action={{ to: '/menu', label: 'See the full menu' }}
+      />
       </div>
       {!loaded ? (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
@@ -224,10 +222,11 @@ function FeaturedMenuSection({ items, loaded }: { items: MenuItem[]; loaded: boo
 function ReviewsSection({ reviews, loaded }: { reviews: FeedbackSummary[]; loaded: boolean }) {
   return (
     <section className="container-wyndell py-16">
-      <div className="flex items-center gap-2">
-        <Star className="size-5 text-wyndell-orange-dark" aria-hidden />
-        <h2 className="font-display text-2xl font-bold text-wyndell-forest">What our guests say</h2>
-      </div>
+      <SectionHeading
+        eyebrow="Guest stories"
+        title="What our guests say"
+        align="left"
+      />
       {!loaded ? (
         <div className="mt-6 grid gap-6 sm:grid-cols-2 lg:grid-cols-3">
           {[0, 1, 2].map((key) => (
@@ -270,54 +269,54 @@ function ReviewsSection({ reviews, loaded }: { reviews: FeedbackSummary[]; loade
 function ReservationCtaSection() {
   return (
     <section className="container-wyndell py-16">
-      <Card className="border-0 bg-linear-to-r from-wyndell-orange/15 via-wyndell-cream to-wyndell-green/10 p-8 sm:p-12">
-        <CardHeader className="px-0">
-          <Badge variant="secondary" className="w-fit bg-white/70 text-wyndell-orange-dark hover:bg-white">
-            <CalendarCheck />
-            Online reservations
-          </Badge>
-          <CardTitle className="font-display text-3xl font-bold text-wyndell-forest">Plan your visit</CardTitle>
-          <CardDescription className="max-w-2xl text-base text-wyndell-ink">
+      <div className="relative overflow-hidden rounded-3xl bg-wyndell-forest px-6 py-12 text-center shadow-xl shadow-wyndell-forest/20 sm:px-12 sm:py-16">
+        <div aria-hidden className="pointer-events-none absolute inset-0">
+          <div className="absolute -top-24 -right-16 size-72 rounded-full bg-wyndell-sun/10 blur-3xl" />
+          <div className="absolute -bottom-28 -left-20 size-80 rounded-full bg-wyndell-orange/15 blur-3xl" />
+        </div>
+        <div className="relative">
+          <span className="text-xs font-semibold tracking-[0.18em] text-wyndell-sun uppercase">Online reservations</span>
+          <h2 className="mt-2 font-display text-3xl font-semibold text-white sm:text-4xl">Plan your visit</h2>
+          <p className="mx-auto mt-4 max-w-2xl text-base leading-relaxed text-white/75">
             Reserve a table online in under a minute — no account needed. Pick a branch, a time that suits you,
             and we&rsquo;ll have the grill ready.
-          </CardDescription>
-        </CardHeader>
-        <CardContent className="px-0">
-          <Button asChild size="lg" className="bg-wyndell-orange text-white shadow-md hover:bg-wyndell-orange-dark">
-            <Link to="/reserve">
-              Book a Reservation
-              <ArrowRight />
-            </Link>
-          </Button>
-        </CardContent>
-      </Card>
+          </p>
+          <div className="mt-8 flex flex-wrap justify-center gap-3">
+            <Button asChild size="lg" className="rounded-full bg-wyndell-orange px-7 text-white shadow-lg shadow-black/20 hover:bg-wyndell-orange-dark">
+              <Link to="/reserve">
+                Book a Reservation
+                <ArrowRight />
+              </Link>
+            </Button>
+            <Button
+              asChild
+              size="lg"
+              variant="outline"
+              className="rounded-full border-white/25 bg-transparent px-7 text-white hover:bg-white/10 hover:text-white"
+            >
+              <Link to="/check">Check a Reservation</Link>
+            </Button>
+          </div>
+        </div>
+      </div>
     </section>
   )
 }
 
 function ContactTeaserSection() {
   return (
-    <section className="container-wyndell py-16">
-      <Card>
-        <CardHeader>
-          <div className="flex items-center gap-2">
-            <MessageSquare className="size-5 text-wyndell-orange-dark" aria-hidden />
-            <CardTitle className="font-display text-2xl font-bold text-wyndell-forest">Reach us</CardTitle>
-          </div>
-          <CardDescription className="text-base text-wyndell-ink">
-            Questions, large groups, or feedback? Find a branch&rsquo;s contact details on our{' '}
-            <Button asChild variant="link" className="h-auto p-0 text-wyndell-orange-dark">
-              <Link to="/branches">branches page</Link>
-            </Button>
-            , or visit our{' '}
-            <Button asChild variant="link" className="h-auto p-0 text-wyndell-orange-dark">
-              <Link to="/contact">contact page</Link>
-            </Button>
-            .
-          </CardDescription>
-        </CardHeader>
-      </Card>
-      <Separator className="mt-16" />
+    <section className="container-wyndell py-16 text-center">
+      <p className="text-base leading-relaxed text-wyndell-ink/80">
+        Questions, large groups, or feedback? Find a branch&rsquo;s contact details on our{' '}
+        <Link to="/branches" className="font-semibold text-wyndell-orange-dark underline-offset-4 hover:underline">
+          branches page
+        </Link>
+        , or visit our{' '}
+        <Link to="/contact" className="font-semibold text-wyndell-orange-dark underline-offset-4 hover:underline">
+          contact page
+        </Link>
+        .
+      </p>
     </section>
   )
 }

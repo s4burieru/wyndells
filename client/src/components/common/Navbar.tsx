@@ -41,8 +41,10 @@ export function PublicNavbar() {
                 end={link.to === '/'}
                 className={({ isActive }) =>
                   [
-                    'rounded-lg px-3 py-2 text-sm font-medium transition-colors',
-                    isActive ? 'bg-wyndell-orange/15 text-wyndell-orange-dark' : 'text-wyndell-ink hover:bg-wyndell-cream-dark/60',
+                    'relative rounded-lg px-3 py-2 text-sm font-medium transition-colors after:absolute after:inset-x-3 after:bottom-1 after:h-0.5 after:rounded-full after:bg-wyndell-orange after:transition-opacity',
+                    isActive
+                      ? 'text-wyndell-forest after:opacity-100'
+                      : 'text-wyndell-ink/80 hover:bg-wyndell-cream-dark/40 hover:text-wyndell-forest after:opacity-0 hover:after:opacity-50',
                   ].join(' ')
                 }
               >
@@ -106,10 +108,15 @@ export function PublicNavbar() {
             </div>
           </div>
           <div className="flex items-center gap-2">
-            <Button asChild variant="outline" size="sm" className="hidden sm:inline-flex">
+            <Button
+              asChild
+              variant="ghost"
+              size="sm"
+              className="hidden text-sm font-medium text-wyndell-ink hover:text-wyndell-forest sm:inline-flex"
+            >
               <Link to="/check">Check Reservation</Link>
             </Button>
-            <Button asChild>
+            <Button asChild className="rounded-full bg-wyndell-orange text-white shadow-sm shadow-wyndell-orange/25 hover:bg-wyndell-orange-dark">
               <Link to="/reserve">Book a Reservation</Link>
             </Button>
             <Button

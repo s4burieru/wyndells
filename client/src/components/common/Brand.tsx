@@ -31,11 +31,24 @@ export function Wordmark({ light = false }: { light?: boolean }) {
   )
 }
 
-export function BrandLogo({ to = '/', light = false }: { to?: string; light?: boolean }) {
+/** The official logo file, copied into client/public/logos. */
+const BRAND_LOGO_SRC = '/logos/wyndells-main-logo.png'
+
+/**
+ * The official Wyndell's logo — mark and wordmark baked into one image. Its
+ * orange-and-yellow artwork reads well on both the light navbar and the dark
+ * footer, so a single image serves every placement.
+ */
+export function BrandLogo({
+  to = '/',
+  className = 'h-12 w-auto',
+}: {
+  to?: string
+  className?: string
+}) {
   return (
-    <Link to={to} className="inline-flex items-center gap-2">
-      <BrandMark />
-      <Wordmark light={light} />
+    <Link to={to} className="inline-flex shrink-0 items-center">
+      <img src={BRAND_LOGO_SRC} alt="Wyndell's" className={className} />
     </Link>
   )
 }
