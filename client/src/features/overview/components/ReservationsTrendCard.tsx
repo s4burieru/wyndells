@@ -12,7 +12,7 @@ function shortDay(date: string): string {
 }
 
 const trendConfig = {
-  total: { label: "Total bookings", color: "#f0810d" },
+  total: { label: "Total bookings", color: "#F58000" },
   confirmed: { label: "Confirmed", color: "#168b48" },
   completed: { label: "Completed", color: "#0ea5e9" },
 } satisfies ChartConfig

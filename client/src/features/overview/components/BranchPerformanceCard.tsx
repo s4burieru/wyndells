@@ -17,7 +17,7 @@ type BranchRow = {
 }
 
 const radarConfig = {
-  reservations: { label: "Reservations", color: "#f0810d" },
+  reservations: { label: "Reservations", color: "#F58000" },
   confirmed: { label: "Confirmed", color: "#168b48" },
   completed: { label: "Completed", color: "#0ea5e9" },
 } satisfies ChartConfig
