@@ -4,12 +4,10 @@ import {
   BriefcaseBusinessIcon,
   CalendarCheckIcon,
   ChartColumnIcon,
-  ExternalLinkIcon,
+  HistoryIcon,
   LayoutDashboardIcon,
-  LogOutIcon,
   MapPinIcon,
   MessageSquareTextIcon,
-  UserIcon,
   UsersIcon,
   UtensilsCrossedIcon,
 } from 'lucide-react'
@@ -17,8 +15,7 @@ import { useState, type ComponentType } from 'react'
 import { toast } from 'sonner'
 import { updateProfile } from '@/services/api/auth'
 import { useAuth } from '@/contexts/AuthContext'
-import { friendlyError, roleLabel } from '@/utils/format'
-import { Button } from '@/components/ui/button'
+import { friendlyError } from '@/utils/format'
 import { Separator } from '@/components/ui/separator'
 import {
   Sidebar,
@@ -37,7 +34,8 @@ import {
   SidebarTrigger,
 } from '@/components/ui/sidebar'
 import { BrandMark, Wordmark } from '@/components/common/Brand'
-import { UserAvatar } from '@/components/common/UserAvatar'
+import { NotificationBell } from '@/features/notifications/components'
+import { AccountMenu } from '@/features/users/components/AccountMenu'
 import { UserFormModal } from '@/features/users/components/UserFormModal'
 import { UserProfileSheet } from '@/features/users/components/UserProfileSheet'
 
@@ -59,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon },
   { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, adminOnly: true },
   { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, adminOnly: true },
+  { to: '/staff/activity', label: 'Activity', icon: HistoryIcon, adminOnly: true },
 ]
 
 export function DashboardLayout() {
@@ -133,68 +132,12 @@ export function DashboardLayout() {
         </SidebarContent>
 
         <SidebarFooter>
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            className="flex w-full items-center gap-2 rounded-md p-1 text-left transition-colors hover:bg-accent group-data-[collapsible=icon]:hidden"
-          >
-            <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} size="xs" />
-            <span className="min-w-0 flex-1">
-              <span className="block truncate text-xs font-medium text-foreground">
-                {user.name}
-              </span>
-              <span className="block truncate text-[0.7rem] text-muted-foreground">
-                {user.position || roleLabel(user.role)}
-              </span>
-            </span>
-          </button>
-
-          <div className="flex flex-col gap-2 group-data-[collapsible=icon]:hidden">
-            <div className="flex items-center justify-between gap-1">
-              <Button
-                variant="ghost"
-                size="xs"
-                className="text-muted-foreground"
-                onClick={() => setProfileOpen(true)}
-              >
-                <UserIcon />
-                My profile
-              </Button>
-              <Button asChild variant="ghost" size="xs" className="text-muted-foreground">
-                <Link to="/">
-                  <ExternalLinkIcon />
-                  Public site
-                </Link>
-              </Button>
-            </div>
-            <Button
-              variant="ghost"
-              size="xs"
-              className="justify-start text-destructive hover:text-destructive"
-              onClick={handleSignOut}
-            >
-              <LogOutIcon />
-              Sign out
-            </Button>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setProfileOpen(true)}
-            className="hidden justify-center group-data-[collapsible=icon]:flex"
-            aria-label="My profile"
-          >
-            <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} size="xs" />
-          </button>
-          <Button
-            variant="ghost"
-            size="icon"
-            className="hidden text-destructive group-data-[collapsible=icon]:flex hover:text-destructive"
-            onClick={handleSignOut}
-            aria-label="Sign out"
-          >
-            <LogOutIcon />
-          </Button>
+          <AccountMenu
+            user={user}
+            onViewProfile={() => setProfileOpen(true)}
+            onEditProfile={() => setEditingSelf(true)}
+            onSignOut={handleSignOut}
+          />
         </SidebarFooter>
         <SidebarRail />
       </Sidebar>
@@ -206,6 +149,9 @@ export function DashboardLayout() {
           <span className="truncate text-sm font-medium text-muted-foreground">
             Wyndell&rsquo;s · Staff portal
           </span>
+          <div className="ml-auto flex items-center gap-1">
+            <NotificationBell />
+          </div>
         </header>
         <main className="flex-1 px-4 py-6 sm:px-6 lg:px-8">
           <Outlet />

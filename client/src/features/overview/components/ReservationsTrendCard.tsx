@@ -72,7 +72,7 @@ export function ReservationsTrendCard({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={trendConfig} className="aspect-auto h-[260px] w-full">
+        <ChartContainer config={trendConfig} className="aspect-auto h-65 w-full">
           <AreaChart accessibilityLayer data={data} margin={{ left: 4, right: 12, top: 8 }}>
             <defs>
               <linearGradient id="fillTotal" x1="0" y1="0" x2="0" y2="1">

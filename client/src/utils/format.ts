@@ -54,6 +54,26 @@ export function todayLocal(): string {
   return `${now.getFullYear()}-${month}-${day}`
 }
 
+/**
+ * Short relative timestamp used by the notification list ("5m ago", "2h ago",
+ * "yesterday"). Anything older than a week falls back to a date so the list
+ * never shows an unhelpfully vague "347d ago".
+ */
+export function timeAgo(iso: string): string {
+  const then = new Date(iso).getTime()
+  if (Number.isNaN(then)) return iso
+  const seconds = Math.max(Math.floor((Date.now() - then) / 1000), 0)
+  if (seconds < 60) return 'just now'
+  const minutes = Math.floor(seconds / 60)
+  if (minutes < 60) return `${minutes}m ago`
+  const hours = Math.floor(minutes / 60)
+  if (hours < 24) return `${hours}h ago`
+  const days = Math.floor(hours / 24)
+  if (days === 1) return 'yesterday'
+  if (days < 7) return `${days}d ago`
+  return formatDate(new Date(then).toISOString().slice(0, 10))
+}
+
 export function addDays(dateString: string, days: number): string {
   const parsed = new Date(`${dateString}T00:00:00`)
   parsed.setDate(parsed.getDate() + days)

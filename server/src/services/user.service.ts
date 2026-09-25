@@ -16,6 +16,9 @@ import {
 } from '../constants'
 import { buildSafeUsers, hashPassword, USER_SELECT, type SafeUser } from './auth.service'
 import { deleteStoredAvatar, uploadAvatar, type AvatarUpload } from './avatar.service'
+import type { AuthUser } from '../middleware/auth'
+import { notifyAdmins, welcomeNewUser } from './notification.service'
+import { recordActivity } from './activity.service'
 
 const USER_EDITABLE_FIELDS = [
   'name',
@@ -175,6 +178,7 @@ export async function listUsers(role?: string): Promise<SafeUser[]> {
 export async function createUser(
   payload: Record<string, unknown>,
   upload?: AvatarUpload,
+  actor?: AuthUser,
 ): Promise<SafeUser> {
   requireFields(payload, ['name', 'email', 'password', 'role'])
   const role = String(payload.role)
@@ -217,6 +221,26 @@ export async function createUser(
     }
     throw new ApiError(500, 'Could not create the user.')
   }
+
+  const branchId = payload.assignedBranch ? String(payload.assignedBranch) : null
+  // The new account starts life with a welcome notification, and the rest of
+  // the staff hear that a colleague joined.
+  await welcomeNewUser(String(inserted.id), branchId)
+  void notifyAdmins({
+    type: 'staff_created',
+    title: 'New staff account',
+    body: `${name} (${roleValue === 'admin' ? 'Administrator' : 'Manager'}) was added to the portal.`,
+    link: '/staff/users',
+  })
+  void recordActivity({
+    actorId: actor?.id ?? null,
+    branchId,
+    action: 'user.created',
+    summary: `${name} (${String(payload.email)}) was created as ${roleValue}`,
+    entity: 'user',
+    entityId: String(inserted.id),
+  })
+
   return fetchSafeUser(inserted.id)
 }
 
@@ -228,9 +252,11 @@ export async function updateUser(
   id: string,
   payload: Record<string, unknown>,
   upload?: AvatarUpload,
+  actor?: AuthUser,
 ): Promise<SafeUser> {
   assertUuid(id, 'user')
   const existing = await fetchSafeUser(id)
+  const changedFields = Object.keys(pickFields(payload, USER_EDITABLE_FIELDS))
 
   const updates = pickFields(payload, USER_EDITABLE_FIELDS)
   const rowUpdates: Record<string, unknown> = {}
@@ -294,6 +320,20 @@ export async function updateUser(
   }
   // Only once the new photo is safely stored does the old one go away.
   await deleteStoredAvatar(avatar.purge)
+
+  if (changedFields.length > 0) {
+    const onlyToggledActive = changedFields.length === 1 && changedFields[0] === 'isActive'
+    void recordActivity({
+      actorId: actor?.id ?? null,
+      branchId: existing.assignedBranch?.id ?? null,
+      action: onlyToggledActive ? 'user.status_changed' : 'user.updated',
+      summary: onlyToggledActive
+        ? `${existing.name} was ${rowUpdates.is_active === false ? 'deactivated' : 'reactivated'}`
+        : `${existing.name} was updated (${changedFields.join(', ')})`,
+      entity: 'user',
+      entityId: id,
+    })
+  }
   return fetchSafeUser(id)
 }
 
@@ -338,19 +378,38 @@ export async function updateOwnProfile(
   }
   // Only once the new photo is safely stored does the old one go away.
   await deleteStoredAvatar(avatar.purge)
+
+  const profileFields = Object.keys(rowUpdates)
+  void recordActivity({
+    actorId: id,
+    branchId: existing.assignedBranch?.id ?? null,
+    action: 'user.profile_updated',
+    summary: `${existing.name} updated their own profile (${profileFields.join(', ')})`,
+    entity: 'user',
+    entityId: id,
+  })
   return fetchSafeUser(id)
 }
 
-export async function setUserActive(id: string, isActive: boolean): Promise<SafeUser> {
+export async function setUserActive(id: string, isActive: boolean, actor?: AuthUser): Promise<SafeUser> {
   assertUuid(id, 'user')
+  const existing = await fetchSafeUser(id)
   const { error } = await getDb().from(usersTable).update({ is_active: isActive }).eq('id', id)
   if (error) {
     throw new ApiError(404, 'User not found')
   }
+  void recordActivity({
+    actorId: actor?.id ?? null,
+    branchId: existing.assignedBranch?.id ?? null,
+    action: 'user.status_changed',
+    summary: `${existing.name} was ${isActive ? 'reactivated' : 'deactivated'}`,
+    entity: 'user',
+    entityId: id,
+  })
   return fetchSafeUser(id)
 }
 
-export async function deleteUser(id: string): Promise<void> {
+export async function deleteUser(id: string, actor?: AuthUser): Promise<void> {
   assertUuid(id, 'user')
   const existing = await fetchSafeUser(id)
   if (existing.role === 'admin') {
@@ -362,4 +421,12 @@ export async function deleteUser(id: string): Promise<void> {
   }
   // The account is gone, so its stored profile photo would be orphaned.
   await deleteStoredAvatar(existing.avatarUrl)
+  void recordActivity({
+    actorId: actor?.id ?? null,
+    branchId: existing.assignedBranch?.id ?? null,
+    action: 'user.deleted',
+    summary: `${existing.name} (${existing.email}) was deleted`,
+    entity: 'user',
+    entityId: id,
+  })
 }

@@ -12,6 +12,7 @@ import { reservationsTable } from '../models/Reservation'
 import { feedbackTable } from '../models/Feedback'
 import { careerPostingsTable } from '../models/CareerPosting'
 import { jobApplicationsTable } from '../models/JobApplication'
+import { notificationsTable } from '../models/Notification'
 import { addDays, todayString } from '../utils/validate'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -421,6 +422,64 @@ async function menuSeeds(branchId: string): Promise<MenuSeed[]> {
  * empty copy the source branch (`masinag`). Branches that already have tables or
  * menu items are never modified, so re-running the seed is always safe.
  */
+/**
+ * Guarantees every staff account has at least one notification. Accounts that
+ * already have any notification are left alone, so this stays a no-op on
+ * re-runs and never overwrites a real inbox.
+ */
+async function seedWelcomeNotifications() {
+  const { data: users, error: usersError } = await getDb()
+    .from(usersTable)
+    .select('id, name, assigned_branch_id, is_active')
+    .eq('is_active', true)
+  if (usersError) {
+    console.warn(`Skipping welcome notifications: ${usersError.message}`)
+    return
+  }
+
+  const rows = (users ?? []) as Array<{
+    id: string
+    name: string
+    assigned_branch_id: string | null
+  }>
+  if (rows.length === 0) return
+
+  const { data: existing, error: existingError } = await getDb()
+    .from(notificationsTable)
+    .select('user_id')
+    .in(
+      'user_id',
+      rows.map((row) => row.id),
+    )
+  if (existingError) {
+    console.warn(`Skipping welcome notifications: ${existingError.message}`)
+    return
+  }
+
+  const alreadyNotified = new Set((existing ?? []).map((row) => String(row.user_id)))
+  const fresh = rows.filter((row) => !alreadyNotified.has(row.id))
+  if (fresh.length === 0) {
+    console.log('Welcome notifications already present')
+    return
+  }
+
+  const { error: insertError } = await getDb().from(notificationsTable).insert(
+    fresh.map((row) => ({
+      user_id: row.id,
+      branch_id: row.assigned_branch_id,
+      type: 'welcome',
+      title: 'Welcome to the staff portal',
+      body: `Hi ${row.name} — your account is ready. Notifications about reservations, feedback and applications will appear here.`,
+      link: '/staff',
+    })),
+  )
+  if (insertError) {
+    console.warn(`Welcome notifications failed: ${insertError.message}`)
+    return
+  }
+  console.log(`Welcome notifications created for ${fresh.length} account(s)`)
+}
+
 async function seedBranchContent() {
   const { data: branches, error } = await getDb().from(branchesTable).select('*')
   if (error) {
@@ -719,6 +778,11 @@ async function main() {
   console.log(`Connected to Supabase: ${supabaseUrl ? new URL(supabaseUrl).hostname : 'unknown host'}`)
 
   await seedBranchesAndUsers()
+
+  // Every account must have at least one notification to interact with, so the
+  // bell is never empty on first login. Idempotent — accounts that already
+  // have notifications are skipped.
+  await seedWelcomeNotifications()
 
   // Every branch gets a floor plan and a menu (copied from the source branch when
   // it has none yet) so online reservations and the QR menu work everywhere.

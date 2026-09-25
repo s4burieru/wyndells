@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { fetchReservations, updateReservationStatus } from '@/services/api/reservations'
 import type {  Reservation, ReservationStatus  } from '@/types'
 import { friendlyError } from '@/utils/format'
@@ -10,6 +11,8 @@ import { TableAssignmentModal } from '@/features/reservations/components/TableAs
 
 export function ManageReservationsPage() {
   const { user } = useAuth()
+  // Notifications deep-link here with `?ref=RD-1234` to open that booking.
+  const [searchParams, setSearchParams] = useSearchParams()
   const [items, setItems] = useState<Reservation[]>([])
   const [filter, setFilter] = useState<'all' | ReservationStatus>('all')
   const [date, setDate] = useState('')
@@ -17,6 +20,7 @@ export function ManageReservationsPage() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<Reservation | null>(null)
   const [assigning, setAssigning] = useState<Reservation | null>(null)
+  const highlightRef = searchParams.get('ref') ?? ''
 
   const load = () => {
     setLoading(true)
@@ -28,6 +32,21 @@ export function ManageReservationsPage() {
   }
 
   useEffect(load, [filter, date])
+
+  // Open the booking a notification pointed at, then drop the parameter so a
+  // refresh or a later navigation doesn't reopen a stale detail modal. The
+  // lookup runs once the first page has loaded; a booking outside the window
+  // simply leaves the list untouched.
+  useEffect(() => {
+    if (!highlightRef || loading) return
+    const match = items.find(
+      (item) => item.reference.toUpperCase() === highlightRef.toUpperCase(),
+    )
+    if (match) {
+      setSelected(match)
+    }
+    setSearchParams({}, { replace: true })
+  }, [highlightRef, loading, items, setSearchParams])
 
   const changeStatus = (id: string, status: ReservationStatus) => {
     setError('')

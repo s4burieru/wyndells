@@ -25,6 +25,7 @@ import { ManageApplicationsPage } from '@/pages/dashboard/ApplicationsPage'
 import { ReportsPage } from '@/pages/dashboard/ReportsPage'
 import { ManageBranchesPage } from '@/pages/dashboard/BranchesPage'
 import { ManageUsersPage } from '@/pages/dashboard/UsersPage'
+import { ActivityPage } from '@/pages/dashboard/ActivityPage'
 
 function App() {
   return (
@@ -58,6 +59,7 @@ function App() {
               <Route element={<RequireAuth role="admin" />}>
                 <Route path="/staff/branches" element={<ManageBranchesPage />} />
                 <Route path="/staff/users" element={<ManageUsersPage />} />
+                <Route path="/staff/activity" element={<ActivityPage />} />
               </Route>
             </Route>
           </Route>

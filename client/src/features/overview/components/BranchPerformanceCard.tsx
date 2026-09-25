@@ -73,7 +73,7 @@ export function BranchPerformanceCard({
         <CardDescription>{description}</CardDescription>
       </CardHeader>
       <CardContent>
-        <ChartContainer config={radarConfig} className="mx-auto aspect-square max-h-[320px] w-full">
+        <ChartContainer config={radarConfig} className="mx-auto aspect-square max-h-80 w-full">
           <RadarChart accessibilityLayer data={data} outerRadius="72%">
             <PolarGrid />
             <PolarAngleAxis dataKey="branch" tick={{ fontSize: 11 }} />
