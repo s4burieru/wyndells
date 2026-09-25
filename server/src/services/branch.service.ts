@@ -3,6 +3,8 @@ import { branchesTable, toBranch, type BranchRow } from '../models/Branch'
 import { ApiError, isDuplicateKeyError } from '../utils/ApiError'
 import { pickFields } from '../utils/pick'
 import { assertUuid, isUuid, requireFields } from '../utils/validate'
+import type { AuthUser } from '../middleware/auth'
+import { recordActivity } from './activity.service'
 
 const BRANCH_EDITABLE_FIELDS = [
   'name',
@@ -64,7 +66,7 @@ export async function getBranch(idOrCode: string, includeInactive = false) {
   return toBranch(data as BranchRow)
 }
 
-export async function createBranch(payload: Record<string, unknown>) {
+export async function createBranch(payload: Record<string, unknown>, actor?: AuthUser) {
   requireFields(payload, ['name', 'code'])
   const updates = pickFields(payload, BRANCH_EDITABLE_FIELDS)
   const code = String(updates.code).trim().toLowerCase()
@@ -82,10 +84,19 @@ export async function createBranch(payload: Record<string, unknown>) {
     }
     throw new ApiError(500, 'Could not create the branch.')
   }
-  return toBranch(created as BranchRow)
+  const branch = toBranch(created as BranchRow)
+  void recordActivity({
+    actorId: actor?.id ?? null,
+    branchId: branch._id,
+    action: 'branch.created',
+    summary: `${branch.name} (${branch.code}) was created`,
+    entity: 'branch',
+    entityId: branch._id,
+  })
+  return branch
 }
 
-export async function updateBranch(id: string, payload: Record<string, unknown>) {
+export async function updateBranch(id: string, payload: Record<string, unknown>, actor?: AuthUser) {
   assertUuid(id, 'branch')
   const updates = pickFields(payload, BRANCH_EDITABLE_FIELDS)
   const row = toRowUpdates(updates)
@@ -102,10 +113,25 @@ export async function updateBranch(id: string, payload: Record<string, unknown>)
     }
     throw new ApiError(404, 'Branch not found')
   }
-  return toBranch(updated as BranchRow)
+  const branch = toBranch(updated as BranchRow)
+  const changed = Object.keys(updates)
+  if (changed.length > 0) {
+    void recordActivity({
+      actorId: actor?.id ?? null,
+      branchId: id,
+      action: changed.length === 1 && changed[0] === 'isActive' ? 'branch.status_changed' : 'branch.updated',
+      summary:
+        changed.length === 1 && changed[0] === 'isActive'
+          ? `${branch.name} was ${branch.isActive ? 'reactivated' : 'deactivated'}`
+          : `${branch.name} was updated (${changed.join(', ')})`,
+      entity: 'branch',
+      entityId: id,
+    })
+  }
+  return branch
 }
 
-export async function setBranchActive(id: string, isActive: boolean) {
+export async function setBranchActive(id: string, isActive: boolean, actor?: AuthUser) {
   assertUuid(id, 'branch')
   const { data: updated, error } = await getDb()
     .from(branchesTable)
@@ -116,13 +142,35 @@ export async function setBranchActive(id: string, isActive: boolean) {
   if (error || !updated) {
     throw new ApiError(404, 'Branch not found')
   }
-  return toBranch(updated as BranchRow)
+  const branch = toBranch(updated as BranchRow)
+  void recordActivity({
+    actorId: actor?.id ?? null,
+    branchId: id,
+    action: 'branch.status_changed',
+    summary: `${branch.name} was ${isActive ? 'reactivated' : 'deactivated'}`,
+    entity: 'branch',
+    entityId: id,
+  })
+  return branch
 }
 
-export async function deleteBranch(id: string): Promise<void> {
+export async function deleteBranch(id: string, actor?: AuthUser): Promise<void> {
   assertUuid(id, 'branch')
+  const { data: existing } = await getDb()
+    .from(branchesTable)
+    .select('name, code')
+    .eq('id', id)
+    .maybeSingle()
   const { data, error } = await getDb().from(branchesTable).delete().eq('id', id).select('id').single()
   if (error || !data) {
     throw new ApiError(404, 'Branch not found')
   }
+  void recordActivity({
+    actorId: actor?.id ?? null,
+    branchId: id,
+    action: 'branch.deleted',
+    summary: `${existing?.name ?? 'Branch'} (${existing?.code ?? id}) was deleted`,
+    entity: 'branch',
+    entityId: id,
+  })
 }

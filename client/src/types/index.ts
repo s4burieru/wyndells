@@ -215,3 +215,52 @@ export type JobApplication = {
   createdAt: string
   updatedAt: string
 }
+
+// ---------------------------------------------------------------------------
+// Notifications & activity log
+// ---------------------------------------------------------------------------
+
+export type NotificationType =
+  | 'reservation_new'
+  | 'reservation_status'
+  | 'table_assigned'
+  | 'feedback_new'
+  | 'application_new'
+  | 'application_status'
+  | 'staff_created'
+  | 'welcome'
+
+export type AppNotification = {
+  _id: string
+  type: NotificationType
+  title: string
+  body: string
+  /** Dashboard route opened on click; empty when there is nothing to open. */
+  link: string
+  isRead: boolean
+  branch: BranchRef | null
+  createdAt: string
+}
+
+export type NotificationListResult = {
+  notifications: AppNotification[]
+  total: number
+  unread: number
+}
+
+export type ActivityEntry = {
+  _id: string
+  /** Stable machine name, e.g. `reservation.status_changed`. */
+  action: string
+  summary: string
+  entity: string
+  entityId: string
+  actor: { _id: string; name: string; role: Role } | null
+  branch: BranchRef | null
+  createdAt: string
+}
+
+export type ActivityListResult = {
+  activities: ActivityEntry[]
+  total: number
+}

@@ -5,6 +5,9 @@ import { branchesTable } from '../models/Branch'
 import { ApiError } from '../utils/ApiError'
 import { assertEmail, assertUuid, assertPhone, requireFields } from '../utils/validate'
 import { FEEDBACK_MAX_SUBMISSIONS_PER_CLIENT_PER_HOUR } from '../constants'
+import type { AuthUser } from '../middleware/auth'
+import { notifyBranch } from './notification.service'
+import { recordActivity } from './activity.service'
 
 const FEEDBACK_WINDOW_MS = 60 * 60 * 1000 // one hour
 const MAX_FEEDBACK_COMMENT_LENGTH = 1000
@@ -105,6 +108,23 @@ export async function createFeedback(payload: Record<string, unknown>, clientKey
   if (error) {
     throw new ApiError(500, 'Could not save your feedback. Please try again.')
   }
+
+  const stars = '★'.repeat(rating) + '☆'.repeat(5 - rating)
+  void notifyBranch(branchId, {
+    type: 'feedback_new',
+    title: `${rating}-star feedback received`,
+    body: `${customerName} · ${stars}${comment ? ` — ${comment}` : ''}`,
+    link: '/staff/feedback',
+    branchId,
+  })
+  void recordActivity({
+    branchId,
+    action: 'feedback.created',
+    summary: `${customerName} left ${rating}★ feedback: ${comment.slice(0, 80)}`,
+    entity: 'feedback',
+    entityId: String(created.id),
+  })
+
   return getFeedbackById(created.id)
 }
 
@@ -156,10 +176,27 @@ export async function listManageableFeedback(filter: { branch?: string; limit?: 
   return (data ?? []).map((row) => toFeedback(row as FeedbackWithBranchRow))
 }
 
-export async function deleteFeedback(id: string): Promise<void> {
+export async function deleteFeedback(id: string, actor?: AuthUser): Promise<void> {
   assertUuid(id, 'feedback')
+  const { data: existing } = await getDb()
+    .from(feedbackTable)
+    .select('id, branch_id, customer_name, rating')
+    .eq('id', id)
+    .maybeSingle()
+
   const { data, error } = await getDb().from(feedbackTable).delete().eq('id', id).select('id').single()
   if (error || !data) {
     throw new ApiError(404, 'Feedback not found')
+  }
+
+  if (existing) {
+    void recordActivity({
+      actorId: actor?.id ?? null,
+      branchId: existing.branch_id ? String(existing.branch_id) : null,
+      action: 'feedback.deleted',
+      summary: `Feedback from ${existing.customer_name} (${existing.rating}★) was removed`,
+      entity: 'feedback',
+      entityId: id,
+    })
   }
 }

@@ -26,6 +26,8 @@ import {
   type ReservationStatus,
 } from '../constants'
 import { assertBranchAccess, type AuthUser } from '../middleware/auth'
+import { notifyBranch } from './notification.service'
+import { recordActivity } from './activity.service'
 
 /** Reservations are treated as occupying a table for 90 minutes. */
 const BOOKING_WINDOW_MINUTES = 90
@@ -430,6 +432,23 @@ export async function createReservation(payload: Record<string, unknown>) {
     throw new ApiError(500, 'Could not save the reservation.')
   }
 
+  // Best-effort: a booking arriving from the public site is announced to the
+  // branch's staff (and admins) without being able to fail the booking itself.
+  void notifyBranch(branchId, {
+    type: 'reservation_new',
+    title: 'New online reservation',
+    body: `${customerName} · ${guests} ${guests === 1 ? 'guest' : 'guests'} · ${date} at ${time}`,
+    link: `/staff/reservations?ref=${reference}`,
+    branchId,
+  })
+  void recordActivity({
+    branchId,
+    action: 'reservation.created',
+    summary: `${customerName} booked ${guests} ${guests === 1 ? 'guest' : 'guests'} for ${date} ${time} (${reference})`,
+    entity: 'reservation',
+    entityId: String(created.id),
+  })
+
   return getReservation(created.id)
 }
 
@@ -589,6 +608,27 @@ export async function updateReservationStatus(
     throw new ApiError(500, 'Could not update the reservation.')
   }
 
+  void notifyBranch(
+    String(row.branch_id),
+    {
+      type: 'reservation_status',
+      title: `Reservation ${nextStatus}`,
+      body: `${row.customer_name} · ${row.reference} · ${row.date} at ${row.time}`,
+      link: `/staff/reservations?ref=${row.reference}`,
+      branchId: String(row.branch_id),
+    },
+    // The person who moved the reservation doesn't need telling about it.
+    actor.id,
+  )
+  void recordActivity({
+    actorId: actor.id,
+    branchId: String(row.branch_id),
+    action: 'reservation.status_changed',
+    summary: `${row.reference} · ${row.customer_name} moved from ${current} to ${nextStatus}`,
+    entity: 'reservation',
+    entityId: id,
+  })
+
   return getReservation(id)
 }
 
@@ -635,6 +675,33 @@ export async function assignTable(id: string, tableId: string, actor: AuthUser) 
     await releaseTableIfHeld(String(previousTable))
   }
   await markTableReserved(tableIdValue)
+
+  const { data: assignedTable } = await getDb()
+    .from(diningTablesTable)
+    .select('table_number')
+    .eq('id', tableIdValue)
+    .maybeSingle()
+  const tableLabel = assignedTable ? `table ${assignedTable.table_number}` : 'a table'
+
+  void notifyBranch(
+    String(row.branch_id),
+    {
+      type: 'table_assigned',
+      title: 'Table assigned',
+      body: `${row.reference} · ${row.customer_name} is now assigned to ${tableLabel}.`,
+      link: `/staff/reservations?ref=${row.reference}`,
+      branchId: String(row.branch_id),
+    },
+    actor.id,
+  )
+  void recordActivity({
+    actorId: actor.id,
+    branchId: String(row.branch_id),
+    action: 'reservation.table_assigned',
+    summary: `${tableLabel} assigned to ${row.reference} (${row.customer_name})`,
+    entity: 'reservation',
+    entityId: id,
+  })
 
   return getReservation(id)
 }

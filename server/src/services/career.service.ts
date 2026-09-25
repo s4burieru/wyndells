@@ -29,6 +29,8 @@ import {
   type PostingStatus,
 } from '../constants'
 import { assertBranchAccess, type AuthUser } from '../middleware/auth'
+import { notifyBranch } from './notification.service'
+import { recordActivity } from './activity.service'
 
 const APPLICATION_WINDOW_MS = 60 * 60 * 1000 // one hour
 
@@ -230,7 +232,7 @@ export async function createApplication(
   // Applications are only accepted for an open posting of an active branch.
   const { data: posting, error: postingError } = await getDb()
     .from(careerPostingsTable)
-    .select('id, branch_id, status')
+    .select('id, branch_id, status, title')
     .eq('id', postingId)
     .eq('status', 'open')
     .maybeSingle()
@@ -279,6 +281,23 @@ export async function createApplication(
     await getDb().from(jobApplicationsTable).delete().eq('id', created.id)
     throw reason
   }
+
+  const branchId = String(posting.branch_id)
+  const postingTitle = String(posting.title)
+  void notifyBranch(branchId, {
+    type: 'application_new',
+    title: 'New job application',
+    body: `${fullName} applied for ${postingTitle}`,
+    link: '/staff/applications',
+    branchId,
+  })
+  void recordActivity({
+    branchId,
+    action: 'career.application_created',
+    summary: `${fullName} applied for ${postingTitle}`,
+    entity: 'application',
+    entityId: String(created.id),
+  })
 
   return getApplicationById(created.id)
 }
@@ -501,6 +520,28 @@ export async function setApplicationStatus(
   if (error) {
     throw new ApiError(500, 'Could not update the application status.')
   }
+
+  const branchId = application.branch?._id ?? null
+  void notifyBranch(
+    branchId,
+    {
+      type: 'application_status',
+      title: `Application ${nextStatus}`,
+      body: `${application.fullName} · ${application.posting?.title ?? 'a position'}`,
+      link: '/staff/applications',
+      branchId,
+    },
+    actor.id,
+  )
+  void recordActivity({
+    actorId: actor.id,
+    branchId,
+    action: 'career.application_status_changed',
+    summary: `${application.fullName} (${application.posting?.title ?? 'application'}) moved from ${previous} to ${nextStatus}`,
+    entity: 'application',
+    entityId: id,
+  })
+
   return getApplicationById(id)
 }
 

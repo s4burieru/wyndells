@@ -15,6 +15,8 @@ import reservationsRouter from './routes/reservations'
 import feedbackRouter from './routes/feedback'
 import careersRouter from './routes/careers'
 import reportsRouter from './routes/reports'
+import notificationsRouter from './routes/notifications'
+import activityRouter from './routes/activity'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -49,6 +51,8 @@ app.use('/api/reservations', reservationsRouter)
 app.use('/api/feedback', feedbackRouter)
 app.use('/api/careers', careersRouter)
 app.use('/api/reports', reportsRouter)
+app.use('/api/notifications', notificationsRouter)
+app.use('/api/activity', activityRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

@@ -6,6 +6,7 @@ import { pickFields } from '../utils/pick'
 import { assertUuid, requireFields } from '../utils/validate'
 import { MENU_CATEGORIES, type MenuCategory } from '../constants'
 import { assertBranchAccess, type AuthUser } from '../middleware/auth'
+import { recordActivity } from './activity.service'
 
 const MENU_EDITABLE_FIELDS = ['name', 'description', 'price', 'category', 'image', 'status', 'isFeatured']
 
@@ -18,7 +19,7 @@ const MENU_SELECT = '*, branch:branch_id(id, name, code)'
  */
 const PUBLIC_MENU_SELECT = '*, branch:branch_id!inner(id, name, code)'
 
-async function assertMenuItemBranchAccess(id: string, actor: AuthUser): Promise<void> {
+async function assertMenuItemBranchAccess(id: string, actor: AuthUser): Promise<string> {
   const { data: match, error } = await getDb()
     .from(menuItemsTable)
     .select('branch_id')
@@ -28,6 +29,7 @@ async function assertMenuItemBranchAccess(id: string, actor: AuthUser): Promise<
     throw new ApiError(404, 'Menu item not found')
   }
   assertBranchAccess(actor, String(match.branch_id))
+  return String(match.branch_id)
 }
 
 export async function listMenuItems(options: {
@@ -123,12 +125,21 @@ export async function createMenuItem(payload: Record<string, unknown>, actor: Au
   if (error) {
     throw new ApiError(500, 'Could not create the menu item.')
   }
-  return toMenuItem(created as MenuItemRow)
+  const inserted = created as MenuItemRow
+  void recordActivity({
+    actorId: actor.id,
+    branchId,
+    action: 'menu.created',
+    summary: `${inserted.name} (${category}, ₱${price}) was added to the menu`,
+    entity: 'menu',
+    entityId: inserted.id,
+  })
+  return toMenuItem(inserted)
 }
 
 export async function updateMenuItem(id: string, payload: Record<string, unknown>, actor: AuthUser) {
   assertUuid(id, 'menu item')
-  await assertMenuItemBranchAccess(id, actor)
+  const branchId = await assertMenuItemBranchAccess(id, actor)
   const updates = pickFields(payload, MENU_EDITABLE_FIELDS)
 
   const row: Record<string, unknown> = {}
@@ -161,14 +172,39 @@ export async function updateMenuItem(id: string, payload: Record<string, unknown
   if (error || !updated) {
     throw new ApiError(404, 'Menu item not found')
   }
-  return toMenuItem(updated as MenuItemRow)
+  const stored = updated as MenuItemRow
+  const changed = Object.keys(updates)
+  if (changed.length > 0) {
+    void recordActivity({
+      actorId: actor.id,
+      branchId,
+      action: 'menu.updated',
+      summary: `${stored.name} was updated (${changed.join(', ')})`,
+      entity: 'menu',
+      entityId: id,
+    })
+  }
+  return toMenuItem(stored)
 }
 
 export async function deleteMenuItem(id: string, actor: AuthUser): Promise<void> {
   assertUuid(id, 'menu item')
-  await assertMenuItemBranchAccess(id, actor)
-  const { data, error } = await getDb().from(menuItemsTable).delete().eq('id', id).select('id').single()
+  const branchId = await assertMenuItemBranchAccess(id, actor)
+  const { data, error } = await getDb()
+    .from(menuItemsTable)
+    .delete()
+    .eq('id', id)
+    .select('id, name')
+    .single()
   if (error || !data) {
     throw new ApiError(404, 'Menu item not found')
   }
+  void recordActivity({
+    actorId: actor.id,
+    branchId,
+    action: 'menu.deleted',
+    summary: `${data.name} was removed from the menu`,
+    entity: 'menu',
+    entityId: id,
+  })
 }

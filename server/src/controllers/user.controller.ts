@@ -17,7 +17,7 @@ export const listUsersController = asyncHandler(async (req: AuthedRequest, res: 
 })
 
 export const createUserController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const user = await createUser(req.body as Record<string, unknown>, uploadedAvatar(req))
+  const user = await createUser(req.body as Record<string, unknown>, uploadedAvatar(req), req.user)
   res.status(201).json({ user })
 })
 
@@ -26,17 +26,18 @@ export const updateUserController = asyncHandler(async (req: AuthedRequest, res:
     String(req.params.id),
     req.body as Record<string, unknown>,
     uploadedAvatar(req),
+    req.user,
   )
   res.json({ user })
 })
 
 export const setUserActiveController = asyncHandler(async (req: AuthedRequest, res: Response) => {
   const isActive = String(req.body?.isActive ?? '').toLowerCase() === 'true'
-  const user = await setUserActive(String(req.params.id), isActive)
+  const user = await setUserActive(String(req.params.id), isActive, req.user)
   res.json({ user })
 })
 
 export const deleteUserController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  await deleteUser(String(req.params.id))
+  await deleteUser(String(req.params.id), req.user)
   res.json({ message: 'User deleted' })
 })

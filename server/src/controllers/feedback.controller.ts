@@ -42,6 +42,6 @@ export const listManageableFeedbackController = asyncHandler(
 )
 
 export const deleteFeedbackController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  await deleteFeedback(String(req.params.id))
+  await deleteFeedback(String(req.params.id), req.user)
   res.json({ message: 'Feedback deleted' })
 })

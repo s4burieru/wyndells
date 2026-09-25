@@ -6,6 +6,7 @@ import { pickFields } from '../utils/pick'
 import { assertUuid, requireFields } from '../utils/validate'
 import { TABLE_STATUSES, type TableStatus } from '../constants'
 import { assertBranchAccess, type AuthUser } from '../middleware/auth'
+import { recordActivity } from './activity.service'
 
 const TABLE_EDITABLE_FIELDS = ['tableNumber', 'capacity', 'location', 'status', 'isActive']
 
@@ -24,7 +25,7 @@ function scopedBranch(branch: string | undefined, actor: AuthUser): string | und
   return branch
 }
 
-async function assertTableBranchAccess(id: string, actor: AuthUser): Promise<void> {
+async function assertTableBranchAccess(id: string, actor: AuthUser): Promise<string> {
   const { data: match, error } = await getDb()
     .from(diningTablesTable)
     .select('branch_id')
@@ -34,6 +35,7 @@ async function assertTableBranchAccess(id: string, actor: AuthUser): Promise<voi
     throw new ApiError(404, 'Table not found')
   }
   assertBranchAccess(actor, String(match.branch_id))
+  return String(match.branch_id)
 }
 
 export async function listTables(
@@ -106,12 +108,20 @@ export async function createTable(payload: Record<string, unknown>, actor: AuthU
     }
     throw new ApiError(500, 'Could not create the table.')
   }
+  void recordActivity({
+    actorId: actor.id,
+    branchId,
+    action: 'table.created',
+    summary: `Table ${tableNumber} (seats ${capacity}) was added`,
+    entity: 'table',
+    entityId: String(created.id),
+  })
   return toDiningTable(created as DiningTableRow)
 }
 
 export async function updateTable(id: string, payload: Record<string, unknown>, actor: AuthUser) {
   assertUuid(id, 'table')
-  await assertTableBranchAccess(id, actor)
+  const branchId = await assertTableBranchAccess(id, actor)
   const updates = pickFields(payload, TABLE_EDITABLE_FIELDS)
 
   const row: Record<string, unknown> = {}
@@ -144,12 +154,23 @@ export async function updateTable(id: string, payload: Record<string, unknown>, 
     }
     throw new ApiError(404, 'Table not found')
   }
+  const changed = Object.keys(updates)
+  if (changed.length > 0) {
+    void recordActivity({
+      actorId: actor.id,
+      branchId,
+      action: changed.length === 1 && changed[0] === 'status' ? 'table.status_changed' : 'table.updated',
+      summary: `Table ${updated.table_number} was updated (${changed.join(', ')})`,
+      entity: 'table',
+      entityId: id,
+    })
+  }
   return toDiningTable(updated as DiningTableRow)
 }
 
 export async function setTableStatus(id: string, status: string, actor: AuthUser) {
   assertUuid(id, 'table')
-  await assertTableBranchAccess(id, actor)
+  const branchId = await assertTableBranchAccess(id, actor)
   if (!TABLE_STATUSES.includes(status as TableStatus)) {
     throw new ApiError(400, 'Invalid table status.')
   }
@@ -162,15 +183,36 @@ export async function setTableStatus(id: string, status: string, actor: AuthUser
   if (error || !updated) {
     throw new ApiError(404, 'Table not found')
   }
+  void recordActivity({
+    actorId: actor.id,
+    branchId,
+    action: 'table.status_changed',
+    summary: `Table ${updated.table_number} is now ${status}`,
+    entity: 'table',
+    entityId: id,
+  })
   return toDiningTable(updated as DiningTableRow)
 }
 
 export async function deleteTable(id: string, actor: AuthUser): Promise<void> {
   assertUuid(id, 'table')
-  await assertTableBranchAccess(id, actor)
+  const branchId = await assertTableBranchAccess(id, actor)
+  const { data: existing } = await getDb()
+    .from(diningTablesTable)
+    .select('table_number')
+    .eq('id', id)
+    .maybeSingle()
   // Deactivating instead of deleting keeps historical reservations intact.
   const { error } = await getDb().from(diningTablesTable).update({ is_active: false }).eq('id', id)
   if (error) {
     throw new ApiError(404, 'Table not found')
   }
+  void recordActivity({
+    actorId: actor.id,
+    branchId,
+    action: 'table.updated',
+    summary: `Table ${existing?.table_number ?? id} was deactivated`,
+    entity: 'table',
+    entityId: id,
+  })
 }

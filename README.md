@@ -65,11 +65,14 @@ wyndells/
    or open **SQL Editor → New query**, paste the contents of
    `supabase/migrations/0001_initial_schema.sql`, then
    `supabase/migrations/0002_careers.sql`, then
-   `supabase/migrations/0003_user_profiles.sql`, and run each. This creates the
-   tables, indexes, row-level security, and the report functions the dashboard
-   depends on, plus the `career_postings` / `job_applications` tables powering
-   the Careers feature and the staff profile columns (job title, contact number,
-   address, avatar and bio) used by **Users & Managers**.
+   `supabase/migrations/0003_user_profiles.sql`, then
+   `supabase/migrations/0004_notifications_activity.sql`, and run each. This
+   creates the tables, indexes, row-level security, and the report functions the
+   dashboard depends on, plus the `career_postings` / `job_applications` tables
+   powering the Careers feature, the staff profile columns (job title, contact
+   number, address, avatar and bio) used by **Users & Managers**, and the
+   `notifications` / `activity_log` tables behind the header bell and the
+   admin **Activity** page.
 
    > Profile photos are uploaded to a public Supabase Storage bucket (`avatars`)
    > that the API creates automatically on the first upload, so no extra SQL is
@@ -187,7 +190,30 @@ The Express server exposes the same routes the client uses today:
 | PATCH  | `/api/careers/applications/:id/status` | Staff (pipeline updates) |
 | DELETE | `/api/careers/applications/:id` | Admin |
 | GET    | `/api/tables` `/api/reservations` `/api/reports/overview` | Staff |
+| GET    | `/api/notifications` `/api/notifications/unread-count` | Staff (own inbox) |
+| PATCH  | `/api/notifications/:id/read` `/api/notifications/:id/unread` | Staff (own inbox) |
+| POST   | `/api/notifications/read-all` | Staff |
+| GET    | `/api/activity` | Admin (audit trail; `group`, `actor`, `branch`, `page`) |
 | POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Admin / Manager |
+
+### Notifications & activity log
+
+- **Notifications** — the bell in the dashboard header polls
+  `GET /api/notifications/unread-count` every 30 seconds while the tab is
+  visible. Branch events (a new online reservation, a status change, an
+  assigned table, new feedback, a job application) fan out to the active staff
+  of that branch **plus** every administrator; account events go to the
+  account itself.
+- **Guaranteed first item** — an account with no notifications is given a
+  welcome one on its first inbox read, and `npm run seed --workspace server`
+  backfills every seeded account, so the bell is never empty.
+- **Activity log** — `activity_log` records who changed what (reservations,
+  feedback, careers, staff accounts, branches, tables and menu items) and is
+  read from the admin-only **Activity** page at `/staff/activity`. Log writes
+  are best-effort: a failed insert is logged and never fails the operation
+  that produced it.
+
+Requires `supabase/migrations/0004_notifications_activity.sql`.
 
 ### Staff profile photos
 
