@@ -10,7 +10,7 @@ export const STATUS_FILL: Record<string, string> = {
 export const TABLE_FILL: Record<string, string> = {
   available: "#168b48",
   reserved: "#f9c515",
-  occupied: "#f0810d",
+  occupied: "#F58000",
   cleaning: "#0ea5e9",
   unavailable: "#a3a3a3",
 }

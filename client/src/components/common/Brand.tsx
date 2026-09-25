@@ -8,7 +8,7 @@ export function BrandMark({ className = 'h-10 w-10' }: { className?: string }) {
   return (
     <span className={['inline-flex shrink-0 items-center justify-center rounded-full bg-wyndell-orange/10 p-1', className].join(' ')}>
       <svg viewBox="0 0 40 40" className="h-full w-full" aria-hidden>
-        <circle cx="20" cy="20" r="15" fill="none" stroke="#f0810d" strokeWidth="2.4" />
+        <circle cx="20" cy="20" r="15" fill="none" stroke="#F58000" strokeWidth="2.4" />
         <circle cx="20" cy="14.5" r="4.2" fill="#f9c515" />
         <path
           d="M14.5 22.5 Q11 25 6.5 24 Q4.5 20.5 6.5 17 Q10 15.5 14.5 17.5 Z"

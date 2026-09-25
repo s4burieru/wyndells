@@ -52,7 +52,7 @@ export function HomePage() {
 
 function HeroSection() {
   return (
-    <section className="relative flex min-h-svh items-center overflow-hidden bg-wyndell-sand">
+    <section className="relative flex h-[calc(100svh-var(--navbar-height,4rem))] items-center overflow-hidden bg-wyndell-sand">
       {/* full-bleed hero photo */}
       <img
         src={heroHome}
