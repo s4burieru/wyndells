@@ -8,6 +8,7 @@ import {
   LayoutDashboardIcon,
   MapPinIcon,
   MessageSquareTextIcon,
+  MessagesSquareIcon,
   UsersIcon,
   UtensilsCrossedIcon,
 } from 'lucide-react'
@@ -15,6 +16,7 @@ import { useState, type ComponentType } from 'react'
 import { toast } from 'sonner'
 import { updateProfile } from '@/services/api/auth'
 import { useAuth } from '@/contexts/AuthContext'
+import { useChatBadge } from '@/hooks/useChatBadge'
 import { friendlyError } from '@/utils/format'
 import { Separator } from '@/components/ui/separator'
 import {
@@ -55,6 +57,7 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/staff/feedback', label: 'Feedback', icon: MessageSquareTextIcon },
   { to: '/staff/applications', label: 'Careers', icon: BriefcaseBusinessIcon },
   { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon },
+  { to: '/staff/chat', label: 'Chat', icon: MessagesSquareIcon },
   { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, adminOnly: true },
   { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, adminOnly: true },
   { to: '/staff/activity', label: 'Activity', icon: HistoryIcon, adminOnly: true },
@@ -66,6 +69,8 @@ export function DashboardLayout() {
   const { pathname } = useLocation()
   const [profileOpen, setProfileOpen] = useState(false)
   const [editingSelf, setEditingSelf] = useState(false)
+  // Keeps the shared chat socket alive and the unread count current.
+  const chatUnread = useChatBadge(user !== null)
 
   if (!user) {
     return null
@@ -116,16 +121,28 @@ export function DashboardLayout() {
             <SidebarGroupLabel>Navigation</SidebarGroupLabel>
             <SidebarGroupContent>
               <SidebarMenu>
-                {items.map((item) => (
-                  <SidebarMenuItem key={item.to}>
-                    <SidebarMenuButton asChild isActive={isActive(item)} tooltip={item.label}>
-                      <NavLink to={item.to} end={item.end === true}>
-                        <item.icon />
-                        <span>{item.label}</span>
-                      </NavLink>
-                    </SidebarMenuButton>
-                  </SidebarMenuItem>
-                ))}
+                {items.map((item) => {
+                  const badge = item.to === '/staff/chat' ? chatUnread : 0
+                  return (
+                    <SidebarMenuItem key={item.to}>
+                      <SidebarMenuButton
+                        asChild
+                        isActive={isActive(item)}
+                        tooltip={badge > 0 ? `${item.label} · ${badge} unread` : item.label}
+                      >
+                        <NavLink to={item.to} end={item.end === true}>
+                          <item.icon />
+                          <span>{item.label}</span>
+                          {badge > 0 ? (
+                            <span className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
+                              {badge > 99 ? '99+' : badge}
+                            </span>
+                          ) : null}
+                        </NavLink>
+                      </SidebarMenuButton>
+                    </SidebarMenuItem>
+                  )
+                })}
               </SidebarMenu>
             </SidebarGroupContent>
           </SidebarGroup>
