@@ -264,3 +264,60 @@ export type ActivityListResult = {
   activities: ActivityEntry[]
   total: number
 }
+
+// ---------------------------------------------------------------------------
+// Staff chat
+// ---------------------------------------------------------------------------
+
+export type ChatConversationType = 'direct' | 'group'
+export type ChatMemberRole = 'owner' | 'member'
+
+/** The slim user shape embedded in chat payloads. */
+export type ChatUserRef = {
+  id: string
+  name: string
+  role: Role
+  avatarUrl: string
+}
+
+export type ChatParticipant = ChatUserRef & {
+  memberRole: ChatMemberRole
+  /** When this person last opened the conversation — drives read receipts. */
+  lastReadAt: string
+}
+
+export type ChatAttachment = {
+  url: string
+  name: string
+  mime: string
+  size: number
+}
+
+export type ChatMessage = {
+  _id: string
+  conversationId: string
+  sender: ChatUserRef
+  body: string
+  attachment: ChatAttachment | null
+  editedAt: string | null
+  deletedAt: string | null
+  createdAt: string
+}
+
+export type ChatConversation = {
+  _id: string
+  type: ChatConversationType
+  /** Group name; empty for direct conversations (use the other participant). */
+  title: string
+  participants: ChatParticipant[]
+  lastMessage: ChatMessage | null
+  unread: number
+  createdAt: string
+}
+
+export type ChatMessagesResult = { messages: ChatMessage[]; hasMore: boolean }
+
+export type ChatUnreadSummary = {
+  total: number
+  conversations: { id: string; unread: number }[]
+}

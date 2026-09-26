@@ -66,13 +66,15 @@ wyndells/
    `supabase/migrations/0001_initial_schema.sql`, then
    `supabase/migrations/0002_careers.sql`, then
    `supabase/migrations/0003_user_profiles.sql`, then
-   `supabase/migrations/0004_notifications_activity.sql`, and run each. This
+   `supabase/migrations/0004_notifications_activity.sql`, then
+   `supabase/migrations/0005_chat.sql`, and run each. This
    creates the tables, indexes, row-level security, and the report functions the
    dashboard depends on, plus the `career_postings` / `job_applications` tables
    powering the Careers feature, the staff profile columns (job title, contact
-   number, address, avatar and bio) used by **Users & Managers**, and the
+   number, address, avatar and bio) used by **Users & Managers**, the
    `notifications` / `activity_log` tables behind the header bell and the
-   admin **Activity** page.
+   admin **Activity** page, and the `chat_conversations` / `chat_participants` /
+   `chat_messages` tables behind the staff **Chat** page.
 
    > Profile photos are uploaded to a public Supabase Storage bucket (`avatars`)
    > that the API creates automatically on the first upload, so no extra SQL is
@@ -194,6 +196,14 @@ The Express server exposes the same routes the client uses today:
 | PATCH  | `/api/notifications/:id/read` `/api/notifications/:id/unread` | Staff (own inbox) |
 | POST   | `/api/notifications/read-all` | Staff |
 | GET    | `/api/activity` | Admin (audit trail; `group`, `actor`, `branch`, `page`) |
+| GET/POST | `/api/chat/conversations` | Staff (list conversations; create a `direct` or `group` conversation) |
+| GET    | `/api/chat/conversations/:id/messages` | Staff (member of that conversation; `before`, `limit` paging) |
+| PATCH  | `/api/chat/conversations/:id` | Staff members (rename a group: `title`) |
+| POST/DELETE | `/api/chat/conversations/:id/participants` `/api/chat/conversations/:id/participants/:userId` | Staff (add members; remove a member — owner/admin — or leave with `me`) |
+| POST   | `/api/chat/conversations/:id/read` | Staff (member) |
+| GET    | `/api/chat/unread-count` `/api/chat/directory` | Staff (own unread totals; staff directory for the pickers) |
+| POST   | `/api/chat/uploads` | Staff (`multipart/form-data` with a `file`, images/documents up to 10 MB) |
+| WS     | `/socket.io` | Staff (JWT handshake; send/edit/delete messages, typing, read receipts) |
 | POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Admin / Manager |
 
 ### Notifications & activity log
@@ -214,6 +224,39 @@ The Express server exposes the same routes the client uses today:
   that produced it.
 
 Requires `supabase/migrations/0004_notifications_activity.sql`.
+
+### Staff chat
+
+Every account that can sign in to the staff portal (administrators **and**
+managers) gets a **Chat** page at `/staff/chat` — no role gate, no branch
+filtering: anyone can message anyone, one-to-one or in groups.
+
+- **Transport** — history and membership are plain REST (`/api/chat/...`);
+  live traffic runs over Socket.io on the same server (`/socket.io`,
+  proxied by Vite in development). The WebSocket handshake carries the same
+  JWT as the REST API and re-reads the user row, so deactivated accounts are
+  refused immediately.
+- **Events** — clients emit `message:send` / `message:edit` / `message:delete`
+  (all acknowledged), `typing`, and `read:mark`; the server broadcasts
+  `message:new|updated|deleted`, `conversation:created|updated|removed`,
+  `participant:added|removed`, `read:updated`, and `typing`. On connect each
+  socket joins its user room plus one room per conversation, which is how
+  REST handlers broadcast too (`server/src/sockets/chatEvents.ts`).
+- **Unread & receipts** — `chat_participants.last_read_at` powers both the
+  sidebar/nav unread badges and the "Seen" receipt under your last message.
+  The nav badge refreshes (debounced) on live events, window focus, and
+  reconnects.
+- **Attachments** — uploaded first to the public `chat-attachments` storage
+  bucket (created automatically on first upload; images and documents up to
+  10 MB), then referenced by the message. Deleting a message clears its
+  content, removes the stored file best-effort, and everyone keeps seeing
+  "This message was deleted".
+- **Permissions** — any member may rename a group or add members; removing
+  someone else is reserved for the group owner and administrators; members
+  may leave a group themselves. Direct conversations cannot be left. Message
+  edit/delete is sender-only. All of this is enforced server-side.
+
+Requires `supabase/migrations/0005_chat.sql`.
 
 ### Staff profile photos
 

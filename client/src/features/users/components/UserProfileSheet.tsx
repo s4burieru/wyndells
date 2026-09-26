@@ -22,7 +22,7 @@ function DetailRow({ icon, label, value }: { icon: ReactNode; label: string; val
       </span>
       <div className="grid gap-0.5">
         <span className="text-xs uppercase tracking-wide text-muted-foreground">{label}</span>
-        <span className="text-sm break-words text-foreground">{value}</span>
+        <span className="text-sm wrap-break-word text-foreground">{value}</span>
       </div>
     </div>
   )

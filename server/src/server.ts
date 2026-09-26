@@ -1,4 +1,5 @@
 import { existsSync } from 'node:fs'
+import { createServer } from 'node:http'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 import dotenv from 'dotenv'
@@ -17,6 +18,8 @@ import careersRouter from './routes/careers'
 import reportsRouter from './routes/reports'
 import notificationsRouter from './routes/notifications'
 import activityRouter from './routes/activity'
+import chatRouter from './routes/chat'
+import { attachChatSocket } from './sockets/chat.socket'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
@@ -53,6 +56,7 @@ app.use('/api/careers', careersRouter)
 app.use('/api/reports', reportsRouter)
 app.use('/api/notifications', notificationsRouter)
 app.use('/api/activity', activityRouter)
+app.use('/api/chat', chatRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)
@@ -61,6 +65,11 @@ app.use(errorHandler)
 // missing database never blocks the API from coming up.
 void connectDB()
 
-app.listen(PORT, () => {
+// One server hosts both the REST API and the staff-chat WebSocket, so
+// REST handlers can broadcast to connected clients (sockets/chatEvents).
+const httpServer = createServer(app)
+attachChatSocket(httpServer, CLIENT_ORIGIN)
+
+httpServer.listen(PORT, () => {
   console.log(`API server listening on http://localhost:${PORT}`)
 })
