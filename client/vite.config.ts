@@ -13,6 +13,9 @@ export default defineConfig({
       '@': fileURLToPath(new URL('./src', import.meta.url)),
     },
   },
+  // The monorepo keeps a single .env at the repo root, shared with the API, so
+  // point Vite there. Only VITE_-prefixed values are exposed to the browser.
+  envDir: fileURLToPath(new URL('..', import.meta.url)),
   server: {
     proxy: {
       '/api': {

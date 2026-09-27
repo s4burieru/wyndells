@@ -121,6 +121,27 @@ export async function buildSafeUser(userId: string): Promise<SafeUser> {
   return toSafeUser(user)
 }
 
+/**
+ * Shown to a visitor whose Google identity is valid but who has no active
+ * portal account. Google sign-in never registers anybody.
+ */
+export const GOOGLE_NOT_AUTHORIZED_MESSAGE =
+  'Your Google account is not authorized to access this portal. Please contact an administrator.'
+
+/**
+ * Issues the portal session for an authorized user row: the app JWT (carrying
+ * id, role and branch, so every downstream permission check keeps working) plus
+ * the safe public profile.
+ */
+function issueSession(user: UserLikeInput): { token: string; user: SafeUser } {
+  const authUser: AuthUser = {
+    id: user.id,
+    role: user.role,
+    branch: user.assigned_branch_id ?? null,
+  }
+  return { token: signToken(authUser), user: toSafeUser(user) }
+}
+
 export async function login(email: string, password: string): Promise<{ token: string; user: SafeUser }> {
   if (!email || !password) {
     throw new ApiError(400, 'Email and password are required.')
@@ -144,13 +165,63 @@ export async function login(email: string, password: string): Promise<{ token: s
     throw new ApiError(403, 'This account has been deactivated. Please contact an administrator.')
   }
 
-  const authUser: AuthUser = {
-    id: user.id,
-    role: user.role,
-    branch: user.assigned_branch_id,
+  return issueSession(user)
+}
+
+/**
+ * Signs in a staff member through Google (Supabase Auth's Google provider).
+ *
+ * The browser only ever hands over the Supabase access token it received from
+ * Google; everything that decides access happens here:
+ *
+ * 1. Supabase Auth validates the token and returns the identity behind it.
+ * 2. The identity must come from Google with a confirmed email address.
+ * 3. The email must already exist in the `users` table — an unknown Google
+ *    account is rejected, never registered.
+ * 4. The matching account must still be active.
+ *
+ * Only then does the API hand out its own JWT, so role and branch permissions
+ * keep being enforced by `authenticateUser` on every later request.
+ */
+export async function loginWithGoogle(accessToken: string): Promise<{ token: string; user: SafeUser }> {
+  if (!accessToken) {
+    throw new ApiError(400, 'A Google access token is required.')
   }
 
-  return { token: signToken(authUser), user: toSafeUser(user) }
+  const { data, error } = await getDb().auth.getUser(accessToken)
+  const identity = data?.user
+  if (error || !identity) {
+    // The reason (expired or revoked session, wrong project, …) is logged for
+    // operators only — the browser just gets the friendly message.
+    console.error(`Google sign-in token rejected: ${error?.message ?? 'no identity returned'}`)
+    throw new ApiError(401, 'We could not verify your Google sign-in. Please try again.')
+  }
+
+  const metadata = (identity.app_metadata ?? {}) as { provider?: string; providers?: string[] }
+  const providers = metadata.providers ?? (metadata.provider ? [metadata.provider] : [])
+  const email = identity.email?.trim().toLowerCase() ?? ''
+  const emailConfirmed = Boolean(identity.email_confirmed_at ?? identity.confirmed_at)
+  if (!providers.includes('google') || !email || !emailConfirmed) {
+    throw new ApiError(403, GOOGLE_NOT_AUTHORIZED_MESSAGE)
+  }
+
+  const { data: user, error: lookupError } = await getDb()
+    .from(usersTable)
+    .select(USER_SELECT)
+    .eq('email', email)
+    .maybeSingle()
+  if (lookupError) {
+    throw new ApiError(503, 'We could not check your account right now. Please try again.')
+  }
+  if (!user) {
+    throw new ApiError(403, GOOGLE_NOT_AUTHORIZED_MESSAGE)
+  }
+
+  if (!user.is_active) {
+    throw new ApiError(403, 'This account has been deactivated. Please contact an administrator.')
+  }
+
+  return issueSession(user)
 }
 
 /** Maps user rows (already carrying their embedded branch name) to the safe public shape. */

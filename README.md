@@ -96,6 +96,12 @@ wyndells/
    never put it in client code. If Supabase is not reachable, the API still
    starts so you can keep working on the frontend.
 
+   Optional: set `VITE_SUPABASE_URL` (the same project URL) and
+   `VITE_SUPABASE_ANON_KEY` (the anon/publishable key) to switch on the
+   **Continue with Google** button on the staff login — see
+   *Staff sign-in with Google* below. Leave them out and the button shows as
+   disabled; email/password sign-in is unaffected.
+
 4. Seed the database (optional but recommended for development):
 
    ```bash
@@ -179,6 +185,7 @@ The Express server exposes the same routes the client uses today:
 | ------ | ----------------------------- | ------------------- |
 | GET    | `/api/health`                 | Public              |
 | POST   | `/api/auth/login`             | Public              |
+| POST   | `/api/auth/google`            | Public (Google OAuth; only pre-authorized staff are signed in) |
 | GET    | `/api/auth/me`                | Staff               |
 | PATCH  | `/api/auth/me`                | Staff (own profile: `name`, `position`, `contactNumber`, `address`, `avatarUrl`, `bio`; see *Staff profile photos*) |
 | GET    | `/api/branches` `/api/branches/:codeOrId` | Public  |
@@ -315,3 +322,45 @@ curl -X PATCH http://localhost:5000/api/auth/me \
 The response shapes are kept identical to the previous MongoDB version (ids are
 serialized as `_id`, fields stay camelCase), so the React client did not need
 any changes for this migration.
+
+### Staff sign-in with Google
+
+The staff login (`/staff/login`) offers email + password and **Continue with
+Google**. Google is *authentication only* — it never registers anybody:
+
+1. The browser starts the Google consent screen through Supabase Auth
+   (`supabase.auth.signInWithOAuth({ provider: 'google' })`) and returns to
+   `/staff/login`.
+2. `POST /api/auth/google` sends the resulting Supabase access token to the API.
+3. The API asks Supabase Auth to verify the token, then requires that the Google
+   email **already exists** in the `users` table and that the account is active.
+4. Only then does the API issue the usual portal JWT, so roles and branch
+   permissions (`authenticateUser`, `authorizeRole`, `assertBranchAccess`) apply
+   to a Google session exactly as they do to a password session.
+
+There is **no sign-up / create-account path**. A Google account with no staff
+row is refused with
+
+> Your Google account is not authorized to access this portal. Please contact an
+> administrator.
+
+and nothing is written to the database. Staff accounts are still created and
+managed by an administrator in **Users & Managers**.
+
+Setup (one-off), in the Supabase dashboard:
+
+1. **Authentication → Providers → Google** — enable it and paste the client id +
+   secret from the [Google Cloud
+   console](https://console.cloud.google.com/apis/credentials) (authorized
+   redirect URI: `https://<project-ref>.supabase.co/auth/v1/callback`).
+2. **Authentication → URL Configuration** — add every origin the flow returns
+   to, e.g. `http://localhost:5173/staff/login` and
+   `https://<your-domain>/staff/login`.
+3. **Project Settings → API** — copy the project URL and the **anon/publishable**
+   key into `VITE_SUPABASE_URL` / `VITE_SUPABASE_ANON_KEY` in the root `.env`.
+
+The browser only ever sees the anon key, which is public by design: every table
+is RLS-protected and only the API's service-role key (server-only) can read the
+staff table. When the two `VITE_` variables are missing the Google button renders
+disabled with an explanatory note instead of failing.
+

@@ -1,7 +1,7 @@
 export { apiQuery, apiRequest, getToken, setToken, ApiError } from './client'
 export { fetchActivity } from './activity'
 export type { ActivityQuery } from './activity'
-export { fetchMe, login, updateProfile } from './auth'
+export { fetchMe, login, loginWithGoogle, updateProfile } from './auth'
 export { fetchBranches, fetchBranch, createBranch, updateBranch, setBranchActive } from './branches'
 export {
   fetchCareers,

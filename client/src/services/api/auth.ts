@@ -11,6 +11,19 @@ export async function login(email: string, password: string): Promise<LoginResul
   })
 }
 
+/**
+ * Trades a verified Google identity for a portal session. The API checks the
+ * token with Supabase Auth and only signs in people who already have an active
+ * account — an unknown Google email is refused, never registered.
+ */
+export async function loginWithGoogle(accessToken: string): Promise<LoginResult> {
+  return apiRequest<LoginResult>('/api/auth/google', {
+    method: 'POST',
+    body: { accessToken },
+    auth: false,
+  })
+}
+
 export async function fetchMe(): Promise<SafeUser> {
   const result = await apiRequest<{ user: SafeUser }>('/api/auth/me')
   return result.user
