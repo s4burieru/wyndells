@@ -35,7 +35,6 @@ import {
   SidebarRail,
   SidebarTrigger,
 } from '@/components/ui/sidebar'
-import { BrandMark, Wordmark } from '@/components/common/Brand'
 import { NotificationBell } from '@/features/notifications/components'
 import { AccountMenu } from '@/features/users/components/AccountMenu'
 import { UserFormModal } from '@/features/users/components/UserFormModal'
@@ -103,12 +102,25 @@ export function DashboardLayout() {
         <SidebarHeader>
           <SidebarMenu>
             <SidebarMenuItem>
-              <SidebarMenuButton size="lg" asChild tooltip="Wyndell's staff portal">
-                <Link to="/staff">
-                  <BrandMark className="size-8" />
-                  <div className="grid flex-1 text-left leading-tight">
-                    <Wordmark />
-                    <span className="truncate text-xs text-muted-foreground">Staff portal</span>
+              <SidebarMenuButton
+                size="lg"
+                asChild
+                className="h-auto"
+                tooltip="Wyndell's Operations Dashboard"
+              >
+                <Link to="/staff" aria-label="Wyndell's Operations Dashboard">
+                  <img
+                    src="/logos/wyndells-icon-logo.png"
+                    alt=""
+                    className="size-8 shrink-0 object-contain"
+                  />
+                  <div className="grid min-w-0 flex-1 content-center gap-0.5 overflow-hidden text-left leading-tight transition-opacity duration-200 ease-linear group-data-[collapsible=icon]:opacity-0">
+                    <img
+                      src="/logos/wyndells-logo-text.png"
+                      alt="Wyndell's"
+                      className="h-auto w-full max-w-28.75 object-contain object-left"
+                    />
+                    <span className="truncate text-xs text-muted-foreground">Operations Dashboard</span>
                   </div>
                 </Link>
               </SidebarMenuButton>
@@ -164,7 +176,7 @@ export function DashboardLayout() {
           <SidebarTrigger className="-ml-1" />
           <Separator orientation="vertical" className="mr-2 h-4!" />
           <span className="truncate text-sm font-medium text-muted-foreground">
-            Wyndell&rsquo;s · Staff portal
+            Wyndell&rsquo;s · Operations Dashboard
           </span>
           <div className="ml-auto flex items-center gap-1">
             <NotificationBell />

@@ -1,6 +1,6 @@
 import type { Response } from 'express'
 import { asyncHandler } from '../utils/asyncHandler'
-import { login, buildSafeUser } from '../services/auth.service'
+import { login, loginWithGoogle, buildSafeUser } from '../services/auth.service'
 import { updateOwnProfile } from '../services/user.service'
 import type { AuthedRequest } from '../middleware/auth'
 import { uploadedAvatar } from '../middleware/uploads'
@@ -11,6 +11,17 @@ export const loginController = asyncHandler(async (req, res) => {
     body.email ? String(body.email) : '',
     body.password ? String(body.password) : '',
   )
+  res.json({ token, user })
+})
+
+/**
+ * Exchanges a Google (Supabase Auth) access token for a portal session. The
+ * token is verified server-side and the account is authorized against the
+ * `users` table — the frontend never decides who gets in.
+ */
+export const googleLoginController = asyncHandler(async (req, res: Response) => {
+  const body = req.body as { accessToken?: unknown }
+  const { token, user } = await loginWithGoogle(body.accessToken ? String(body.accessToken) : '')
   res.json({ token, user })
 })
 
