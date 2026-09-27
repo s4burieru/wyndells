@@ -270,7 +270,7 @@ export type ActivityListResult = {
 // ---------------------------------------------------------------------------
 
 export type ChatConversationType = 'direct' | 'group'
-export type ChatMemberRole = 'owner' | 'member'
+export type ChatMemberRole = 'owner' | 'admin' | 'member'
 
 /** The slim user shape embedded in chat payloads. */
 export type ChatUserRef = {
@@ -293,10 +293,14 @@ export type ChatAttachment = {
   size: number
 }
 
+/** 'system' rows are event lines written by the API ("Alice left the group"). */
+export type ChatMessageKind = 'text' | 'image' | 'file' | 'system'
+
 export type ChatMessage = {
   _id: string
   conversationId: string
   sender: ChatUserRef
+  kind: ChatMessageKind
   body: string
   attachment: ChatAttachment | null
   editedAt: string | null
@@ -309,6 +313,8 @@ export type ChatConversation = {
   type: ChatConversationType
   /** Group name; empty for direct conversations (use the other participant). */
   title: string
+  /** Group photo URL; '' for direct chats and groups without a photo. */
+  imageUrl: string
   participants: ChatParticipant[]
   lastMessage: ChatMessage | null
   unread: number

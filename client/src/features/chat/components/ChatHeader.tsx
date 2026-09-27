@@ -1,4 +1,10 @@
-import { ArrowLeftIcon, LogOutIcon, MoreVerticalIcon, SettingsIcon } from 'lucide-react'
+import {
+  ArrowLeftIcon,
+  LogOutIcon,
+  MoreVerticalIcon,
+  SettingsIcon,
+  Trash2Icon,
+} from 'lucide-react'
 import { roleLabel } from '@/utils/format'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { Button } from '@/components/ui/button'
@@ -18,12 +24,14 @@ export function ChatHeader({
   onBack,
   onOpenSettings,
   onLeave,
+  onDelete,
 }: {
   conversation: ChatConversation
   currentUserId: string
   onBack: () => void
   onOpenSettings: () => void
   onLeave: () => void
+  onDelete: () => void
 }) {
   const isGroup = conversation.type === 'group'
   const partner = directPartner(conversation, currentUserId)
@@ -38,7 +46,7 @@ export function ChatHeader({
 
       <UserAvatar
         name={title}
-        src={isGroup ? undefined : partner?.avatarUrl}
+        src={isGroup ? conversation.imageUrl : partner?.avatarUrl}
         role={partner?.role}
         size="sm"
       />
@@ -49,26 +57,32 @@ export function ChatHeader({
         </span>
       </div>
 
-      {isGroup ? (
-        <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <Button variant="ghost" size="icon">
-              <MoreVerticalIcon />
-              <span className="sr-only">Conversation options</span>
-            </Button>
-          </DropdownMenuTrigger>
-          <DropdownMenuContent align="end">
+      <DropdownMenu>
+        <DropdownMenuTrigger asChild>
+          <Button variant="ghost" size="icon">
+            <MoreVerticalIcon />
+            <span className="sr-only">Conversation options</span>
+          </Button>
+        </DropdownMenuTrigger>
+        <DropdownMenuContent align="end">
+          {isGroup ? (
             <DropdownMenuItem onClick={onOpenSettings}>
               <SettingsIcon />
               Group settings
             </DropdownMenuItem>
+          ) : null}
+          <DropdownMenuItem variant="destructive" onClick={onDelete}>
+            <Trash2Icon />
+            Delete conversation
+          </DropdownMenuItem>
+          {isGroup ? (
             <DropdownMenuItem variant="destructive" onClick={onLeave}>
               <LogOutIcon />
               Leave group
             </DropdownMenuItem>
-          </DropdownMenuContent>
-        </DropdownMenu>
-      ) : null}
+          ) : null}
+        </DropdownMenuContent>
+      </DropdownMenu>
     </div>
   )
 }

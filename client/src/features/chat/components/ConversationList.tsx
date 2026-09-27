@@ -131,7 +131,11 @@ export function ConversationList({
                   >
                     <UserAvatar
                       name={title}
-                      src={conversation.type === 'direct' ? partner?.avatarUrl : undefined}
+                      src={
+                        conversation.type === 'direct'
+                          ? partner?.avatarUrl
+                          : conversation.imageUrl
+                      }
                       role={partner?.role}
                       size="sm"
                     />

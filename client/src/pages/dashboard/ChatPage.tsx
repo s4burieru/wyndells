@@ -19,11 +19,15 @@ import {
   addConversationMembers,
   createDirectConversation,
   createGroupConversation,
+  deleteConversation,
   fetchChatConversations,
   fetchChatMessages,
   markConversationRead,
   removeConversationMember,
+  removeGroupImage,
   renameConversation,
+  setConversationMemberRole,
+  updateGroupImage,
 } from '@/services/api/chat'
 import {
   connectChatSocket,
@@ -85,13 +89,21 @@ export function ChatPage() {
   const [groupOpen, setGroupOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
   const [leaveConfirmOpen, setLeaveConfirmOpen] = useState(false)
+  const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
 
   /** Mirrors `activeId` for socket handlers, which must not re-subscribe. */
   const activeIdRef = useRef<string | null>(null)
+  /** Mirrors `conversations` the same way (see `handleParticipantAdded`). */
+  const conversationsRef = useRef<ChatConversation[]>([])
   /** Invalidates in-flight message loads when the reader switches threads. */
   const loadTokenRef = useRef(0)
 
   const activeConversation = conversations.find((item) => item._id === activeId) ?? null
+
+  // Keeps the socket handlers' view of the list current without re-subscribing.
+  useEffect(() => {
+    conversationsRef.current = conversations
+  }, [conversations])
 
   // -------------------------------------------------------------------------
   // Conversation list
@@ -141,7 +153,14 @@ export function ChatPage() {
         const updated: ChatConversation = {
           ...existing,
           lastMessage: message,
-          unread: mine || markRead ? 0 : existing.unread + 1,
+          // Event lines move the chat up the list but never add to the badge:
+          // an open, visible thread resets to 0; a background one keeps its count.
+          unread:
+            mine || markRead
+              ? 0
+              : message.kind === 'system'
+                ? existing.unread
+                : existing.unread + 1,
         }
         return [updated, ...prev.filter((item) => item._id !== existing._id)]
       })
@@ -180,6 +199,7 @@ export function ChatPage() {
         setTypingMap({})
         setSettingsOpen(false)
         setLeaveConfirmOpen(false)
+        setDeleteConfirmOpen(false)
       }
     }
 
@@ -197,6 +217,14 @@ export function ChatPage() {
             : item,
         ),
       )
+    }
+
+    const handleParticipantAdded = (payload: { conversationId: string; memberIds: string[] }) => {
+      // Normally `conversation:created` already delivered the conversation;
+      // this heals the rare case where that broadcast was missed.
+      if (!payload.memberIds.includes(userId)) return
+      if (conversationsRef.current.some((item) => item._id === payload.conversationId)) return
+      loadConversations()
     }
 
     const handleReadUpdated = (payload: {
@@ -242,6 +270,7 @@ export function ChatPage() {
     socket.on('conversation:created', handleConversationCreated)
     socket.on('conversation:updated', handleConversationUpdated)
     socket.on('conversation:removed', handleConversationRemoved)
+    socket.on('participant:added', handleParticipantAdded)
     socket.on('participant:removed', handleParticipantRemoved)
     socket.on('read:updated', handleReadUpdated)
     socket.on('typing', handleTyping)
@@ -255,6 +284,7 @@ export function ChatPage() {
       socket.off('conversation:created', handleConversationCreated)
       socket.off('conversation:updated', handleConversationUpdated)
       socket.off('conversation:removed', handleConversationRemoved)
+      socket.off('participant:added', handleParticipantAdded)
       socket.off('participant:removed', handleParticipantRemoved)
       socket.off('read:updated', handleReadUpdated)
       socket.off('typing', handleTyping)
@@ -416,6 +446,7 @@ export function ChatPage() {
       setTypingMap({})
       setSettingsOpen(false)
       setLeaveConfirmOpen(false)
+      setDeleteConfirmOpen(false)
     }
   }, [])
 
@@ -438,6 +469,40 @@ export function ChatPage() {
     if (!conversationId) return
     await removeConversationMember(conversationId, 'me')
     closeActiveConversation(conversationId)
+  }
+
+  /** Deletes the open conversation for this person only (everyone else keeps it). */
+  const handleDeleteConversation = async () => {
+    const conversationId = activeIdRef.current
+    if (!conversationId) return
+    await deleteConversation(conversationId)
+    // The `conversation:removed` broadcast lands too; this covers a dropped socket.
+    closeActiveConversation(conversationId)
+    toast.success('Conversation deleted.')
+  }
+
+  const handleSetGroupImage = async (file: File) => {
+    const conversationId = activeIdRef.current
+    if (!conversationId) return
+    const updated = await updateGroupImage(conversationId, file)
+    setConversations((prev) => mergeConversation(prev, updated))
+    toast.success('Group photo updated.')
+  }
+
+  const handleRemoveGroupImage = async () => {
+    const conversationId = activeIdRef.current
+    if (!conversationId) return
+    const updated = await removeGroupImage(conversationId)
+    setConversations((prev) => mergeConversation(prev, updated))
+    toast.success('Group photo removed.')
+  }
+
+  const handleSetMemberRole = async (memberUserId: string, role: 'admin' | 'member') => {
+    const conversationId = activeIdRef.current
+    if (!conversationId) return
+    const updated = await setConversationMemberRole(conversationId, memberUserId, role)
+    // The socket broadcast refreshes everyone else's badges too.
+    setConversations((prev) => mergeConversation(prev, updated))
   }
 
   // -------------------------------------------------------------------------
@@ -494,6 +559,7 @@ export function ChatPage() {
                 }}
                 onOpenSettings={() => setSettingsOpen(true)}
                 onLeave={() => setLeaveConfirmOpen(true)}
+                onDelete={() => setDeleteConfirmOpen(true)}
               />
               <MessageList
                 conversation={activeConversation}
@@ -546,7 +612,7 @@ export function ChatPage() {
         onCreate={handleCreateGroup}
       />
       <GroupSettingsModal
-        open={settingsOpen && activeConversation !== null}
+        open={settingsOpen && activeConversation?.type === 'group'}
         conversation={activeConversation}
         currentUserId={userId}
         currentUserRole={user.role}
@@ -555,6 +621,21 @@ export function ChatPage() {
         onAdd={handleAddMembers}
         onRemove={handleRemoveMember}
         onLeave={handleLeaveGroup}
+        onSetImage={handleSetGroupImage}
+        onRemoveImage={handleRemoveGroupImage}
+        onSetRole={handleSetMemberRole}
+      />
+      <ConfirmDialog
+        open={deleteConfirmOpen}
+        title="Delete conversation?"
+        message="This removes the conversation from your list only — the other members keep it and its history. You cannot restore it from here; a group returns only if someone adds you again, and a direct chat returns if you start it again."
+        confirmLabel="Delete"
+        onConfirm={() => {
+          void handleDeleteConversation().catch((reason: unknown) =>
+            toast.error(friendlyError(reason)),
+          )
+        }}
+        onCancel={() => setDeleteConfirmOpen(false)}
       />
       <ConfirmDialog
         open={leaveConfirmOpen}

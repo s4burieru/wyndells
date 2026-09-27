@@ -49,19 +49,21 @@ export function errorHandler(
     return
   }
 
-  // Multer multipart upload errors (careers resumes and staff profile photos).
+  // Multer multipart upload errors (careers resumes, staff profile photos and
+  // group chat photos).
   if (error instanceof multer.MulterError) {
-    const isAvatar = error.field === 'avatar'
+    const isPhoto = error.field === 'avatar' || error.field === 'image'
+    const photoNoun = error.field === 'image' ? 'group photo' : 'profile photo'
     if (error.code === 'LIMIT_FILE_SIZE') {
       res.status(413).json({
-        message: isAvatar
-          ? 'The profile photo is too large. Please upload a JPG, PNG, or WEBP image up to 2 MB.'
+        message: isPhoto
+          ? `The ${photoNoun} is too large. Please upload a JPG, PNG, or WEBP image up to 2 MB.`
           : 'The resume file is too large. Please upload a PDF, DOC, or DOCX up to 5 MB.',
       })
       return
     }
     res.status(400).json({
-      message: isAvatar
+      message: isPhoto
         ? 'Could not process the uploaded photo. Please try again.'
         : 'Could not process the uploaded resume. Please try again.',
     })

@@ -199,7 +199,10 @@ The Express server exposes the same routes the client uses today:
 | GET/POST | `/api/chat/conversations` | Staff (list conversations; create a `direct` or `group` conversation) |
 | GET    | `/api/chat/conversations/:id/messages` | Staff (member of that conversation; `before`, `limit` paging) |
 | PATCH  | `/api/chat/conversations/:id` | Staff members (rename a group: `title`) |
-| POST/DELETE | `/api/chat/conversations/:id/participants` `/api/chat/conversations/:id/participants/:userId` | Staff (add members; remove a member — owner/admin — or leave with `me`) |
+| PATCH/DELETE | `/api/chat/conversations/:id/image` | Staff members (`multipart` field `image` up to 2 MB; remove the group photo) |
+| DELETE | `/api/chat/conversations/:id` | Staff (deletes that conversation **for themselves** only) |
+| POST/DELETE | `/api/chat/conversations/:id/participants` `/api/chat/conversations/:id/participants/:userId` | Staff (add members; remove a member — owner/group admin/admin — or leave with `me`) |
+| PATCH  | `/api/chat/conversations/:id/participants/:userId/role` | Group owner / admin (set `role` to `admin` or `member`) |
 | POST   | `/api/chat/conversations/:id/read` | Staff (member) |
 | GET    | `/api/chat/unread-count` `/api/chat/directory` | Staff (own unread totals; staff directory for the pickers) |
 | POST   | `/api/chat/uploads` | Staff (`multipart/form-data` with a `file`, images/documents up to 10 MB) |
@@ -251,10 +254,33 @@ filtering: anyone can message anyone, one-to-one or in groups.
   10 MB), then referenced by the message. Deleting a message clears its
   content, removes the stored file best-effort, and everyone keeps seeing
   "This message was deleted".
-- **Permissions** — any member may rename a group or add members; removing
-  someone else is reserved for the group owner and administrators; members
-  may leave a group themselves. Direct conversations cannot be left. Message
-  edit/delete is sender-only. All of this is enforced server-side.
+- **Group photos** — any member may set or replace the group's photo
+  (`PATCH/DELETE /conversations/:id/image`, a 2 MB JPG/PNG/WEBP uploaded on
+  pick, stored in the public `avatars` bucket under `groups/<id>/`). Changes
+  broadcast as `conversation:updated`, so every open tab and the conversation
+  list refresh instantly; the previous file is removed best-effort.
+- **Deleting a conversation** — `DELETE /conversations/:id` is a per-person
+  delete: `chat_participants.hidden_at` drops it from *that* person's list,
+  socket rooms, and unread counts while every other member keeps the
+  conversation and its history. One-way, no restore — except that starting
+  the direct conversation again yourself un-deletes it (never for anyone
+  else).
+- **Permissions** — any member may rename a group, add members, or set the
+  photo. Removing someone else is reserved for the group owner, group admins,
+  and administrators: group admins can remove plain members only, admins are
+  the owner's call, and the owner can only leave (never be removed) — when
+  they do, the first group admin (or the longest-standing member) takes over.
+  Only the owner (and administrators) promote/demote group admins via
+  `PATCH .../participants/:userId/role`. Direct conversations cannot be
+  left. Message edit/delete is sender-only. All of this is enforced
+  server-side.
+- **System messages** — group events are written into the history as regular
+  message rows with `kind: 'system'`: a member was added or removed, someone
+  left, the photo changed, a role changed, the group was renamed, or the
+  crown passed to a new owner. The sender is whoever caused the event and
+  they travel over the usual `message:new` broadcast, but the client renders
+  them as a centered note with no bubble, avatar, or menu: they cannot be
+  edited or deleted and they never count toward unread badges.
 
 Requires `supabase/migrations/0005_chat.sql`.
 

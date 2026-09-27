@@ -8,10 +8,10 @@ export const chatMessagesTable = 'chat_messages'
 export const CHAT_CONVERSATION_TYPES = ['direct', 'group'] as const
 export type ChatConversationType = (typeof CHAT_CONVERSATION_TYPES)[number]
 
-export const CHAT_MEMBER_ROLES = ['owner', 'member'] as const
+export const CHAT_MEMBER_ROLES = ['owner', 'admin', 'member'] as const
 export type ChatMemberRole = (typeof CHAT_MEMBER_ROLES)[number]
 
-export const CHAT_MESSAGE_KINDS = ['text', 'image', 'file'] as const
+export const CHAT_MESSAGE_KINDS = ['text', 'image', 'file', 'system'] as const
 export type ChatMessageKind = (typeof CHAT_MESSAGE_KINDS)[number]
 
 /** Longest message body the composer accepts. */
@@ -25,6 +25,8 @@ export type ChatConversationRow = {
   id: string
   type: ChatConversationType
   title: string
+  /** Group photo URL ('' when there is none); always '' for direct chats. */
+  image_url: string
   direct_key: string | null
   created_by: string
   last_message_at: string | null
@@ -38,6 +40,8 @@ export type ChatParticipantRow = {
   role: ChatMemberRole
   last_read_at: string
   joined_at: string
+  /** Set when this person deleted the conversation for themselves. */
+  hidden_at: string | null
 }
 
 export type ChatMessageRow = {
@@ -98,6 +102,8 @@ export type ChatMessage = {
   _id: string
   conversationId: string
   sender: ChatUserRef
+  /** 'system' rows are event lines written by the API (never by a person). */
+  kind: ChatMessageKind
   body: string
   attachment: ChatAttachment | null
   editedAt: string | null
@@ -109,6 +115,8 @@ export type ChatConversation = {
   _id: string
   type: ChatConversationType
   title: string
+  /** Group photo URL; '' for direct chats and groups without a photo. */
+  imageUrl: string
   participants: ChatParticipant[]
   lastMessage: ChatMessage | null
   unread: number
@@ -154,6 +162,7 @@ export function toChatMessage(row: ChatMessageWithSenderRow): ChatMessage {
     _id: row.id,
     conversationId: row.conversation_id,
     sender: toChatUserRef(row.sender, row.sender_id),
+    kind: row.kind,
     // A deleted message keeps its row but loses its content.
     body: deleted ? '' : row.body,
     attachment: attachmentOf(row),
@@ -173,6 +182,7 @@ export function toChatConversation(
     _id: row.id,
     type: row.type,
     title: row.title,
+    imageUrl: row.image_url ?? '',
     participants: (row.participants ?? []).map(toChatParticipant),
     lastMessage,
     unread,

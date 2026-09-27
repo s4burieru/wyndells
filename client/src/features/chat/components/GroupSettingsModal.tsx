@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react'
-import { LogOutIcon, Settings2Icon, UserPlusIcon, XIcon } from 'lucide-react'
+import { LogOutIcon, Settings2Icon, ShieldCheckIcon, ShieldOffIcon, UserPlusIcon, XIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { friendlyError, roleBadgeClass, roleLabel } from '@/utils/format'
+import { AvatarPicker } from '@/components/common/AvatarPicker'
 import { ConfirmDialog, Modal } from '@/components/common/Modal'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { Badge } from '@/components/ui/badge'
@@ -22,6 +23,9 @@ export function GroupSettingsModal({
   onAdd,
   onRemove,
   onLeave,
+  onSetImage,
+  onRemoveImage,
+  onSetRole,
 }: {
   open: boolean
   conversation: ChatConversation | null
@@ -32,6 +36,11 @@ export function GroupSettingsModal({
   onAdd: (memberIds: string[]) => Promise<void>
   onRemove: (userId: string) => Promise<void>
   onLeave: () => Promise<void>
+  /** Uploads a freshly picked photo for the group (immediate, no save step). */
+  onSetImage: (file: File) => Promise<void>
+  onRemoveImage: () => Promise<void>
+  /** Promotes to group admin, or demotes back to a plain member. */
+  onSetRole: (userId: string, role: 'admin' | 'member') => Promise<void>
 }) {
   const [draftTitle, setDraftTitle] = useState('')
   const [renaming, setRenaming] = useState(false)
@@ -42,8 +51,22 @@ export function GroupSettingsModal({
 
   const participants = conversation?.participants ?? []
   const myRole = participants.find((person) => person.id === currentUserId)?.memberRole
-  // Members may manage settings; owners and administrators may remove people.
-  const canManage = myRole === 'owner' || currentUserRole === 'admin'
+  const isOwner = myRole === 'owner'
+  const isGroupAdmin = myRole === 'admin'
+  const isPlatformAdmin = currentUserRole === 'admin'
+  // Tints the initials fallback until the group has a photo of its own.
+  const ownerRole =
+    participants.find((person) => person.memberRole === 'owner')?.role ?? currentUserRole
+  // Members may rename, add, and set the photo; removing anyone but yourself
+  // belongs to the owner, group admins, and administrators (the server
+  // enforces the same ranking — an admin cannot remove another admin).
+  const canRemove = (person: ChatParticipant) => {
+    if (person.memberRole === 'owner') return false
+    if (isOwner || isPlatformAdmin) return true
+    return isGroupAdmin && person.memberRole === 'member'
+  }
+  // Only the owner (and administrators) hand out the group-admin role.
+  const canChangeRoles = isOwner || isPlatformAdmin
 
   useEffect(() => {
     if (open && conversation) {
@@ -97,6 +120,49 @@ export function GroupSettingsModal({
     }
   }
 
+  // The photo uploads the moment a file is picked (same feel as the composer
+  // attachments), so there is no separate save step to press.
+  const changePhoto = async (file: File) => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await onSetImage(file)
+    } catch (error) {
+      toast.error(friendlyError(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const clearPhoto = async () => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await onRemoveImage()
+    } catch (error) {
+      toast.error(friendlyError(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
+  const setRole = async (person: ChatParticipant, role: 'admin' | 'member') => {
+    if (busy) return
+    setBusy(true)
+    try {
+      await onSetRole(person.id, role)
+      toast.success(
+        role === 'admin'
+          ? `${person.name} is now a group admin.`
+          : `${person.name} is now a plain member.`,
+      )
+    } catch (error) {
+      toast.error(friendlyError(error))
+    } finally {
+      setBusy(false)
+    }
+  }
+
   return (
     <Modal
       open={open}
@@ -109,6 +175,18 @@ export function GroupSettingsModal({
       }
     >
       <div className="grid gap-6">
+        <div className="grid gap-1.5">
+          <span className="text-sm font-medium">Group photo</span>
+          <AvatarPicker
+            name={conversation.title}
+            role={ownerRole}
+            src={conversation.imageUrl}
+            file={null}
+            onPick={(file) => void changePhoto(file)}
+            onRemove={() => void clearPhoto()}
+          />
+        </div>
+
         <div className="grid gap-1.5">
           <label htmlFor="settings-group-title" className="text-sm font-medium">
             Group name
@@ -148,7 +226,9 @@ export function GroupSettingsModal({
           <ul className="grid gap-1">
             {participants.map((person) => {
               const isMe = person.id === currentUserId
-              const showRemove = isMe || canManage
+              const showRemove = isMe || canRemove(person)
+              const showRoleToggle =
+                canChangeRoles && person.memberRole !== 'owner' && !isMe
               return (
                 <li
                   key={person.id}
@@ -169,10 +249,33 @@ export function GroupSettingsModal({
                   <Badge className={cn('px-1.5 py-0 text-[0.65rem]', roleBadgeClass(person.role))}>
                     {roleLabel(person.role)}
                   </Badge>
-                  {person.memberRole === 'owner' ? (
+                  {person.memberRole !== 'member' ? (
                     <Badge variant="outline" className="px-1.5 py-0 text-[0.65rem]">
-                      Owner
+                      {person.memberRole === 'owner' ? 'Owner' : 'Admin'}
                     </Badge>
+                  ) : null}
+                  {showRoleToggle ? (
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      className="h-7 px-2 text-xs"
+                      disabled={busy}
+                      title={
+                        person.memberRole === 'admin'
+                          ? `Make ${person.name} a plain member`
+                          : `Make ${person.name} a group admin`
+                      }
+                      onClick={() =>
+                        void setRole(person, person.memberRole === 'admin' ? 'member' : 'admin')
+                      }
+                    >
+                      {person.memberRole === 'admin' ? (
+                        <ShieldOffIcon className="size-3.5" />
+                      ) : (
+                        <ShieldCheckIcon className="size-3.5" />
+                      )}
+                      {person.memberRole === 'admin' ? 'Demote' : 'Make admin'}
+                    </Button>
                   ) : null}
                   {showRemove ? (
                     <Button
