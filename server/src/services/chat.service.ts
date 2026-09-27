@@ -15,16 +15,19 @@ import {
   type ChatMessage,
   type ChatMessageKind,
   type ChatMessageWithSenderRow,
+  type ChatParticipantWithUserRow,
   type ChatUserRef,
 } from '../models/Chat'
 import { usersTable } from '../models/User'
 import { ApiError } from '../utils/ApiError'
 import { assertUuid } from '../utils/validate'
+import { deleteStoredAvatar, type AvatarUpload } from './avatar.service'
 import {
   deleteStoredChatAttachment,
   isStoredChatAttachmentUrl,
   MAX_CHAT_FILE_SIZE_BYTES,
 } from './chatUpload.service'
+import { uploadGroupImage } from './groupImage.service'
 
 /** Who is acting: the signed-in staff member (admin or manager). */
 export type ChatActor = { id: string; role: 'admin' | 'manager' }
@@ -74,8 +77,8 @@ async function assertMember(conversationId: string, userId: string): Promise<voi
 }
 
 /**
- * Conversation settings (rename / add / remove) are open to every member and,
- * as a safety net, to administrators — who can moderate any conversation.
+ * Conversation settings (rename / add / group photo) are open to every member
+ * and, as a safety net, to administrators — who can moderate any conversation.
  */
 function assertCanManage(actor: ChatActor, row: ChatConversationWithParticipantsRow): void {
   const isMember = (row.participants ?? []).some((participant) => participant.user_id === actor.id)
@@ -102,6 +105,19 @@ async function assertActiveUsers(userIds: string[]): Promise<void> {
 /** Unique key for a direct pair, so two people can only have one conversation. */
 function directKey(a: string, b: string): string {
   return [a, b].sort().join(':')
+}
+
+/** Member ids that still see the conversation (everyone but self-deleters). */
+async function visibleMemberIds(conversationId: string): Promise<string[]> {
+  const { data, error } = await getDb()
+    .from(chatParticipantsTable)
+    .select('user_id')
+    .eq('conversation_id', conversationId)
+    .is('hidden_at', null)
+  if (error) {
+    throw new ApiError(500, 'Could not start the conversation.')
+  }
+  return (data ?? []).map((row) => String(row.user_id))
 }
 
 // ---------------------------------------------------------------------------
@@ -132,6 +148,8 @@ async function unreadFor(
     .select('id', { count: 'exact', head: true })
     .eq('conversation_id', conversationId)
     .neq('sender_id', userId)
+    // Event lines ("Alice left the group") never bump anyone's badge.
+    .neq('kind', 'system')
     .gt('created_at', lastReadAt)
   if (error) return 0
   return count ?? 0
@@ -160,6 +178,8 @@ export async function getConversationIdsForUser(userId: string): Promise<string[
     .from(chatParticipantsTable)
     .select('conversation_id')
     .eq('user_id', userId)
+    // Deleted-for-me conversations are not joined: no live messages, no typing.
+    .is('hidden_at', null)
   if (error) {
     throw new ApiError(500, 'Could not load conversations.')
   }
@@ -173,6 +193,8 @@ export async function listConversations(userId: string): Promise<ChatConversatio
     .from(chatParticipantsTable)
     .select('conversation_id, last_read_at')
     .eq('user_id', userId)
+    // Conversations this person deleted stay gone after a refresh too.
+    .is('hidden_at', null)
   if (mineError) {
     throw new ApiError(500, 'Could not load conversations.')
   }
@@ -301,6 +323,8 @@ export async function unreadSummary(
     .from(chatParticipantsTable)
     .select('conversation_id, last_read_at')
     .eq('user_id', userId)
+    // Hidden conversations never contribute to the badge.
+    .is('hidden_at', null)
   if (error) {
     throw new ApiError(500, 'Could not load conversations.')
   }
@@ -317,8 +341,18 @@ export async function unreadSummary(
 // Creating
 // ---------------------------------------------------------------------------
 
-/** Finds or starts the direct conversation between two staff members. */
-export async function createDirect(actor: ChatActor, otherUserId: string): Promise<ChatConversation> {
+/**
+ * Finds or starts the direct conversation between two staff members.
+ *
+ * Returns the ids that should be told about it: everyone who still sees the
+ * conversation. Starting a chat again restores it for the person who deleted
+ * it (they asked for it by writing first) — never for anyone else, so a
+ * delete stays private to that person.
+ */
+export async function createDirect(
+  actor: ChatActor,
+  otherUserId: string,
+): Promise<{ conversation: ChatConversation; announceIds: string[] }> {
   if (actor.id === otherUserId) {
     throw new ApiError(400, 'You cannot message yourself.')
   }
@@ -346,8 +380,17 @@ export async function createDirect(actor: ChatActor, otherUserId: string): Promi
       ],
       { onConflict: 'conversation_id,user_id', ignoreDuplicates: true },
     )
+    // …and un-delete it for whoever is starting it fresh.
+    await db
+      .from(chatParticipantsTable)
+      .update({ hidden_at: null })
+      .eq('conversation_id', String(existing.id))
+      .eq('user_id', actor.id)
     const row = await loadConversation(String(existing.id))
-    return buildConversation(row, actor.id)
+    return {
+      conversation: await buildConversation(row, actor.id),
+      announceIds: await visibleMemberIds(String(existing.id)),
+    }
   }
 
   const { data: created, error } = await db
@@ -373,8 +416,16 @@ export async function createDirect(actor: ChatActor, otherUserId: string): Promi
       ],
       { onConflict: 'conversation_id,user_id', ignoreDuplicates: true },
     )
+    await db
+      .from(chatParticipantsTable)
+      .update({ hidden_at: null })
+      .eq('conversation_id', String(raced.id))
+      .eq('user_id', actor.id)
     const row = await loadConversation(String(raced.id))
-    return buildConversation(row, actor.id)
+    return {
+      conversation: await buildConversation(row, actor.id),
+      announceIds: await visibleMemberIds(String(raced.id)),
+    }
   }
 
   await db.from(chatParticipantsTable).insert([
@@ -382,7 +433,10 @@ export async function createDirect(actor: ChatActor, otherUserId: string): Promi
     { conversation_id: created.id, user_id: otherId, role: 'member' },
   ])
   const row = await loadConversation(String(created.id))
-  return buildConversation(row, actor.id)
+  return {
+    conversation: await buildConversation(row, actor.id),
+    announceIds: [actor.id, otherId],
+  }
 }
 
 /** Creates a named group with the chosen staff members. */
@@ -514,7 +568,10 @@ export async function editMessage(actor: ChatActor, messageId: string, body: str
   if (loadError || !existing) {
     throw new ApiError(404, 'Message not found.')
   }
-  const row = existing as { sender_id: string; deleted_at: string | null }
+  const row = existing as { sender_id: string; deleted_at: string | null; kind: ChatMessageKind }
+  if (row.kind === 'system') {
+    throw new ApiError(403, 'System messages cannot be edited.')
+  }
   if (row.sender_id !== actor.id) {
     throw new ApiError(403, 'You can only edit your own messages.')
   }
@@ -556,7 +613,15 @@ export async function deleteMessage(actor: ChatActor, messageId: string): Promis
   if (loadError || !existing) {
     throw new ApiError(404, 'Message not found.')
   }
-  const row = existing as { sender_id: string; deleted_at: string | null; attachment_url: string }
+  const row = existing as {
+    sender_id: string
+    deleted_at: string | null
+    attachment_url: string
+    kind: ChatMessageKind
+  }
+  if (row.kind === 'system') {
+    throw new ApiError(403, 'System messages cannot be deleted.')
+  }
   if (row.sender_id !== actor.id) {
     throw new ApiError(403, 'You can only delete your own messages.')
   }
@@ -588,6 +653,67 @@ export async function deleteMessage(actor: ChatActor, messageId: string): Promis
 }
 
 // ---------------------------------------------------------------------------
+// System messages
+// ---------------------------------------------------------------------------
+
+/**
+ * Display name of whoever acted: embedded when they are a participant of the
+ * conversation, looked up otherwise (platform administrators can moderate a
+ * group they never joined).
+ */
+async function actorNameOf(
+  row: ChatConversationWithParticipantsRow,
+  userId: string,
+): Promise<string> {
+  const embedded = (row.participants ?? []).find(
+    (participant) => participant.user_id === userId,
+  )?.user
+  if (embedded?.name) {
+    return String(embedded.name)
+  }
+  const { data } = await getDb()
+    .from(usersTable)
+    .select('name')
+    .eq('id', userId)
+    .maybeSingle()
+  return data ? String(data.name) : 'Someone'
+}
+
+/** Display name of a participant from the embedded user projection. */
+function participantName(participant: ChatParticipantWithUserRow): string {
+  return participant.user?.name ? String(participant.user.name) : 'Someone'
+}
+
+/**
+ * Writes an event line into the conversation ("Alice left the group"): a
+ * regular message row flagged `system`, so it rides the existing history,
+ * paging, previews and `message:new` broadcasts. The caller returns it for
+ * the controller to broadcast. Best-effort, like the activity log — a failed
+ * insert never fails the action that caused it.
+ */
+async function recordSystemMessage(
+  conversationId: string,
+  actorId: string,
+  body: string,
+): Promise<ChatMessage | null> {
+  const db = getDb()
+  const { data, error } = await db
+    .from(chatMessagesTable)
+    .insert({ conversation_id: conversationId, sender_id: actorId, kind: 'system', body })
+    .select(CHAT_MESSAGE_SELECT)
+    .single()
+  if (error || !data) {
+    return null
+  }
+  // Keeps the conversation ordered by newest activity, events included.
+  await db
+    .from(chatConversationsTable)
+    .update({ last_message_at: data.created_at })
+    .eq('id', conversationId)
+  return toChatMessage(data as ChatMessageWithSenderRow)
+}
+
+// ---------------------------------------------------------------------------
 // Managing conversations
 // ---------------------------------------------------------------------------
 
@@ -596,7 +722,7 @@ export async function renameConversation(
   actor: ChatActor,
   conversationId: string,
   title: string,
-): Promise<ChatConversation> {
+): Promise<{ conversation: ChatConversation; systemMessages: ChatMessage[] }> {
   const row = await loadConversation(conversationId)
   assertCanManage(actor, row)
   if (row.type !== 'group') {
@@ -619,7 +745,159 @@ export async function renameConversation(
   if (error || !data) {
     throw new ApiError(500, 'Could not rename the group.')
   }
-  return buildConversation(data as ChatConversationWithParticipantsRow, actor.id)
+  const updated = data as ChatConversationWithParticipantsRow
+  const systemMessage = await recordSystemMessage(
+    conversationId,
+    actor.id,
+    `${await actorNameOf(updated, actor.id)} renamed the group to "${trimmed}"`,
+  )
+  return {
+    conversation: await buildConversation(updated, actor.id),
+    systemMessages: systemMessage ? [systemMessage] : [],
+  }
+}
+
+/** Guards the photo change: groups only, and only for people in the conversation. */
+async function assertGroupPhotoManager(
+  actor: ChatActor,
+  conversationId: string,
+): Promise<ChatConversationWithParticipantsRow> {
+  const row = await loadConversation(conversationId)
+  if (row.type !== 'group') {
+    throw new ApiError(400, 'Only groups have a photo.')
+  }
+  assertCanManage(actor, row)
+  return row
+}
+
+/** Stores a new group photo and returns the refreshed conversation. */
+export async function setGroupImage(
+  actor: ChatActor,
+  conversationId: string,
+  upload: AvatarUpload,
+): Promise<{ conversation: ChatConversation; systemMessages: ChatMessage[] }> {
+  const row = await assertGroupPhotoManager(actor, conversationId)
+  // Upload first: a rejected file leaves the current photo untouched.
+  const imageUrl = await uploadGroupImage(conversationId, upload)
+
+  const { data, error } = await getDb()
+    .from(chatConversationsTable)
+    .update({ image_url: imageUrl })
+    .eq('id', conversationId)
+    .select(CHAT_CONVERSATION_SELECT)
+    .single()
+  if (error || !data) {
+    // The row kept its old photo; don't strand the freshly uploaded file.
+    void deleteStoredAvatar(imageUrl)
+    throw new ApiError(500, 'Could not update the group photo.')
+  }
+
+  // Replaced photo: the old file goes away best-effort, never failing the save.
+  if (row.image_url) {
+    void deleteStoredAvatar(row.image_url)
+  }
+  const updated = data as ChatConversationWithParticipantsRow
+  const systemMessage = await recordSystemMessage(
+    conversationId,
+    actor.id,
+    `${await actorNameOf(updated, actor.id)} changed the group photo`,
+  )
+  return {
+    conversation: await buildConversation(updated, actor.id),
+    systemMessages: systemMessage ? [systemMessage] : [],
+  }
+}
+
+/** Clears the group photo; members fall back to the initials avatar. */
+export async function removeGroupImage(
+  actor: ChatActor,
+  conversationId: string,
+): Promise<{ conversation: ChatConversation; systemMessages: ChatMessage[] }> {
+  const row = await assertGroupPhotoManager(actor, conversationId)
+
+  const { data, error } = await getDb()
+    .from(chatConversationsTable)
+    .update({ image_url: '' })
+    .eq('id', conversationId)
+    .select(CHAT_CONVERSATION_SELECT)
+    .single()
+  if (error || !data) {
+    throw new ApiError(500, 'Could not update the group photo.')
+  }
+
+  if (row.image_url) {
+    void deleteStoredAvatar(row.image_url)
+  }
+  const updated = data as ChatConversationWithParticipantsRow
+  const systemMessage = await recordSystemMessage(
+    conversationId,
+    actor.id,
+    `${await actorNameOf(updated, actor.id)} removed the group photo`,
+  )
+  return {
+    conversation: await buildConversation(updated, actor.id),
+    systemMessages: systemMessage ? [systemMessage] : [],
+  }
+}
+
+/**
+ * Promotes a member to group admin or demotes them back. Only the group owner
+ * (and administrators, as a safety net) may change roles, the owner's own
+ * role is untouchable, and only `admin` / `member` are assignable — the owner
+ * stays the owner.
+ */
+export async function updateParticipantRole(
+  actor: ChatActor,
+  conversationId: string,
+  targetUserId: string,
+  role: string,
+): Promise<{ conversation: ChatConversation; systemMessages: ChatMessage[] }> {
+  if (role !== 'admin' && role !== 'member') {
+    throw new ApiError(400, 'The field "role" must be either "admin" or "member".')
+  }
+  const row = await loadConversation(conversationId)
+  if (row.type !== 'group') {
+    throw new ApiError(400, 'Only groups have member roles.')
+  }
+
+  const actorIsOwner = (row.participants ?? []).some(
+    (participant) => participant.user_id === actor.id && participant.role === 'owner',
+  )
+  if (!actorIsOwner && actor.role !== 'admin') {
+    throw new ApiError(403, 'Only the group owner can change member roles.')
+  }
+
+  const target = (row.participants ?? []).find(
+    (participant) => participant.user_id === targetUserId,
+  )
+  if (!target) {
+    throw new ApiError(400, 'That staff member is not in this conversation.')
+  }
+  if (target.role === 'owner') {
+    throw new ApiError(400, "The group owner's role cannot be changed.")
+  }
+
+  const { error } = await getDb()
+    .from(chatParticipantsTable)
+    .update({ role })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', targetUserId)
+  if (error) {
+    throw new ApiError(500, 'Could not update the conversation.')
+  }
+
+  const systemMessage = await recordSystemMessage(
+    conversationId,
+    actor.id,
+    `${await actorNameOf(row, actor.id)} made ${participantName(target)} ${
+      role === 'admin' ? 'a group admin' : 'a plain member'
+    }`,
+  )
+  const refreshed = await loadConversation(conversationId)
+  return {
+    conversation: await buildConversation(refreshed, actor.id),
+    systemMessages: systemMessage ? [systemMessage] : [],
+  }
 }
 
 /** Adds staff members to a group; returns who was actually added. */
@@ -627,7 +905,7 @@ export async function addParticipants(
   actor: ChatActor,
   conversationId: string,
   memberIds: string[],
-): Promise<{ conversation: ChatConversation; addedIds: string[] }> {
+): Promise<{ conversation: ChatConversation; addedIds: string[]; systemMessages: ChatMessage[] }> {
   const row = await loadConversation(conversationId)
   if (row.type !== 'group') {
     throw new ApiError(400, 'Members can only be added to group conversations.')
@@ -637,7 +915,11 @@ export async function addParticipants(
   const existing = new Set((row.participants ?? []).map((participant) => participant.user_id))
   const uniqueIds = [...new Set(memberIds.map((id) => String(id)))].filter((id) => !existing.has(id))
   if (uniqueIds.length === 0) {
-    return { conversation: await buildConversation(row, actor.id), addedIds: [] }
+    return {
+      conversation: await buildConversation(row, actor.id),
+      addedIds: [],
+      systemMessages: [],
+    }
   }
   if (uniqueIds.length > MAX_GROUP_MEMBERS) {
     throw new ApiError(400, `Groups can hold up to ${MAX_GROUP_MEMBERS} staff members.`)
@@ -660,19 +942,44 @@ export async function addParticipants(
 
   const addedIds = (inserted ?? []).map((item) => String(item.user_id))
   const refreshed = await loadConversation(conversationId)
-  return { conversation: await buildConversation(refreshed, actor.id), addedIds }
+  const addedNames = (refreshed.participants ?? [])
+    .filter((participant) => addedIds.includes(participant.user_id))
+    .map(participantName)
+  const systemMessage =
+    addedIds.length > 0
+      ? await recordSystemMessage(
+          conversationId,
+          actor.id,
+          `${await actorNameOf(refreshed, actor.id)} added ${addedNames.join(', ')}`,
+        )
+      : null
+  return {
+    conversation: await buildConversation(refreshed, actor.id),
+    addedIds,
+    systemMessages: systemMessage ? [systemMessage] : [],
+  }
 }
 
 /**
  * Removes a person from a group: members may remove themselves (leave), while
- * removing anyone else is reserved for the group owner and administrators.
+ * removing anyone else is reserved for the group owner, group admins, and
+ * administrators — group admins may only remove plain members, and the owner
+ * can only leave on their own (never be removed).
  * Direct conversations cannot be left — they belong to both people.
+ *
+ * When the owner leaves, the first group admin (or the longest-standing
+ * member) is promoted so the group always keeps someone who can manage it.
  */
 export async function removeParticipant(
   actor: ChatActor,
   conversationId: string,
   targetUserId: string,
-): Promise<{ removedUserId: string; remainingIds: string[] }> {
+): Promise<{
+  removedUserId: string
+  remainingIds: string[]
+  conversation: ChatConversation | null
+  systemMessages: ChatMessage[]
+}> {
   const row = await loadConversation(conversationId)
   if (row.type !== 'group') {
     throw new ApiError(400, 'Direct conversations cannot be left.')
@@ -688,11 +995,21 @@ export async function removeParticipant(
   }
 
   if (!isSelf) {
-    const isOwner = (row.participants ?? []).some(
-      (participant) => participant.user_id === actor.id && participant.role === 'owner',
-    )
-    if (!isOwner && actor.role !== 'admin') {
-      throw new ApiError(403, 'Only the group owner or an administrator can remove members.')
+    const actorMemberRole = (row.participants ?? []).find(
+      (participant) => participant.user_id === actor.id,
+    )?.role
+    const isOwner = actorMemberRole === 'owner'
+    const isGroupAdmin = actorMemberRole === 'admin'
+    const isPlatformAdmin = actor.role === 'admin'
+    if (!isOwner && !isGroupAdmin && !isPlatformAdmin) {
+      throw new ApiError(403, 'Only the group owner, a group admin, or an administrator can remove members.')
+    }
+    if (target.role === 'owner') {
+      throw new ApiError(400, 'The group owner cannot be removed from the group.')
+    }
+    // Group admins outrank plain members only — admins are the owner's call.
+    if (!isOwner && !isPlatformAdmin && target.role === 'admin') {
+      throw new ApiError(403, 'Only the group owner can remove a group admin.')
     }
   } else {
     assertCanManage(actor, row)
@@ -707,10 +1024,79 @@ export async function removeParticipant(
     throw new ApiError(500, 'Could not update the conversation.')
   }
 
-  const remainingIds = (row.participants ?? [])
-    .map((participant) => participant.user_id)
-    .filter((id) => id !== targetUserId)
-  return { removedUserId: targetUserId, remainingIds }
+  const remaining = (row.participants ?? []).filter(
+    (participant) => participant.user_id !== targetUserId,
+  )
+  const remainingIds = remaining.map((participant) => participant.user_id)
+
+  // The event line is written after the removal succeeded, using the names
+  // captured from the row as it was before anyone left.
+  const systemMessages: ChatMessage[] = []
+  const removalLine = await recordSystemMessage(
+    conversationId,
+    actor.id,
+    isSelf
+      ? `${await actorNameOf(row, actor.id)} left the group`
+      : `${await actorNameOf(row, actor.id)} removed ${participantName(target)}`,
+  )
+  if (removalLine) {
+    systemMessages.push(removalLine)
+  }
+
+  // Hand the crown over when the owner walks away: prefer an admin, then the
+  // longest-standing member, so the group never becomes unmanageable.
+  let promotedUserId: string | null = null
+  if (target.role === 'owner' && remaining.length > 0) {
+    const successor =
+      remaining.find((participant) => participant.role === 'admin') ??
+      [...remaining].sort(
+        (a, b) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime(),
+      )[0]
+    const { error: promoteError } = await getDb()
+      .from(chatParticipantsTable)
+      .update({ role: 'owner' })
+      .eq('conversation_id', conversationId)
+      .eq('user_id', successor.user_id)
+    if (!promoteError) {
+      promotedUserId = successor.user_id
+      const transferLine = await recordSystemMessage(
+        conversationId,
+        actor.id,
+        `${participantName(successor)} is now the group owner`,
+      )
+      if (transferLine) {
+        systemMessages.push(transferLine)
+      }
+    }
+  }
+
+  // The room hears about the new owner through this refreshed payload.
+  const conversation = promotedUserId
+    ? await buildConversation(await loadConversation(conversationId), promotedUserId)
+    : null
+
+  return { removedUserId: targetUserId, remainingIds, conversation, systemMessages }
+}
+
+/**
+ * Deletes a conversation for one person: their membership row is marked
+ * hidden, which drops it from their list, socket rooms and unread counts —
+ * while every other member keeps the conversation and its history. One-way:
+ * nothing another person does can bring it back (a direct chat reappears
+ * only if this person starts it again themselves).
+ */
+export async function hideConversation(actor: ChatActor, conversationId: string): Promise<void> {
+  await assertMember(conversationId, actor.id)
+  const now = new Date().toISOString()
+  const { error } = await getDb()
+    .from(chatParticipantsTable)
+    // Marking read as well keeps the badge maths clean if the row is ever read.
+    .update({ hidden_at: now, last_read_at: now })
+    .eq('conversation_id', conversationId)
+    .eq('user_id', actor.id)
+  if (error) {
+    throw new ApiError(500, 'Could not delete the conversation.')
+  }
 }
 
 /** Marks a conversation read for one person; returns the new read timestamp. */

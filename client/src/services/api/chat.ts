@@ -55,6 +55,47 @@ export async function renameConversation(
   return data.conversation
 }
 
+/** Uploads a new photo for a group (any member of the conversation). */
+export async function updateGroupImage(
+  conversationId: string,
+  file: File,
+): Promise<ChatConversation> {
+  const form = new FormData()
+  form.append('image', file)
+  const data = await apiRequest<{ conversation: ChatConversation }>(
+    `/api/chat/conversations/${conversationId}/image`,
+    { method: 'PATCH', body: form },
+  )
+  return data.conversation
+}
+
+/** Removes the group photo; members fall back to the initials avatar. */
+export async function removeGroupImage(conversationId: string): Promise<ChatConversation> {
+  const data = await apiRequest<{ conversation: ChatConversation }>(
+    `/api/chat/conversations/${conversationId}/image`,
+    { method: 'DELETE' },
+  )
+  return data.conversation
+}
+
+/** Deletes a conversation for the signed-in staff member only. */
+export async function deleteConversation(conversationId: string): Promise<void> {
+  await apiRequest(`/api/chat/conversations/${conversationId}`, { method: 'DELETE' })
+}
+
+/** Promotes a member to group admin, or demotes them back to a plain member. */
+export async function setConversationMemberRole(
+  conversationId: string,
+  userId: string,
+  role: 'admin' | 'member',
+): Promise<ChatConversation> {
+  const data = await apiRequest<{ conversation: ChatConversation }>(
+    `/api/chat/conversations/${conversationId}/participants/${userId}/role`,
+    { method: 'PATCH', body: { role } },
+  )
+  return data.conversation
+}
+
 export async function addConversationMembers(
   conversationId: string,
   memberIds: string[],

@@ -101,6 +101,8 @@ export function isSameDay(a: string, b: string): boolean {
 /** True when two messages belong to the same sender run within 5 minutes. */
 export function isGroupedWith(previous: ChatMessage | undefined, message: ChatMessage): boolean {
   if (!previous) return false
+  // Event lines stand alone: never grouped, never grouped after.
+  if (previous.kind === 'system' || message.kind === 'system') return false
   if (previous.sender.id !== message.sender.id) return false
   if (previous.deletedAt || message.deletedAt) return false
   const gap = new Date(message.createdAt).getTime() - new Date(previous.createdAt).getTime()

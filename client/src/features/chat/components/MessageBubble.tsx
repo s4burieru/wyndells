@@ -16,7 +16,7 @@ import { Textarea } from '@/components/ui/textarea'
 import type { ChatMessage } from '@/types'
 import { fileSize, messageTime } from '../helpers'
 
-/** One message: text, attachment, or the tombstone left by a delete. */
+/** One message: text, attachment, the tombstone left by a delete, or an event line. */
 export function MessageBubble({
   message,
   isOwn,
@@ -72,6 +72,19 @@ export function MessageBubble({
     } finally {
       setBusy(false)
     }
+  }
+
+  // Event lines ("Alice left the group"): a centered pill instead of a bubble,
+  // with no sender, no grouping and no edit/delete menu.
+  if (message.kind === 'system') {
+    return (
+      <div className="flex w-full justify-center py-1">
+        <span className="rounded-full border bg-muted px-3 py-1.5 text-center text-xs text-muted-foreground">
+          {message.body}
+          <span className="ml-1.5 opacity-70">{messageTime(message.createdAt)}</span>
+        </span>
+      </div>
+    )
   }
 
   return (

@@ -22,17 +22,20 @@ export type AvatarUpload = {
   size: number
 }
 
-/** Validates the picked photo and returns its lowercase file extension. */
-function avatarExtension(upload: AvatarUpload): string {
+/**
+ * Validates any photo picked for staff use (profile or group) and returns its
+ * lowercase file extension. `label` keeps the error messages specific.
+ */
+export function validatePhotoUpload(upload: AvatarUpload, label: string): string {
   if (upload.size > MAX_AVATAR_FILE_SIZE_BYTES) {
     throw new ApiError(
       413,
-      'The profile photo is too large. Please upload a JPG, PNG, or WEBP image up to 2 MB.',
+      `The ${label} is too large. Please upload a JPG, PNG, or WEBP image up to 2 MB.`,
     )
   }
   const ext = upload.originalname.split('.').pop()?.toLowerCase() ?? ''
   if (!ALLOWED_AVATAR_EXTENSIONS.has(ext)) {
-    throw new ApiError(400, 'Please choose your profile photo as a JPG, PNG, or WEBP image.')
+    throw new ApiError(400, `Please choose your ${label} as a JPG, PNG, or WEBP image.`)
   }
   // Reject mismatched types when the browser reported a specific type.
   const reportedType = upload.mimetype.toLowerCase()
@@ -47,7 +50,7 @@ function avatarExtension(upload: AvatarUpload): string {
 }
 
 /** Creates the public avatars bucket on first use (safe to call repeatedly). */
-async function ensureAvatarBucket(): Promise<void> {
+export async function ensureAvatarBucket(): Promise<void> {
   const { error } = await getDb().storage.createBucket(AVATARS_BUCKET, { public: true })
   if (!error) {
     return
@@ -64,7 +67,7 @@ async function ensureAvatarBucket(): Promise<void> {
  * fresh id while a new account is still being created).
  */
 export async function uploadAvatar(ownerKey: string, upload: AvatarUpload): Promise<string> {
-  const extension = avatarExtension(upload)
+  const extension = validatePhotoUpload(upload, 'profile photo')
   await ensureAvatarBucket()
   const path = `staff/${ownerKey}/${randomUUID()}${extension}`
   const { error } = await getDb()

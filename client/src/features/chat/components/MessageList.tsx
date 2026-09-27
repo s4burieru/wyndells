@@ -86,7 +86,10 @@ export function MessageList({
 
   const lastMessage = messages[messages.length - 1]
   const receiptNames =
-    lastMessage && lastMessage.sender.id === currentUserId && !lastMessage.deletedAt
+    lastMessage &&
+    lastMessage.sender.id === currentUserId &&
+    !lastMessage.deletedAt &&
+    lastMessage.kind !== 'system'
       ? seenByParticipants(conversation, lastMessage, currentUserId).map((person) => person.name)
       : []
   const showReceipt = receiptNames.length > 0
