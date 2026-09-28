@@ -48,10 +48,29 @@ export function formatTime12(time: string): string {
 }
 
 export function todayLocal(): string {
-  const now = new Date()
-  const month = String(now.getMonth() + 1).padStart(2, '0')
-  const day = String(now.getDate()).padStart(2, '0')
-  return `${now.getFullYear()}-${month}-${day}`
+  return dateToString(new Date())
+}
+
+/**
+ * Parses a `YYYY-MM-DD` value as *local* midnight. Using the local calendar
+ * (instead of `new Date('2026-09-28')`, which is parsed as UTC) keeps the
+ * picker on the same day the user picked, regardless of timezone.
+ * Returns `undefined` for empty or malformed values.
+ */
+export function dateStringToDate(value: string): Date | undefined {
+  const [year, month, day] = value.split('-').map(Number)
+  if (!year || !month || !day) {
+    return undefined
+  }
+  const date = new Date(year, month - 1, day)
+  return Number.isNaN(date.getTime()) ? undefined : date
+}
+
+/** Converts a `Date` to the `YYYY-MM-DD` string the app and API use. */
+export function dateToString(date: Date): string {
+  const month = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  return `${date.getFullYear()}-${month}-${day}`
 }
 
 /**

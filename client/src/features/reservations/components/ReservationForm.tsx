@@ -7,6 +7,7 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription } from '@/components/ui/alert'
 import { Badge } from '@/components/ui/badge'
+import { DatePicker } from '@/components/ui/date-picker'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -95,11 +96,12 @@ export function ReservationForm({
               </Field>
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="Date">
-                  <TextInput
-                    type="date"
-                    min={todayLocal()}
+                  <DatePicker
                     value={form.date}
-                    onChange={(event) => onUpdate('date', event.target.value)}
+                    onChange={(value) => onUpdate('date', value)}
+                    min={todayLocal()}
+                    placeholder="Pick a date"
+                    className="w-full"
                   />
                 </Field>
                 <Field label="Number of guests">
