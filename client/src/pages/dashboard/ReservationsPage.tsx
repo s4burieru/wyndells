@@ -4,6 +4,7 @@ import { fetchReservations, updateReservationStatus } from '@/services/api/reser
 import type {  Reservation, ReservationStatus  } from '@/types'
 import { friendlyError } from '@/utils/format'
 import { PageHeader, Spinner, EmptyState } from '@/components/common/PageHeader'
+import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/AuthContext'
 import { RESERVATION_STATUS_FILTERS, ReservationDetailModal } from '@/features/reservations/components/ReservationManagement'
 import { ReservationsTable } from '@/features/reservations/components/ReservationsTable'
@@ -82,12 +83,12 @@ export function ManageReservationsPage() {
           </button>
         ))}
         <label className="sr-only" htmlFor="reservation-date">Filter by date</label>
-        <input
+        <DatePicker
           id="reservation-date"
-          type="date"
           value={date}
-          onChange={(event) => setDate(event.target.value)}
-          className="ml-2 rounded-lg border border-wyndell-ink/20 bg-white px-3 py-1.5 text-sm"
+          onChange={setDate}
+          placeholder="Filter by date"
+          className="ml-2 w-auto"
         />
         {date ? (
           <button type="button" onClick={() => setDate('')} className="text-xs font-medium text-neutral-500 underline">
