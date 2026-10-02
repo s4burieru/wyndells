@@ -77,7 +77,7 @@ function HeroSection() {
               seasonal freshness, and tables made for sharing.
             </p>
             <div className="mt-8 flex flex-wrap items-center gap-3">
-              <Button asChild size="lg" className="rounded-full bg-wyndell-orange px-7 text-white shadow-lg shadow-wyndell-orange/25 transition-colors hover:bg-wyndell-orange-dark">
+              <Button asChild size="lg" className="rounded-full px-7 shadow-lg shadow-wyndell-orange/25 transition-colors">
                 <Link to="/reserve">
                   <CalendarCheck />
                   Book a Reservation
@@ -282,9 +282,9 @@ function ReservationCtaSection() {
             and we&rsquo;ll have the grill ready.
           </p>
           <div className="mt-8 flex flex-wrap justify-center gap-3">
-            <Button asChild size="lg" className="rounded-full bg-wyndell-orange px-7 text-white shadow-lg shadow-black/20 hover:bg-wyndell-orange-dark">
+            <Button asChild size="lg" className="rounded-full px-7 shadow-lg shadow-black/20">
               <Link to="/reserve">
-                Book a Reservation
+                Reserve your table
                 <ArrowRight />
               </Link>
             </Button>

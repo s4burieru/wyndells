@@ -1,9 +1,11 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { createMenuItem, deleteMenuItem, fetchMenuItems, updateMenuItem } from '@/services/api/menu'
 import type { MenuItem } from '@/types'
-import { formatPrice } from '@/utils/format'
+import { formatPrice, friendlyError } from '@/utils/format'
 import { Button } from '@/components/common/FormControls'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { ConfirmDialog } from '@/components/common/Modal'
 import { useAuth } from '@/contexts/AuthContext'
 import { MenuFormModal } from '@/features/menu/components/MenuFormModal'
 import { QRMenuModal } from '@/features/menu/components/QRMenuModal'
@@ -16,6 +18,7 @@ export function ManageMenuPage() {
   const [editing, setEditing] = useState<MenuItem | null>(null)
   const [creating, setCreating] = useState(false)
   const [showQR, setShowQR] = useState(false)
+  const [deleting, setDeleting] = useState<MenuItem | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -28,26 +31,38 @@ export function ManageMenuPage() {
 
   useEffect(load, [])
 
+  const closeForm = () => {
+    setCreating(false)
+    setEditing(null)
+  }
+
   const handleSave = (payload: Record<string, unknown>) => {
     const request = editing ? updateMenuItem(editing._id, payload) : createMenuItem(payload)
     void request
       .then(() => {
-        setCreating(false)
-        setEditing(null)
+        closeForm()
         load()
       })
-      .catch(() => setError(true))
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
   const handleDelete = (item: MenuItem) => {
-    void deleteMenuItem(item._id).then(load).catch(() => undefined)
+    void deleteMenuItem(item._id)
+      .then(load)
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
+      .finally(() => setDeleting(null))
+  }
+
+  const handleToggleStatus = (item: MenuItem) => {
+    void updateMenuItem(item._id, {
+      status: item.status === 'available' ? 'unavailable' : 'available',
+    })
+      .then(load)
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
   if (loading) {
     return <Spinner label="Loading menu…" />
-  }
-  if (error) {
-    return <ErrorState message="Unable to load the menu right now." onRetry={load} />
   }
 
   return (
@@ -65,7 +80,11 @@ export function ManageMenuPage() {
         }
       />
 
-      {items.length === 0 ? (
+      {error ? (
+        <div className="mt-6">
+          <ErrorState message="Unable to load the menu right now." onRetry={load} />
+        </div>
+      ) : items.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No menu items yet" message="Add your first dish to start serving the digital menu." />
         </div>
@@ -74,12 +93,12 @@ export function ManageMenuPage() {
           <table className="w-full min-w-160 border-collapse text-sm">
             <thead>
               <tr className="border-b border-wyndell-cream-dark bg-wyndell-cream/60 text-left text-xs uppercase tracking-wide text-neutral-500">
-                <th className="px-3 py-2.5">Name</th>
-                <th className="px-3 py-2.5">Category</th>
-                {user?.role === 'admin' ? <th className="px-3 py-2.5">Branch</th> : null}
-                <th className="px-3 py-2.5">Price</th>
-                <th className="px-3 py-2.5">Status</th>
-                <th className="px-3 py-2.5 text-right">Actions</th>
+                <th scope="col" className="px-3 py-2.5">Name</th>
+                <th scope="col" className="px-3 py-2.5">Category</th>
+                {user?.role === 'admin' ? <th scope="col" className="px-3 py-2.5">Branch</th> : null}
+                <th scope="col" className="px-3 py-2.5">Price</th>
+                <th scope="col" className="px-3 py-2.5">Status</th>
+                <th scope="col" className="px-3 py-2.5 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-wyndell-cream-dark/60">
@@ -95,12 +114,11 @@ export function ManageMenuPage() {
                   <td className="px-3 py-2.5">
                     <button
                       type="button"
-                      onClick={() =>
-                        void updateMenuItem(item._id, { status: item.status === 'available' ? 'unavailable' : 'available' }).then(load)
-                      }
+                      aria-pressed={item.status === 'available'}
+                      onClick={() => handleToggleStatus(item)}
                       className={[
                         'rounded-full px-2.5 py-0.5 text-xs font-medium',
-                        item.status === 'available' ? 'bg-wyndell-green/15 text-wyndell-green-dark' : 'bg-red-100 text-red-700',
+                        item.status === 'available' ? 'bg-wyndell-green/15 text-wyndell-green-dark' : 'bg-destructive/10 text-destructive',
                       ].join(' ')}
                     >
                       {item.status === 'available' ? 'Available' : 'Unavailable'}
@@ -113,12 +131,8 @@ export function ManageMenuPage() {
                       </button>
                       <button
                         type="button"
-                        onClick={() => {
-                          if (window.confirm(`Delete "${item.name}" from the menu?`)) {
-                            handleDelete(item)
-                          }
-                        }}
-                        className="text-xs font-medium text-red-600 hover:underline"
+                        onClick={() => setDeleting(item)}
+                        className="text-xs font-medium text-destructive hover:underline"
                       >
                         Delete
                       </button>
@@ -136,13 +150,19 @@ export function ManageMenuPage() {
           item={editing}
           isManager={user?.role === 'manager'}
           defaultBranch={user?.assignedBranch?.id ?? ''}
-          onClose={() => {
-            setCreating(false)
-            setEditing(null)
-          }}
+          onClose={closeForm}
           onSave={handleSave}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete menu item?"
+        message={deleting ? `“${deleting.name}” will be removed from the menu. This can’t be undone.` : ''}
+        confirmLabel="Delete"
+        onConfirm={() => deleting && handleDelete(deleting)}
+        onCancel={() => setDeleting(null)}
+      />
 
       {showQR ? (
         <QRMenuModal

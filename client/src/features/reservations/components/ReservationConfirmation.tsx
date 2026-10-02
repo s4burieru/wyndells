@@ -92,7 +92,7 @@ export function ReservationConfirmationPage({
             </dl>
             <Separator className="mt-4" />
             <div className="mt-4 flex flex-wrap items-center justify-center gap-3">
-              <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+              <Button asChild>
                 <Link to="/check">Check reservation status</Link>
               </Button>
               <Button asChild variant="outline">

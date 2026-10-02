@@ -1,17 +1,20 @@
+/**
+ * Chart fills aligned with the badge palette in `utils/format.ts` so the same
+ * status always reads the same colour in charts, badges, and table dots.
+ */
 export const STATUS_FILL: Record<string, string> = {
-  pending: "#f9c515",
-  confirmed: "#168b48",
-  completed: "#0ea5e9",
-  cancelled: "#a3a3a3",
-  rejected: "#dc2626",
-  "no-show": "#a855f7",
+  pending: "#f9c515", // wyndell-sun
+  confirmed: "#12703c", // wyndell-green-dark
+  completed: "#0ea5e9", // sky-500
+  cancelled: "#a39382", // wyndell-taupe
+  rejected: "#dc2626", // destructive
+  "no-show": "#a855f7", // purple-500
 }
 
 export const TABLE_FILL: Record<string, string> = {
-  available: "#168b48",
-  reserved: "#f9c515",
-  occupied: "#F58000",
-  cleaning: "#0ea5e9",
-  unavailable: "#a3a3a3",
+  available: "#12703c", // wyndell-green-dark
+  reserved: "#f9c515", // wyndell-sun
+  occupied: "#F58000", // wyndell-orange
+  cleaning: "#0ea5e9", // sky-500
+  unavailable: "#a39382", // wyndell-taupe
 }
-

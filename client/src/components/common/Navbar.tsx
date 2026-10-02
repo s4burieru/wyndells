@@ -121,7 +121,7 @@ export function PublicNavbar() {
             >
               <Link to="/check">Check Reservation</Link>
             </Button>
-            <Button asChild className="rounded-lg bg-wyndell-orange text-white shadow-sm shadow-wyndell-orange/25 hover:bg-wyndell-orange-dark">
+            <Button asChild className="rounded-lg shadow-sm shadow-wyndell-orange/25">
               <Link to="/reserve">Book a Reservation</Link>
             </Button>
             <Button

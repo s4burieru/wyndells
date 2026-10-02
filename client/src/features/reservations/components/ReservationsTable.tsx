@@ -21,14 +21,14 @@ export function ReservationsTable({
       <table className="w-full min-w-175 border-collapse text-sm">
         <thead>
           <tr className="border-b border-wyndell-cream-dark bg-wyndell-cream/60 text-left text-xs uppercase tracking-wide text-neutral-500">
-            <th className="px-3 py-2.5">Reference</th>
-            <th className="px-3 py-2.5">Customer</th>
-            {showBranch ? <th className="px-3 py-2.5">Branch</th> : null}
-            <th className="px-3 py-2.5">Date · Time</th>
-            <th className="px-3 py-2.5">Guests</th>
-            <th className="px-3 py-2.5">Table</th>
-            <th className="px-3 py-2.5">Status</th>
-            <th className="px-3 py-2.5 text-right">Actions</th>
+            <th scope="col" className="px-3 py-2.5">Reference</th>
+            <th scope="col" className="px-3 py-2.5">Customer</th>
+            {showBranch ? <th scope="col" className="px-3 py-2.5">Branch</th> : null}
+            <th scope="col" className="px-3 py-2.5">Date · Time</th>
+            <th scope="col" className="px-3 py-2.5">Guests</th>
+            <th scope="col" className="px-3 py-2.5">Table</th>
+            <th scope="col" className="px-3 py-2.5">Status</th>
+            <th scope="col" className="px-3 py-2.5 text-right">Actions</th>
           </tr>
         </thead>
         <tbody className="divide-y divide-wyndell-cream-dark/60">

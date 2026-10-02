@@ -3,7 +3,6 @@ import { Star } from 'lucide-react'
 import { fetchPublicFeedback } from '@/services/api/feedback'
 import type { FeedbackSummary } from '@/types'
 import { formatDateTime } from '@/utils/format'
-import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState, ErrorState } from '@/components/common/PageHeader'
@@ -51,7 +50,13 @@ export function ReviewList({
       ) : null}
       {error ? (
         <div className="mt-4">
-          <ErrorState message="Unable to load reviews right now." onRetry={load} />
+          <ErrorState
+            message="Unable to load reviews right now."
+            onRetry={() => {
+              void onRetry()
+              load()
+            }}
+          />
         </div>
       ) : null}
       {!loading && !error && shown.length === 0 ? (
@@ -77,19 +82,6 @@ export function ReviewList({
           </Card>
         ))}
       </div>
-      {error ? (
-        <Button
-          type="button"
-          variant="outline"
-          onClick={() => {
-            void onRetry()
-            load()
-          }}
-          className="mt-4 border-destructive/30 text-destructive hover:bg-destructive/10 hover:text-destructive"
-        >
-          Try again
-        </Button>
-      ) : null}
     </div>
   )
 }

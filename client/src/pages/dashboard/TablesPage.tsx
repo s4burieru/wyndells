@@ -1,7 +1,8 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
 import { createTable, fetchTables, setTableStatus, updateTable } from '@/services/api/tables'
 import type { DiningTable, TableStatus } from '@/types'
-import { tableLabel } from '@/utils/format'
+import { friendlyError, tableLabel } from '@/utils/format'
 import { Button } from '@/components/common/FormControls'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
 import { TableStatusBadge } from '@/components/common/StatusBadges'
@@ -32,7 +33,9 @@ export function ManageTablesPage() {
   useEffect(load, [])
 
   const quickStatus = (table: DiningTable, status: TableStatus) => {
-    void setTableStatus(table._id, status).then(load).catch(() => undefined)
+    void setTableStatus(table._id, status)
+      .then(load)
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
   const handleSave = (payload: Record<string, unknown>) => {
@@ -48,14 +51,11 @@ export function ManageTablesPage() {
         setEditing(null)
         load()
       })
-      .catch(() => setError(true))
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
   if (loading) {
     return <Spinner label="Loading tables…" />
-  }
-  if (error) {
-    return <ErrorState message="Unable to load tables right now." onRetry={load} />
   }
 
   return (
@@ -66,7 +66,11 @@ export function ManageTablesPage() {
         action={<Button onClick={() => setCreating(true)}>+ Add table</Button>}
       />
 
-      {tables.length === 0 ? (
+      {error ? (
+        <div className="mt-6">
+          <ErrorState message="Unable to load tables right now." onRetry={load} />
+        </div>
+      ) : tables.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No tables yet" message="Add your first table to start taking bookings." />
         </div>
@@ -75,7 +79,7 @@ export function ManageTablesPage() {
           {tables.map((table) => (
             <div key={table._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
               <div className="flex items-center justify-between gap-2">
-                <h2 className="text-lg font-bold text-wyndell-forest">{table.tableNumber}</h2>
+                <h2 className="text-lg font-bold" style={{ color: 'var(--heading)' }}>{table.tableNumber}</h2>
                 <TableStatusBadge status={table.status} />
               </div>
               <p className="mt-1 text-xs text-neutral-500">{table.capacity} seats · {table.location}</p>
@@ -85,10 +89,11 @@ export function ManageTablesPage() {
                   <button
                     key={status}
                     type="button"
+                    aria-pressed={table.status === status}
                     onClick={() => quickStatus(table, status)}
                     className={[
                       'rounded-md px-2 py-1 text-[11px] font-medium transition-colors',
-                      table.status === status ? 'bg-wyndell-orange text-white' : 'bg-wyndell-cream text-wyndell-ink hover:bg-wyndell-orange/10',
+                      table.status === status ? 'bg-wyndell-orange-dark text-white' : 'bg-wyndell-cream text-wyndell-ink hover:bg-wyndell-orange/10',
                     ].join(' ')}
                   >
                     {tableLabel(status)}
@@ -99,7 +104,7 @@ export function ManageTablesPage() {
                 <button type="button" onClick={() => setEditing(table)} className="text-xs font-medium text-wyndell-orange-dark hover:underline">
                   Edit
                 </button>
-                <button type="button" onClick={() => setConfirmDeactivate(table)} className="text-xs font-medium text-red-600 hover:underline">
+                <button type="button" onClick={() => setConfirmDeactivate(table)} className="text-xs font-medium text-destructive hover:underline">
                   Deactivate
                 </button>
               </div>
@@ -128,7 +133,9 @@ export function ManageTablesPage() {
         confirmLabel="Deactivate"
         onConfirm={() => {
           if (confirmDeactivate) {
-            void updateTable(confirmDeactivate._id, { isActive: false }).then(load)
+            void updateTable(confirmDeactivate._id, { isActive: false })
+              .then(load)
+              .catch((reason: unknown) => toast.error(friendlyError(reason)))
           }
           setConfirmDeactivate(null)
         }}

@@ -119,7 +119,7 @@ export function ManageUsersPage() {
         onValueChange={(next) => setTab(next as UserTab)}
         className="mt-6"
       >
-        <TabsList>
+        <TabsList className="h-auto flex-wrap">
           {TABS.map((item) => (
             <TabsTrigger key={item.value} value={item.value}>
               {item.label}
@@ -175,7 +175,16 @@ export function ManageUsersPage() {
                     <div className="flex items-center gap-3">
                       <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} />
                       <div className="grid gap-0.5">
-                        <span className="font-medium text-foreground">{user.name}</span>
+                        <button
+                          type="button"
+                          className="text-left font-medium text-foreground hover:underline"
+                          onClick={(event) => {
+                            event.stopPropagation()
+                            setViewing(user)
+                          }}
+                        >
+                          {user.name}
+                        </button>
                         <span className="text-xs text-muted-foreground">
                           {user.position || user.email}
                         </span>

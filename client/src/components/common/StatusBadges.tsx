@@ -1,6 +1,6 @@
 import { StarIcon } from 'lucide-react'
 import { cn } from '@/utils/cn'
-import { reservationBadgeClass, reservationLabel, tableDotClass, tableLabel } from '@/utils/format'
+import { reservationBadgeClass, reservationLabel, tableBadgeClass, tableDotClass, tableLabel } from '@/utils/format'
 import type { ReservationStatus, TableStatus } from '@/types'
 import { Badge } from '@/components/ui/badge'
 
@@ -28,8 +28,8 @@ export function ReservationStatusBadge({ status }: { status: ReservationStatus }
 
 export function TableStatusBadge({ status }: { status: TableStatus }) {
   return (
-    <Badge className={tableDotClass(status)}>
-      <span className="h-1.5 w-1.5 rounded-full" />
+    <Badge className={tableBadgeClass(status)}>
+      <span className={cn('size-1.5 rounded-full', tableDotClass(status))} aria-hidden />
       {tableLabel(status)}
     </Badge>
   )

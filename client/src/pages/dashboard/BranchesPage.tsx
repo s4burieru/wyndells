@@ -1,6 +1,9 @@
 import { useEffect, useState } from 'react'
+import { toast } from 'sonner'
+import { MapPin, Mail, Phone } from 'lucide-react'
 import { createBranch, fetchBranches, setBranchActive, updateBranch } from '@/services/api/branches'
 import type {  Branch  } from '@/types'
+import { friendlyError } from '@/utils/format'
 import { Button } from '@/components/common/FormControls'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
 import { ConfirmDialog } from '@/components/common/Modal'
@@ -33,14 +36,11 @@ export function ManageBranchesPage() {
         setEditing(null)
         load()
       })
-      .catch(() => setError(true))
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
   if (loading) {
     return <Spinner label="Loading branches…" />
-  }
-  if (error) {
-    return <ErrorState message="Unable to load branches right now." onRetry={load} />
   }
 
   return (
@@ -51,7 +51,11 @@ export function ManageBranchesPage() {
         action={<Button onClick={() => setCreating(true)}>+ Add branch</Button>}
       />
 
-      {branches.length === 0 ? (
+      {error ? (
+        <div className="mt-6">
+          <ErrorState message="Unable to load branches right now." onRetry={load} />
+        </div>
+      ) : branches.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No branches yet" message="Add your first branch to get started." />
         </div>
@@ -61,13 +65,13 @@ export function ManageBranchesPage() {
             <article key={branch._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-5 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>
-                  <h2 className="text-lg font-bold text-wyndell-forest">{branch.name}</h2>
+                  <h2 className="text-lg font-bold" style={{ color: 'var(--heading)' }}>{branch.name}</h2>
                   <p className="text-xs text-neutral-500">
                     {[branch.city, branch.hours, branch.isActive ? '' : 'Inactive'].filter(Boolean).join(' · ')}
                   </p>
                 </div>
                 <div className="flex items-center gap-2">
-                  <span className={['rounded-full px-2.5 py-0.5 text-xs font-medium', branch.isActive ? 'bg-wyndell-green/15 text-wyndell-green-dark' : 'bg-neutral-200 text-neutral-600'].join(' ')}>
+                  <span className={['rounded-full px-2.5 py-0.5 text-xs font-medium', branch.isActive ? 'bg-wyndell-green/15 text-wyndell-green-dark' : 'bg-wyndell-taupe/25 text-wyndell-ink'].join(' ')}>
                     {branch.isActive ? 'Active' : 'Inactive'}
                   </span>
                   <button type="button" onClick={() => setEditing(branch)} className="text-xs font-medium text-wyndell-orange-dark hover:underline">
@@ -79,9 +83,9 @@ export function ManageBranchesPage() {
                 </div>
               </div>
               <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm">
-                <div className="flex items-center gap-2"><dt className="sr-only">Address</dt><dd className="text-neutral-600">📍 {branch.address || '—'}</dd></div>
-                <div className="flex items-center gap-2"><dt className="sr-only">Phone</dt><dd className="text-neutral-600">📞 {branch.contactNumber || '—'}</dd></div>
-                <div className="flex items-center gap-2"><dt className="sr-only">Email</dt><dd className="text-neutral-600">✉️ {branch.email || '—'}</dd></div>
+                <div className="flex items-center gap-2"><dt className="sr-only">Address</dt><dd className="flex items-center gap-1.5 text-neutral-600"><MapPin className="size-3.5 shrink-0" aria-hidden />{branch.address || '—'}</dd></div>
+                <div className="flex items-center gap-2"><dt className="sr-only">Phone</dt><dd className="flex items-center gap-1.5 text-neutral-600"><Phone className="size-3.5 shrink-0" aria-hidden />{branch.contactNumber || '—'}</dd></div>
+                <div className="flex items-center gap-2"><dt className="sr-only">Email</dt><dd className="flex items-center gap-1.5 text-neutral-600"><Mail className="size-3.5 shrink-0" aria-hidden />{branch.email || '—'}</dd></div>
               </dl>
             </article>
           ))}
@@ -106,7 +110,10 @@ export function ManageBranchesPage() {
         confirmLabel={confirmToggle?.isActive ? 'Deactivate' : 'Activate'}
         onConfirm={() => {
           if (confirmToggle) {
-            void setBranchActive(confirmToggle._id, !confirmToggle.isActive).then(load)
+            const branch = confirmToggle
+            void setBranchActive(branch._id, !branch.isActive)
+              .then(load)
+              .catch((reason: unknown) => toast.error(friendlyError(reason)))
           }
           setConfirmToggle(null)
         }}

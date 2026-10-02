@@ -53,7 +53,7 @@ export function BranchesPage() {
         title="Our branches"
         subtitle="Seven Wyndell's locations across Rizal and Metro Manila. Choose the branch nearest you, then book a table online."
         action={
-          <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+          <Button asChild>
             <Link to="/reserve">
               <CalendarCheck />
               Book a table
@@ -112,7 +112,7 @@ export function BranchesPage() {
               </div>
               <Separator />
               <div className="flex flex-wrap gap-2">
-                <Button asChild size="sm" className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+                <Button asChild size="sm">
                   <Link to={`/reserve?branch=${branch._id}`}>
                     Reserve at {branch.name.split(',')[0]}
                   </Link>

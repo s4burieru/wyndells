@@ -1,22 +1,27 @@
 import { type ComponentPropsWithoutRef, type ReactNode } from 'react'
-import { Link } from 'react-router-dom'
 import { cn } from '@/utils/cn'
 import { Button as ShadcnButton } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Textarea } from '@/components/ui/textarea'
 
-type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'green'
+type ButtonVariant = 'primary' | 'secondary' | 'outline' | 'ghost' | 'danger' | 'green'
 
-/** Maps the app's button variants onto shadcn/ui button variants. */
+/**
+ * Maps the app's legacy button variants onto the shadcn/ui button variants so
+ * both button entry points share one visual system. New code should prefer
+ * `@/components/ui/button` directly.
+ */
 const VARIANT_MAP: Record<
   ButtonVariant,
-  { variant: 'default' | 'secondary' | 'outline' | 'destructive'; className?: string }
+  { variant: 'default' | 'secondary' | 'outline' | 'destructive' | 'ghost'; className?: string }
 > = {
   primary: { variant: 'default' },
   secondary: { variant: 'secondary' },
-  green: { variant: 'default', className: 'bg-wyndell-green text-white hover:bg-wyndell-green-dark' },
-  ghost: { variant: 'outline' },
+  outline: { variant: 'outline' },
+  ghost: { variant: 'ghost' },
+  // `wyndell-green` is too light for white text (2.6:1); the dark tint passes AA.
+  green: { variant: 'default', className: 'bg-wyndell-green-dark hover:bg-wyndell-forest' },
   danger: {
     variant: 'outline',
     className: 'border-destructive/30 text-destructive hover:bg-destructive/10',
@@ -31,25 +36,6 @@ export function Button({
   const mapped = VARIANT_MAP[variant]
   return (
     <ShadcnButton variant={mapped.variant} className={cn(mapped.className, className)} {...props} />
-  )
-}
-
-export function ButtonLink({
-  to,
-  variant = 'primary',
-  className,
-  children,
-}: {
-  to: string
-  variant?: ButtonVariant
-  className?: string
-  children: ReactNode
-}) {
-  const mapped = VARIANT_MAP[variant]
-  return (
-    <ShadcnButton asChild variant={mapped.variant} className={cn(mapped.className, className)}>
-      <Link to={to}>{children}</Link>
-    </ShadcnButton>
   )
 }
 

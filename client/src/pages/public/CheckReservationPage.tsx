@@ -89,7 +89,7 @@ export function CheckReservationPage() {
               }}
             />
           </Field>
-          <Button onClick={check} disabled={loading} className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+          <Button onClick={check} disabled={loading}>
             {loading ? (
               <>
                 <Loader2 className="animate-spin" />

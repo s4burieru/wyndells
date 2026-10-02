@@ -130,7 +130,7 @@ export function FeedbackPage() {
                 placeholder="What did you enjoy? What could be better?"
               />
             </Field>
-            <Button onClick={() => void submit()} disabled={submitting} className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+            <Button onClick={() => void submit()} disabled={submitting}>
               {submitting ? (
                 <>
                   <Loader2 className="animate-spin" />

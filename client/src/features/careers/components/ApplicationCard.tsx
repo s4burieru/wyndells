@@ -1,4 +1,5 @@
 import type {  ApplicationStatus, JobApplication  } from '@/types'
+import { Mail, Phone } from 'lucide-react'
 import { applicationBadgeClass, applicationLabel, applicationNextStatuses, departmentLabel, formatDateTime } from '@/utils/format'
 import { Badge } from '@/components/common/PageHeader'
 import { SelectInput } from '@/components/common/FormControls'
@@ -41,20 +42,22 @@ export function ApplicationCard({
           <button
             type="button"
             onClick={onDelete}
-            className="text-xs font-medium text-red-600 hover:underline"
+            className="text-xs font-medium text-destructive hover:underline"
           >
             Delete
           </button>
         </div>
       </div>
 
-      <div className="mt-2 text-xs text-neutral-500">
-        {application.email
-          ? <span>✉️ {application.email}</span>
-          : null}
-        {application.contactNumber ? <span>{(application.email ? ' · ' : '')}📞 {application.contactNumber}</span> : null}
+      <div className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-neutral-500">
+        {application.email ? (
+          <span className="inline-flex items-center gap-1"><Mail className="size-3" aria-hidden />{application.email}</span>
+        ) : null}
+        {application.contactNumber ? (
+          <span className="inline-flex items-center gap-1"><Phone className="size-3" aria-hidden />{application.contactNumber}</span>
+        ) : null}
         {application.resumeUrl ? (
-          <span> · <a href={application.resumeUrl} target="_blank" rel="noreferrer" className="font-medium text-wyndell-orange-dark underline">Resume ↗</a></span>
+          <a href={application.resumeUrl} target="_blank" rel="noreferrer" className="font-medium text-wyndell-orange-dark underline">Resume ↗</a>
         ) : null}
       </div>
       {application.coverLetter ? (

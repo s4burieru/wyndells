@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom'
 import { fetchReservations, updateReservationStatus } from '@/services/api/reservations'
 import type {  Reservation, ReservationStatus  } from '@/types'
 import { friendlyError } from '@/utils/format'
-import { PageHeader, Spinner, EmptyState } from '@/components/common/PageHeader'
+import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/AuthContext'
 import { RESERVATION_STATUS_FILTERS, ReservationDetailModal } from '@/features/reservations/components/ReservationManagement'
@@ -66,9 +66,13 @@ export function ManageReservationsPage() {
         subtitle={`${user?.role === 'manager' ? 'My branch' : 'All branches'} · ${filter === 'all' ? 'all statuses' : filter}.`}
       />
 
-      {error ? <p className="mt-4 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-800">{error}</p> : null}
+      {error ? (
+        <div className="mt-6">
+          <ErrorState message={error} />
+        </div>
+      ) : null}
 
-      <div className="mt-5 flex flex-wrap items-center gap-2">
+      <div className="mt-6 flex flex-wrap items-center gap-2">
         {RESERVATION_STATUS_FILTERS.map(([key, label]) => (
           <button
             key={key}
@@ -76,7 +80,7 @@ export function ManageReservationsPage() {
             onClick={() => setFilter(key)}
             className={[
               'rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors',
-              filter === key ? 'bg-wyndell-orange text-white' : 'bg-white text-wyndell-ink border border-wyndell-cream-dark hover:bg-wyndell-cream-dark/60',
+              filter === key ? 'bg-wyndell-orange-dark text-white' : 'bg-white text-wyndell-ink border border-wyndell-cream-dark hover:bg-wyndell-cream-dark/60',
             ].join(' ')}
           >
             {label}

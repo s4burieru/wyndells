@@ -1,8 +1,11 @@
 import { useEffect, useState } from 'react'
+import { Mail, Phone } from 'lucide-react'
+import { toast } from 'sonner'
 import { deleteFeedback, fetchManageableFeedback } from '@/services/api/feedback'
 import type {  Feedback  } from '@/types'
-import { formatDateTime } from '@/utils/format'
+import { formatDateTime, friendlyError } from '@/utils/format'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { ConfirmDialog } from '@/components/common/Modal'
 import { StarRating } from '@/components/common/StatusBadges'
 import { useAuth } from '@/contexts/AuthContext'
 
@@ -11,6 +14,7 @@ export function ManageFeedbackPage() {
   const [items, setItems] = useState<Feedback[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [removing, setRemoving] = useState<Feedback | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -24,14 +28,14 @@ export function ManageFeedbackPage() {
   useEffect(load, [])
 
   const remove = (id: string) => {
-    void deleteFeedback(id).then(load).catch(() => undefined)
+    void deleteFeedback(id)
+      .then(load)
+      .catch((reason: unknown) => toast.error(friendlyError(reason)))
+      .finally(() => setRemoving(null))
   }
 
   if (loading) {
     return <Spinner label="Loading feedback…" />
-  }
-  if (error) {
-    return <ErrorState message="Unable to load feedback right now." onRetry={load} />
   }
 
   return (
@@ -41,7 +45,11 @@ export function ManageFeedbackPage() {
         subtitle={user?.role === 'manager' ? 'Feedback from guests at your branch.' : 'Feedback across all branches.'}
       />
 
-      {items.length === 0 ? (
+      {error ? (
+        <div className="mt-6">
+          <ErrorState message="Unable to load feedback right now." onRetry={load} />
+        </div>
+      ) : items.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No feedback yet" message="Customer reviews will appear here." />
         </div>
@@ -61,12 +69,8 @@ export function ManageFeedbackPage() {
                   <StarRating value={item.rating} size="sm" />
                   <button
                     type="button"
-                    onClick={() => {
-                      if (window.confirm('Remove this feedback?')) {
-                        remove(item._id)
-                      }
-                    }}
-                    className="text-xs font-medium text-red-600 hover:underline"
+                    onClick={() => setRemoving(item)}
+                    className="text-xs font-medium text-destructive hover:underline"
                   >
                     Remove
                   </button>
@@ -74,14 +78,29 @@ export function ManageFeedbackPage() {
               </div>
               <blockquote className="mt-2 text-sm leading-relaxed text-wyndell-ink">&ldquo;{item.comment}&rdquo;</blockquote>
               {(item.contactNumber || item.email) ? (
-                <p className="mt-2 text-xs text-neutral-500">
-                  Follow up: {item.contactNumber ? `📞 ${item.contactNumber}` : ''}{item.contactNumber && item.email ? ' · ' : ''}{item.email ? `✉️ ${item.email}` : ''}
+                <p className="mt-2 flex flex-wrap items-center gap-x-2 text-xs text-neutral-500">
+                  <span className="sr-only">Follow up:</span>
+                  {item.contactNumber ? (
+                    <span className="inline-flex items-center gap-1"><Phone className="size-3" aria-hidden />{item.contactNumber}</span>
+                  ) : null}
+                  {item.email ? (
+                    <span className="inline-flex items-center gap-1"><Mail className="size-3" aria-hidden />{item.email}</span>
+                  ) : null}
                 </p>
               ) : null}
             </article>
           ))}
         </div>
       )}
+
+      <ConfirmDialog
+        open={removing !== null}
+        title="Remove feedback?"
+        message="This feedback will be permanently removed. This can’t be undone."
+        confirmLabel="Remove"
+        onConfirm={() => removing && remove(removing._id)}
+        onCancel={() => setRemoving(null)}
+      />
     </div>
   )
 }

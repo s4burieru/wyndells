@@ -178,7 +178,7 @@ export function NotificationBell() {
                       {item.body}
                     </span>
                   )}
-                  <span className="mt-1 block text-[11px] text-muted-foreground/80">
+                  <span className="mt-1 block text-[11px] text-muted-foreground">
                     {timeAgo(item.createdAt)}
                   </span>
                 </span>

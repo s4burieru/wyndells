@@ -115,12 +115,12 @@ export function reservationLabel(status: ReservationStatus): string {
 }
 
 const RESERVATION_STYLES: Record<ReservationStatus, string> = {
-  pending: 'bg-wyndell-sun/20 text-yellow-800',
+  pending: 'bg-wyndell-sun/25 text-yellow-900',
   confirmed: 'bg-wyndell-green/15 text-wyndell-green-dark',
-  rejected: 'bg-red-50 text-red-800',
-  cancelled: 'bg-neutral-200 text-neutral-600',
-  completed: 'bg-wyndell-green-dark/15 text-wyndell-green-dark',
-  'no-show': 'bg-red-50 text-red-700',
+  rejected: 'bg-destructive/10 text-destructive',
+  cancelled: 'bg-wyndell-taupe/25 text-wyndell-ink',
+  completed: 'bg-sky-500/15 text-sky-800',
+  'no-show': 'bg-purple-500/15 text-purple-800',
 }
 
 export function reservationBadgeClass(status: ReservationStatus): string {
@@ -140,15 +140,29 @@ export function tableLabel(status: TableStatus): string {
 }
 
 const TABLE_DOT: Record<TableStatus, string> = {
-  available: 'bg-wyndell-green',
-  reserved: 'bg-wyndell-orange',
-  occupied: 'bg-wyndell-orange-dark',
-  cleaning: 'bg-sky-400',
-  unavailable: 'bg-neutral-400',
+  available: 'bg-wyndell-green-dark',
+  reserved: 'bg-wyndell-sun',
+  occupied: 'bg-wyndell-orange',
+  cleaning: 'bg-sky-500',
+  unavailable: 'bg-wyndell-taupe',
 }
 
+/** Solid dot colour for a table status (also used by the status charts). */
 export function tableDotClass(status: TableStatus): string {
-  return TABLE_DOT[status] ?? 'bg-neutral-400'
+  return TABLE_DOT[status] ?? 'bg-wyndell-taupe'
+}
+
+const TABLE_BADGE_STYLES: Record<TableStatus, string> = {
+  available: 'bg-wyndell-green/15 text-wyndell-green-dark',
+  reserved: 'bg-wyndell-sun/25 text-yellow-900',
+  occupied: 'bg-wyndell-orange/15 text-wyndell-orange-dark',
+  cleaning: 'bg-sky-500/15 text-sky-800',
+  unavailable: 'bg-wyndell-taupe/25 text-wyndell-ink',
+}
+
+/** Tinted badge surface + AA-passing label colour for a table status. */
+export function tableBadgeClass(status: TableStatus): string {
+  return TABLE_BADGE_STYLES[status] ?? 'bg-wyndell-taupe/25 text-wyndell-ink'
 }
 
 const CATEGORIES: MenuCategory[] = [
@@ -184,15 +198,15 @@ export function applicationLabel(status: ApplicationStatus): string {
 }
 
 const APPLICATION_STYLES: Record<ApplicationStatus, string> = {
-  new: 'bg-wyndell-sun/20 text-yellow-800',
-  reviewed: 'bg-neutral-100 text-neutral-700',
+  new: 'bg-wyndell-sun/25 text-yellow-900',
+  reviewed: 'bg-wyndell-taupe/25 text-wyndell-ink',
   shortlisted: 'bg-wyndell-orange/15 text-wyndell-orange-dark',
   hired: 'bg-wyndell-green/15 text-wyndell-green-dark',
-  rejected: 'bg-neutral-200 text-neutral-600',
+  rejected: 'bg-destructive/10 text-destructive',
 }
 
 export function applicationBadgeClass(status: ApplicationStatus): string {
-  return APPLICATION_STYLES[status] ?? 'bg-neutral-100 text-neutral-700'
+  return APPLICATION_STYLES[status] ?? 'bg-wyndell-taupe/25 text-wyndell-ink'
 }
 
 const APPLICATION_NEXT: Record<ApplicationStatus, readonly ApplicationStatus[]> = {
@@ -240,7 +254,7 @@ const ROLE_BADGE_STYLES: Record<Role, string> = {
 }
 
 export function roleBadgeClass(role: Role): string {
-  return ROLE_BADGE_STYLES[role] ?? 'bg-neutral-100 text-neutral-700'
+  return ROLE_BADGE_STYLES[role] ?? 'bg-wyndell-taupe/25 text-wyndell-ink'
 }
 
 const ROLE_AVATAR_STYLES: Record<Role, string> = {
