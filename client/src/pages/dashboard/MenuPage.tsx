@@ -95,7 +95,7 @@ export function ManageMenuPage() {
               <tr className="border-b border-wyndell-cream-dark bg-wyndell-cream/60 text-left text-xs uppercase tracking-wide text-neutral-500">
                 <th scope="col" className="px-3 py-2.5">Name</th>
                 <th scope="col" className="px-3 py-2.5">Category</th>
-                {user?.role === 'admin' ? <th scope="col" className="px-3 py-2.5">Branch</th> : null}
+                {user?.role !== 'manager' ? <th scope="col" className="px-3 py-2.5">Branch</th> : null}
                 <th scope="col" className="px-3 py-2.5">Price</th>
                 <th scope="col" className="px-3 py-2.5">Status</th>
                 <th scope="col" className="px-3 py-2.5 text-right">Actions</th>
@@ -109,7 +109,7 @@ export function ManageMenuPage() {
                     <p className="max-w-90 truncate text-xs text-neutral-500">{item.description}</p>
                   </td>
                   <td className="px-3 py-2.5 text-neutral-500">{item.category}</td>
-                  {user?.role === 'admin' ? <td className="px-3 py-2.5 text-neutral-500">{item.branch?.name}</td> : null}
+                  {user?.role !== 'manager' ? <td className="px-3 py-2.5 text-neutral-500">{item.branch?.name}</td> : null}
                   <td className="px-3 py-2.5 whitespace-nowrap">{formatPrice(item.price)}</td>
                   <td className="px-3 py-2.5">
                     <button

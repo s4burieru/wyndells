@@ -67,14 +67,17 @@ wyndells/
    `supabase/migrations/0002_careers.sql`, then
    `supabase/migrations/0003_user_profiles.sql`, then
    `supabase/migrations/0004_notifications_activity.sql`, then
-   `supabase/migrations/0005_chat.sql`, and run each. This
+   `supabase/migrations/0005_chat.sql`, then
+   `supabase/migrations/0006_add_hr_role.sql`, then
+   `supabase/migrations/0007_role_permissions.sql`, and run each. This
    creates the tables, indexes, row-level security, and the report functions the
    dashboard depends on, plus the `career_postings` / `job_applications` tables
    powering the Careers feature, the staff profile columns (job title, contact
    number, address, avatar and bio) used by **Users & Managers**, the
    `notifications` / `activity_log` tables behind the header bell and the
-   admin **Activity** page, and the `chat_conversations` / `chat_participants` /
-   `chat_messages` tables behind the staff **Chat** page.
+   admin **Activity** page, the `chat_conversations` / `chat_participants` /
+   `chat_messages` tables behind the staff **Chat** page, the `hr` role value
+   and the `role_permissions` matrix behind **Roles & Permissions**.
 
    > Profile photos are uploaded to a public Supabase Storage bucket (`avatars`)
    > that the API creates automatically on the first upload, so no extra SQL is
@@ -110,8 +113,10 @@ wyndells/
 
    Creates the seven Wyndell&rsquo;s branches (&ldquo;Wyndell&rsquo;s Al Fresco&rdquo;, &ldquo;at The
    Perch Highland Park&rdquo;, &ldquo;Town&rdquo;, &ldquo;Masinag&rdquo;, &ldquo;Arca South&rdquo;,
-   &ldquo;Bed and Breakfast&rdquo; and &ldquo;Farm&rdquo;), an admin + one manager per branch,
-   dining tables, menu items, and sample reservations/feedback.
+   &ldquo;Bed and Breakfast&rdquo; and &ldquo;Farm&rdquo;), an admin, an HR account and one manager
+   per branch, dining tables, menu items, and sample reservations/feedback.
+   The HR login is `hr@wyndells.com` / `HRStaff123!` (override with `HR_EMAIL`
+   and `HR_PASSWORD`).
 
    Branch names live in `BRANCH_DATA` (`server/src/db/seed.ts`); the seed matches on the
    branch `code`, so re-running it never duplicates an existing branch. Any active
@@ -194,15 +199,17 @@ The Express server exposes the same routes the client uses today:
 | GET    | `/api/feedback` `/api/feedback/manage` | Public / Staff |
 | GET    | `/api/careers/postings` | Public (open positions) |
 | POST   | `/api/careers/applications` | Public (job applications; `multipart/form-data` with a `resume` PDF/DOC/DOCX file, up to 5 MB) |
-| GET/POST/PUT/DELETE | `/api/careers/postings` `/api/careers/postings/manage` `/api/careers/postings/:id` | Staff (positions) |
-| GET   | `/api/careers/applications` | Staff (applications inbox) |
-| PATCH  | `/api/careers/applications/:id/status` | Staff (pipeline updates) |
-| DELETE | `/api/careers/applications/:id` | Admin |
-| GET    | `/api/tables` `/api/reservations` `/api/reports/overview` | Staff |
+| GET/POST/PUT/DELETE | `/api/careers/postings` `/api/careers/postings/manage` `/api/careers/postings/:id` | Staff with `careers.manage` (deletes need `careers.delete`) |
+| GET   | `/api/careers/applications` | Staff with `careers.manage` (applications inbox) |
+| PATCH  | `/api/careers/applications/:id/status` | Staff with `careers.manage` (pipeline updates) |
+| DELETE | `/api/careers/applications/:id` | Staff with `careers.delete` (admin + HR by default) |
+| GET    | `/api/users` | Staff with `users.view` (HR gets a read-only listing) |
+| GET    | `/api/tables` `/api/reservations` `/api/reports/overview` | Staff with `tables.manage` / `reservations.manage` / `reports.view` |
+| GET/PUT | `/api/roles/permissions` | Staff with `roles.manage` (administrators) |
 | GET    | `/api/notifications` `/api/notifications/unread-count` | Staff (own inbox) |
 | PATCH  | `/api/notifications/:id/read` `/api/notifications/:id/unread` | Staff (own inbox) |
 | POST   | `/api/notifications/read-all` | Staff |
-| GET    | `/api/activity` | Admin (audit trail; `group`, `actor`, `branch`, `page`) |
+| GET    | `/api/activity` | Staff with `activity.view` (audit trail; `group`, `actor`, `branch`, `page`) |
 | GET/POST | `/api/chat/conversations` | Staff (list conversations; create a `direct` or `group` conversation) |
 | GET    | `/api/chat/conversations/:id/messages` | Staff (member of that conversation; `before`, `limit` paging) |
 | PATCH  | `/api/chat/conversations/:id` | Staff members (rename a group: `title`) |
@@ -214,7 +221,36 @@ The Express server exposes the same routes the client uses today:
 | GET    | `/api/chat/unread-count` `/api/chat/directory` | Staff (own unread totals; staff directory for the pickers) |
 | POST   | `/api/chat/uploads` | Staff (`multipart/form-data` with a `file`, images/documents up to 10 MB) |
 | WS     | `/socket.io` | Staff (JWT handshake; send/edit/delete messages, typing, read receipts) |
-| POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Admin / Manager |
+| POST/PUT/PATCH/DELETE | users, branches, menu, tables, reservations, feedback | Staff holding the matching permission (below) |
+
+### Roles & permissions
+
+There are three platform roles, stored on `users.role`:
+
+| Role | Scope | Shipped access |
+| ---- | ----- | -------------- |
+| **Administrator** | All branches | Everything. Always locked to full access — the matrix can never narrow it down. |
+| **Manager** | One branch (`assigned_branch_id`) | Reservations, tables, menu, feedback, careers, reports, chat, staff directory. |
+| **HR** | All branches (no branch required) | Read-only **Users & Managers**, recruitment (postings + applications, including deletes), reports, chat, staff directory. |
+
+Access itself is data, not code: `role_permissions` (migration `0007`) stores
+one row per granted permission, and every route checks a permission instead of
+a hard-coded role list (`authorizePermission(...)` in
+`server/src/middleware/auth.ts`, with the catalog and shipped defaults in
+`server/src/constants/permissions.ts`).
+
+- **Settings → Roles & Permissions** (`/staff/settings/roles`, admin only) is a
+  checkbox matrix — flip a permission, hit **Save changes**, and it applies on
+  the user's next request. Managers and HR are editable; the administrator
+  column is locked.
+- `/api/auth/me` returns the caller's `permissions[]`, and the client gates
+  every sidebar item, route and button through `can(permission)` (see
+  `client/src/contexts/AuthContext.tsx`).
+- Branch scoping is unchanged: only managers are pinned to their branch
+  (`assertBranchAccess`), while administrators and HR work across all of them.
+- If migration `0007` has not been applied yet, the server falls back to the
+  built-in defaults (`DEFAULT_ROLE_PERMISSIONS`), so a skipped migration degrades
+  to the old behaviour instead of locking everyone out.
 
 ### Notifications & activity log
 
@@ -222,8 +258,8 @@ The Express server exposes the same routes the client uses today:
   `GET /api/notifications/unread-count` every 30 seconds while the tab is
   visible. Branch events (a new online reservation, a status change, an
   assigned table, new feedback, a job application) fan out to the active staff
-  of that branch **plus** every administrator; account events go to the
-  account itself.
+  of that branch **plus** every administrator; hiring and people events also
+  reach HR, and account events go to the account itself.
 - **Guaranteed first item** — an account with no notifications is given a
   welcome one on its first inbox read, and `npm run seed --workspace server`
   backfills every seeded account, so the bell is never empty.
@@ -237,9 +273,9 @@ Requires `supabase/migrations/0004_notifications_activity.sql`.
 
 ### Staff chat
 
-Every account that can sign in to the staff portal (administrators **and**
-managers) gets a **Chat** page at `/staff/chat` — no role gate, no branch
-filtering: anyone can message anyone, one-to-one or in groups.
+Every account that can sign in to the staff portal (administrators, managers
+and HR) gets a **Chat** page at `/staff/chat` — gated only by `chat.use`, with
+no branch filtering: anyone can message anyone, one-to-one or in groups.
 
 - **Transport** — history and membership are plain REST (`/api/chat/...`);
   live traffic runs over Socket.io on the same server (`/socket.io`,
@@ -334,8 +370,8 @@ Google**. Google is *authentication only* — it never registers anybody:
 2. `POST /api/auth/google` sends the resulting Supabase access token to the API.
 3. The API asks Supabase Auth to verify the token, then requires that the Google
    email **already exists** in the `users` table and that the account is active.
-4. Only then does the API issue the usual portal JWT, so roles and branch
-   permissions (`authenticateUser`, `authorizeRole`, `assertBranchAccess`) apply
+4. Only then does the API issue the usual portal JWT, so roles, permissions and
+   branch limits (`authenticateUser`, `authorizePermission`, `assertBranchAccess`) apply
    to a Google session exactly as they do to a password session.
 
 There is **no sign-up / create-account path**. A Google account with no staff

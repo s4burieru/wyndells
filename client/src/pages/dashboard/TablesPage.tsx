@@ -83,7 +83,7 @@ export function ManageTablesPage() {
                 <TableStatusBadge status={table.status} />
               </div>
               <p className="mt-1 text-xs text-neutral-500">{table.capacity} seats · {table.location}</p>
-              {user?.role === 'admin' ? <p className="text-xs text-neutral-500">{table.branch?.name}</p> : null}
+              {user?.role !== 'manager' ? <p className="text-xs text-neutral-500">{table.branch?.name}</p> : null}
               <div className="mt-3 flex flex-wrap gap-1.5">
                 {TABLE_STATUSES.map((status) => (
                   <button

@@ -26,7 +26,10 @@ import { ReportsPage } from '@/pages/dashboard/ReportsPage'
 import { ManageBranchesPage } from '@/pages/dashboard/BranchesPage'
 import { ManageUsersPage } from '@/pages/dashboard/UsersPage'
 import { ActivityPage } from '@/pages/dashboard/ActivityPage'
+import { RolesPermissionsPage } from '@/pages/dashboard/RolesPermissionsPage'
 import { ChatPage } from '@/pages/dashboard/ChatPage'
+import { StaffDirectoryPage } from '@/pages/dashboard/StaffDirectoryPage'
+import { StaffProfilePage } from '@/pages/dashboard/StaffProfilePage'
 
 function App() {
   return (
@@ -50,18 +53,45 @@ function App() {
 
           <Route element={<RequireAuth />}>
             <Route element={<DashboardLayout />}>
+              {/* The landing page stays ungated so a revoked permission can
+                  never bounce the browser between routes. */}
               <Route path="/staff" element={<DashboardOverviewPage />} />
-              <Route path="/staff/reservations" element={<ManageReservationsPage />} />
-              <Route path="/staff/tables" element={<ManageTablesPage />} />
-              <Route path="/staff/menu" element={<ManageMenuPage />} />
-              <Route path="/staff/feedback" element={<ManageFeedbackPage />} />
-              <Route path="/staff/applications" element={<ManageApplicationsPage />} />
-              <Route path="/staff/reports" element={<ReportsPage />} />
-              <Route path="/staff/chat" element={<ChatPage />} />
-              <Route element={<RequireAuth role="admin" />}>
+              <Route element={<RequireAuth permission="reservations.manage" />}>
+                <Route path="/staff/reservations" element={<ManageReservationsPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="tables.manage" />}>
+                <Route path="/staff/tables" element={<ManageTablesPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="menu.manage" />}>
+                <Route path="/staff/menu" element={<ManageMenuPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="feedback.view" />}>
+                <Route path="/staff/feedback" element={<ManageFeedbackPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="careers.manage" />}>
+                <Route path="/staff/applications" element={<ManageApplicationsPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="reports.view" />}>
+                <Route path="/staff/reports" element={<ReportsPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="chat.use" />}>
+                <Route path="/staff/chat" element={<ChatPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="directory.view" />}>
+                <Route path="/staff/directory" element={<StaffDirectoryPage />} />
+              </Route>
+              <Route path="/staff/profile/:id" element={<StaffProfilePage />} />
+              <Route element={<RequireAuth permission="branches.manage" />}>
                 <Route path="/staff/branches" element={<ManageBranchesPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="users.view" />}>
                 <Route path="/staff/users" element={<ManageUsersPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="activity.view" />}>
                 <Route path="/staff/activity" element={<ActivityPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="roles.manage" />}>
+                <Route path="/staff/settings/roles" element={<RolesPermissionsPage />} />
               </Route>
             </Route>
           </Route>

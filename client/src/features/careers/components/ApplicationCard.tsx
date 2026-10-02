@@ -11,7 +11,8 @@ export function ApplicationCard({
 }: {
   application: JobApplication
   onStatusChange: (status: ApplicationStatus) => void
-  onDelete: () => void
+  /** Omitted when the signed-in role lacks `careers.delete`. */
+  onDelete?: () => void
 }) {
   const nextStatuses = applicationNextStatuses(application.status)
 
@@ -39,13 +40,15 @@ export function ApplicationCard({
               ))}
             </SelectInput>
           ) : null}
-          <button
-            type="button"
-            onClick={onDelete}
-            className="text-xs font-medium text-destructive hover:underline"
-          >
-            Delete
-          </button>
+          {onDelete ? (
+            <button
+              type="button"
+              onClick={onDelete}
+              className="text-xs font-medium text-destructive hover:underline"
+            >
+              Delete
+            </button>
+          ) : null}
         </div>
       </div>
 

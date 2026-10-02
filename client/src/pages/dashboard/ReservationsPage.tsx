@@ -111,7 +111,7 @@ export function ManageReservationsPage() {
       {!loading && items.length > 0 ? (
         <ReservationsTable
           items={items}
-          showBranch={user?.role === 'admin'}
+          showBranch={user?.role !== 'manager'}
           onSelect={setSelected}
           onAssign={setAssigning}
           onChangeStatus={changeStatus}

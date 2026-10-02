@@ -6,7 +6,7 @@ import {
   listMenuItemsController,
   updateMenuItemController,
 } from '../controllers/menu.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
@@ -14,9 +14,9 @@ const router = Router()
 router.get('/', listMenuItemsController)
 router.get('/:id', getMenuItemController)
 
-// Management — admins and managers; managers are restricted to their own branch.
-router.post('/', authenticateUser, authorizeRole('admin', 'manager'), createMenuItemController)
-router.put('/:id', authenticateUser, authorizeRole('admin', 'manager'), updateMenuItemController)
-router.delete('/:id', authenticateUser, authorizeRole('admin', 'manager'), deleteMenuItemController)
+// Management — gated by permission; managers are restricted to their own branch.
+router.post('/', authenticateUser, authorizePermission('menu.manage'), createMenuItemController)
+router.put('/:id', authenticateUser, authorizePermission('menu.manage'), updateMenuItemController)
+router.delete('/:id', authenticateUser, authorizePermission('menu.manage'), deleteMenuItemController)
 
 export default router

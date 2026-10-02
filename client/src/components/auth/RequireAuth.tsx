@@ -1,14 +1,17 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
 import { useAuth } from '@/contexts/AuthContext'
-import type { Role } from '@/types'
+import type { Permission, Role } from '@/types'
 
 /**
  * Guards a staff route group. Renders the nested routes (via Outlet) when the
- * session is valid and, when `role` is given, the user has that role.
- * Unauthenticated users are redirected to the staff login.
+ * session is valid and, when `role` or `permission` is given, the signed-in
+ * user actually holds it.
+ *
+ * Failures land on `/staff`, which is itself never permission-gated — that
+ * keeps a revoked permission from bouncing the user in a redirect loop.
  */
-export function RequireAuth({ role }: { role?: Role }) {
-  const { user, loading } = useAuth()
+export function RequireAuth({ role, permission }: { role?: Role; permission?: Permission }) {
+  const { user, loading, can } = useAuth()
   const location = useLocation()
 
   if (loading) {
@@ -24,6 +27,10 @@ export function RequireAuth({ role }: { role?: Role }) {
   }
 
   if (role && user.role !== role) {
+    return <Navigate to="/staff" replace />
+  }
+
+  if (permission && !can(permission)) {
     return <Navigate to="/staff" replace />
   }
 

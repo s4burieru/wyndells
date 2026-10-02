@@ -16,7 +16,7 @@ import {
   updateMemberRoleController,
   uploadAttachmentController,
 } from '../controllers/chat.controller'
-import { authenticateUser } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 import { avatarUpload } from '../middleware/uploads'
 import { MAX_CHAT_FILE_SIZE_BYTES } from '../services/chatUpload.service'
 
@@ -28,9 +28,10 @@ const attachmentUpload = multer({
   limits: { fileSize: MAX_CHAT_FILE_SIZE_BYTES },
 })
 
-// Everyone who can sign in to the staff portal may chat — there is no role
-// gate; conversation membership is enforced inside the service.
-router.use(authenticateUser)
+// Chat is one permission away from being switched off for a whole role — the
+// page, the REST routes and the WebSocket handshake all check `chat.use`.
+// Conversation membership is enforced inside the service.
+router.use(authenticateUser, authorizePermission('chat.use'))
 
 router.get('/conversations', listConversationsController)
 router.post('/conversations', createConversationController)

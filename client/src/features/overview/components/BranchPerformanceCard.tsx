@@ -4,7 +4,7 @@ import { PolarAngleAxis, PolarGrid, Radar, RadarChart } from "recharts"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ChartContainer, ChartTooltip, type ChartConfig } from "@/components/ui/chart"
 import { ChartTooltipContent } from "@/components/ui/chart-tooltip"
-import type { Overview } from "@/types"
+import type { AllBranchesOverview } from "@/types"
 
 type BranchRow = {
   branch: { id: string; name: string }
@@ -41,7 +41,7 @@ export function BranchPerformanceCard({
   title = "Branch performance comparison",
   description = "Reservations, confirmations and completions normalised per metric.",
 }: {
-  overview: Extract<Overview, { role: "admin" }>
+  overview: AllBranchesOverview
   title?: string
   description?: string
 }) {

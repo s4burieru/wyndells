@@ -284,13 +284,19 @@ export async function createApplication(
 
   const branchId = String(posting.branch_id)
   const postingTitle = String(posting.title)
-  void notifyBranch(branchId, {
-    type: 'application_new',
-    title: 'New job application',
-    body: `${fullName} applied for ${postingTitle}`,
-    link: '/staff/applications',
+  void notifyBranch(
     branchId,
-  })
+    {
+      type: 'application_new',
+      title: 'New job application',
+      body: `${fullName} applied for ${postingTitle}`,
+      link: '/staff/applications',
+      branchId,
+    },
+    null,
+    // Hiring is HR's job, so they hear about it even though they have no branch.
+    { withHr: true },
+  )
   void recordActivity({
     branchId,
     action: 'career.application_created',
@@ -532,6 +538,7 @@ export async function setApplicationStatus(
       branchId,
     },
     actor.id,
+    { withHr: true },
   )
   void recordActivity({
     actorId: actor.id,

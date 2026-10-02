@@ -1,4 +1,31 @@
-export type Role = 'admin' | 'manager'
+/**
+ * Platform roles. `hr` was added alongside the permission matrix (migration
+ * 0006) — keep in sync with `USER_ROLES` in `server/src/constants/index.ts`.
+ */
+export type Role = 'admin' | 'manager' | 'hr'
+
+/**
+ * A single capability a role can hold. Keep in sync with `PERMISSIONS` in
+ * `server/src/constants/permissions.ts` — the server owns the truth and
+ * hands the current grants to the client on `/api/auth/me`.
+ */
+export type Permission =
+  | 'roles.manage'
+  | 'branches.manage'
+  | 'users.view'
+  | 'users.manage'
+  | 'activity.view'
+  | 'reservations.manage'
+  | 'tables.manage'
+  | 'menu.manage'
+  | 'feedback.view'
+  | 'feedback.delete'
+  | 'careers.manage'
+  | 'careers.delete'
+  | 'reports.view'
+  | 'reports.branch_performance'
+  | 'chat.use'
+  | 'directory.view'
 
 export type Branch = {
   _id: string
@@ -29,6 +56,8 @@ export type SafeUser = {
   address: string
   avatarUrl: string
   bio: string
+  /** What this account's role may currently do — drives every client gate. */
+  permissions: Permission[]
   createdAt: string
   updatedAt: string
 }
@@ -159,7 +188,8 @@ export type ManagerOverview = {
 }
 
 export type AdminOverview = {
-  role: 'admin'
+  /** HR receives the all-branches shape, so its role tags along too. */
+  role: 'admin' | 'hr'
   today: { reservations: number; confirmed: number }
   counts: Record<ReservationStatus, number>
   tables: Record<TableStatus, number>
@@ -173,6 +203,12 @@ export type AdminOverview = {
 }
 
 export type Overview = ManagerOverview | AdminOverview
+
+/**
+ * The all-branches overview shape. Both administrators and HR receive it, so
+ * key off the payload rather than the `role` tag.
+ */
+export type AllBranchesOverview = Extract<Overview, { branchPerformance: BranchPerformance[] }>
 
 export type ReservationListResult = { reservations: Reservation[]; total: number }
 

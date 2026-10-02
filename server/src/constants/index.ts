@@ -1,5 +1,16 @@
-export const USER_ROLES = ['admin', 'manager'] as const
+export const USER_ROLES = ['admin', 'manager', 'hr'] as const
 export type UserRole = (typeof USER_ROLES)[number]
+
+/** Human-readable name for each platform role (used in copy and notifications). */
+export const ROLE_DISPLAY_NAMES: Record<UserRole, string> = {
+  admin: 'Administrator',
+  manager: 'Manager',
+  hr: 'HR',
+}
+
+export function roleDisplayName(role: UserRole): string {
+  return ROLE_DISPLAY_NAMES[role] ?? role
+}
 
 /** Staff profile limits (the profile columns added to the `users` table). */
 export const MAX_NAME_LENGTH = 120

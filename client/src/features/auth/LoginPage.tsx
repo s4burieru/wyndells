@@ -137,7 +137,7 @@ export function StaffLoginPage() {
                 <div className="flex flex-col items-center gap-1 text-center">
                   <h1 className="font-display text-2xl font-bold text-wyndell-forest">Staff sign in</h1>
                   <p className="text-sm text-balance text-muted-foreground">
-                    Managers and administrators only.
+                    Managers, HR and administrators only.
                   </p>
                 </div>
 

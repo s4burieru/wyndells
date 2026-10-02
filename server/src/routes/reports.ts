@@ -1,10 +1,12 @@
 import { Router } from 'express'
 import { overviewController } from '../controllers/report.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
-router.use(authenticateUser, authorizeRole('admin', 'manager'))
+// The overview powers both the dashboard landing page and the Reports page,
+// so it follows the same toggle an admin flips on the Roles screen.
+router.use(authenticateUser, authorizePermission('reports.view'))
 router.get('/overview', overviewController)
 
 export default router

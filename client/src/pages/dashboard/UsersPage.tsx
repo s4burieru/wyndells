@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { EllipsisIcon, PlusIcon } from 'lucide-react'
 import { createUser, fetchUsers, setUserActive, updateUser } from '@/services/api/users'
 import type { SafeUser } from '@/types'
@@ -28,14 +29,15 @@ import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHead
 import { ConfirmDialog } from '@/components/common/Modal'
 import { UserAvatar } from '@/components/common/UserAvatar'
 import { UserFormModal } from '@/features/users/components/UserFormModal'
-import { UserProfileSheet } from '@/features/users/components/UserProfileSheet'
+import { useAuth } from '@/contexts/AuthContext'
 
-type UserTab = 'all' | 'admin' | 'manager' | 'inactive'
+type UserTab = 'all' | 'admin' | 'manager' | 'hr' | 'inactive'
 
 const TABS: { value: UserTab; label: string }[] = [
   { value: 'all', label: 'All staff' },
   { value: 'admin', label: 'Administrators' },
   { value: 'manager', label: 'Managers' },
+  { value: 'hr', label: 'HR' },
   { value: 'inactive', label: 'Deactivated' },
 ]
 
@@ -50,14 +52,26 @@ function matchesTab(user: SafeUser, tab: UserTab): boolean {
 }
 
 export function ManageUsersPage() {
+  const navigate = useNavigate()
+  const location = useLocation()
+  // HR is often granted a read-only view (`users.view`); everything that
+  // writes needs `users.manage`, which the server enforces as well.
+  const { can } = useAuth()
+  const canManage = can('users.manage')
   const [users, setUsers] = useState<SafeUser[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [tab, setTab] = useState<UserTab>('all')
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<SafeUser | null>(null)
-  const [viewing, setViewing] = useState<SafeUser | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<SafeUser | null>(null)
+
+  // Profiles open as a full page in the dashboard shell; `from` routes back here.
+  const openProfile = (member: SafeUser) => {
+    navigate(`/staff/profile/${member.id}`, {
+      state: { from: `${location.pathname}${location.search}` },
+    })
+  }
 
   const load = () => {
     setLoading(true)
@@ -99,12 +113,18 @@ export function ManageUsersPage() {
     <div>
       <PageHeader
         title="Users & Managers"
-        subtitle="Create manager accounts, assign branches, and manage staff profiles."
+        subtitle={
+          canManage
+            ? 'Create staff accounts, assign branches, and manage access.'
+            : 'Read-only view of staff accounts — an administrator manages changes.'
+        }
         action={
-          <Button onClick={() => setCreating(true)}>
-            <PlusIcon />
-            Add user
-          </Button>
+          canManage ? (
+            <Button onClick={() => setCreating(true)}>
+              <PlusIcon />
+              Add user
+            </Button>
+          ) : undefined
         }
       />
 
@@ -150,10 +170,10 @@ export function ManageUsersPage() {
               title="No staff to show"
               message={
                 users.length === 0
-                  ? 'Add an administrator or a branch manager.'
+                  ? 'Add an administrator, a branch manager or an HR account.'
                   : 'Nobody matches this filter yet.'
               }
-              action={<Button onClick={() => setCreating(true)}>Add user</Button>}
+              action={canManage ? <Button onClick={() => setCreating(true)}>Add user</Button> : undefined}
             />
           </div>
         ) : (
@@ -170,7 +190,7 @@ export function ManageUsersPage() {
             </TableHeader>
             <TableBody>
               {visible.map((user) => (
-                <TableRow key={user.id} className="cursor-pointer" onClick={() => setViewing(user)}>
+                <TableRow key={user.id} className="cursor-pointer" onClick={() => openProfile(user)}>
                   <TableCell className="pl-4 whitespace-normal">
                     <div className="flex items-center gap-3">
                       <UserAvatar name={user.name} src={user.avatarUrl} role={user.role} />
@@ -180,7 +200,7 @@ export function ManageUsersPage() {
                           className="text-left font-medium text-foreground hover:underline"
                           onClick={(event) => {
                             event.stopPropagation()
-                            setViewing(user)
+                            openProfile(user)
                           }}
                         >
                           {user.name}
@@ -220,28 +240,32 @@ export function ManageUsersPage() {
                         </IconButton>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end" className="w-52">
-                        <DropdownMenuItem onSelect={() => setViewing(user)}>
+                        <DropdownMenuItem onSelect={() => openProfile(user)}>
                           View profile
                         </DropdownMenuItem>
-                        <DropdownMenuItem
-                          onSelect={() => {
-                            setCreating(false)
-                            setEditing(user)
-                          }}
-                        >
-                          Edit details
-                        </DropdownMenuItem>
-                        {user.role === 'admin' ? null : (
+                        {canManage ? (
                           <>
-                            <DropdownMenuSeparator />
                             <DropdownMenuItem
-                              className="text-destructive focus:text-destructive"
-                              onSelect={() => setConfirmToggle(user)}
+                              onSelect={() => {
+                                setCreating(false)
+                                setEditing(user)
+                              }}
                             >
-                              {user.isActive ? 'Deactivate account' : 'Activate account'}
+                              Edit details
                             </DropdownMenuItem>
+                            {user.role === 'admin' ? null : (
+                              <>
+                                <DropdownMenuSeparator />
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onSelect={() => setConfirmToggle(user)}
+                                >
+                                  {user.isActive ? 'Deactivate account' : 'Activate account'}
+                                </DropdownMenuItem>
+                              </>
+                            )}
                           </>
-                        )}
+                        ) : null}
                       </DropdownMenuContent>
                     </DropdownMenu>
                   </TableCell>
@@ -251,8 +275,6 @@ export function ManageUsersPage() {
           </Table>
         )}
       </Card>
-
-      <UserProfileSheet user={viewing} open={viewing !== null} onClose={() => setViewing(null)} />
 
       {creating || editing ? (
         <UserFormModal
