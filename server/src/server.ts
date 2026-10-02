@@ -9,6 +9,7 @@ import { connectDB } from './config/database'
 import healthRouter from './routes/health'
 import authRouter from './routes/auth'
 import usersRouter from './routes/users'
+import staffRouter from './routes/staff'
 import branchesRouter from './routes/branches'
 import menuRouter from './routes/menu'
 import tablesRouter from './routes/tables'
@@ -18,6 +19,7 @@ import careersRouter from './routes/careers'
 import reportsRouter from './routes/reports'
 import notificationsRouter from './routes/notifications'
 import activityRouter from './routes/activity'
+import rolesRouter from './routes/roles'
 import chatRouter from './routes/chat'
 import { attachChatSocket } from './sockets/chat.socket'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
@@ -47,6 +49,7 @@ app.get('/', (_req, res) => {
 app.use('/api/health', healthRouter)
 app.use('/api/auth', authRouter)
 app.use('/api/users', usersRouter)
+app.use('/api/staff', staffRouter)
 app.use('/api/branches', branchesRouter)
 app.use('/api/menu', menuRouter)
 app.use('/api/tables', tablesRouter)
@@ -56,6 +59,7 @@ app.use('/api/careers', careersRouter)
 app.use('/api/reports', reportsRouter)
 app.use('/api/notifications', notificationsRouter)
 app.use('/api/activity', activityRouter)
+app.use('/api/roles', rolesRouter)
 app.use('/api/chat', chatRouter)
 
 app.use(notFoundHandler)

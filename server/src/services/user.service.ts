@@ -12,6 +12,7 @@ import {
   MAX_POSITION_LENGTH,
   MAX_PROFILE_TEXT_LENGTH,
   USER_ROLES,
+  roleDisplayName,
   type UserRole,
 } from '../constants'
 import { buildSafeUsers, hashPassword, USER_SELECT, type SafeUser } from './auth.service'
@@ -162,13 +163,35 @@ async function fetchSafeUser(userId: string): Promise<SafeUser> {
 export async function listUsers(role?: string): Promise<SafeUser[]> {
   let query = getDb().from(usersTable).select(USER_SELECT)
   if (role) {
-    query = query.eq('role', role as 'admin' | 'manager')
+    query = query.eq('role', role as UserRole)
   }
   const { data: users, error } = await query.order('created_at', { ascending: false }).limit(250)
   if (error) {
     throw new ApiError(500, 'Could not load users.')
   }
   return buildSafeUsers(users ?? [])
+}
+
+/**
+ * Staff directory listing for the dashboard, available to every signed-in
+ * staff member. Uses the same serializer as the admin listing, so only the
+ * approved SafeUser fields (never credentials) leave the server.
+ */
+export async function listStaffDirectory(): Promise<SafeUser[]> {
+  const { data: users, error } = await getDb()
+    .from(usersTable)
+    .select(USER_SELECT)
+    .order('name', { ascending: true })
+    .limit(250)
+  if (error) {
+    throw new ApiError(500, 'Could not load staff members.')
+  }
+  return buildSafeUsers(users ?? [])
+}
+
+/** One staff member's profile by id, for the profile page (throws 404). */
+export async function getStaffProfile(userId: string): Promise<SafeUser> {
+  return fetchSafeUser(userId)
 }
 
 /**
@@ -183,9 +206,9 @@ export async function createUser(
   requireFields(payload, ['name', 'email', 'password', 'role'])
   const role = String(payload.role)
   if (!USER_ROLES.includes(role as UserRole)) {
-    throw new ApiError(400, 'Role must be either "admin" or "manager".')
+    throw new ApiError(400, `Role must be one of: ${USER_ROLES.join(', ')}.`)
   }
-  const roleValue = role as 'admin' | 'manager'
+  const roleValue = role as UserRole
   const name = profileText(payload.name, 'Full name', MAX_NAME_LENGTH)
   assertEmail(String(payload.email))
   const password = String(payload.password)
@@ -229,7 +252,7 @@ export async function createUser(
   void notifyAdmins({
     type: 'staff_created',
     title: 'New staff account',
-    body: `${name} (${roleValue === 'admin' ? 'Administrator' : 'Manager'}) was added to the portal.`,
+    body: `${name} (${roleDisplayName(roleValue)}) was added to the portal.`,
     link: '/staff/users',
   })
   void recordActivity({
@@ -282,9 +305,9 @@ export async function updateUser(
   if (updates.role !== undefined) {
     const role = String(updates.role)
     if (!USER_ROLES.includes(role as UserRole)) {
-      throw new ApiError(400, 'Role must be either "admin" or "manager".')
+      throw new ApiError(400, `Role must be one of: ${USER_ROLES.join(', ')}.`)
     }
-    rowUpdates.role = role as 'admin' | 'manager'
+    rowUpdates.role = role as UserRole
   }
   if (updates.assignedBranch !== undefined) {
     const value = updates.assignedBranch === null || updates.assignedBranch === '' ? null : String(updates.assignedBranch)

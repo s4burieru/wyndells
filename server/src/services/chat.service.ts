@@ -28,9 +28,10 @@ import {
   MAX_CHAT_FILE_SIZE_BYTES,
 } from './chatUpload.service'
 import { uploadGroupImage } from './groupImage.service'
+import type { UserRole } from '../constants'
 
-/** Who is acting: the signed-in staff member (admin or manager). */
-export type ChatActor = { id: string; role: 'admin' | 'manager' }
+/** Who is acting: the signed-in staff member (any platform role). */
+export type ChatActor = { id: string; role: UserRole }
 
 /** How many messages one page of history holds. */
 const DEFAULT_MESSAGE_PAGE = 50

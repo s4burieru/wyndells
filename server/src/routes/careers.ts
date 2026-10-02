@@ -11,7 +11,7 @@ import {
   submitApplicationController,
   updatePostingController,
 } from '../controllers/career.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
@@ -25,19 +25,20 @@ const applicationUpload = multer({
 router.get('/postings', listOpenPostingsController)
 router.post('/applications', applicationUpload.single('resume'), submitApplicationController)
 
-// Staff — managers manage their own branch; admins manage everything.
-router.get('/postings/manage', authenticateUser, authorizeRole('admin', 'manager'), listPostingsController)
-router.post('/postings', authenticateUser, authorizeRole('admin', 'manager'), createPostingController)
-router.put('/postings/:id', authenticateUser, authorizeRole('admin', 'manager'), updatePostingController)
-router.delete('/postings/:id', authenticateUser, authorizeRole('admin'), deletePostingController)
+// Staff — hiring access comes from Roles & Permissions; managers stay scoped
+// to their own branch inside the service layer, HR works across all branches.
+router.get('/postings/manage', authenticateUser, authorizePermission('careers.manage'), listPostingsController)
+router.post('/postings', authenticateUser, authorizePermission('careers.manage'), createPostingController)
+router.put('/postings/:id', authenticateUser, authorizePermission('careers.manage'), updatePostingController)
+router.delete('/postings/:id', authenticateUser, authorizePermission('careers.delete'), deletePostingController)
 
-router.get('/applications', authenticateUser, authorizeRole('admin', 'manager'), listApplicationsController)
+router.get('/applications', authenticateUser, authorizePermission('careers.manage'), listApplicationsController)
 router.patch(
   '/applications/:id/status',
   authenticateUser,
-  authorizeRole('admin', 'manager'),
+  authorizePermission('careers.manage'),
   setApplicationStatusController,
 )
-router.delete('/applications/:id', authenticateUser, authorizeRole('admin'), deleteApplicationController)
+router.delete('/applications/:id', authenticateUser, authorizePermission('careers.delete'), deleteApplicationController)
 
 export default router

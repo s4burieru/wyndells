@@ -3,6 +3,8 @@ import { asyncHandler } from '../utils/asyncHandler'
 import {
   createUser,
   deleteUser,
+  getStaffProfile,
+  listStaffDirectory,
   listUsers,
   setUserActive,
   updateUser,
@@ -14,6 +16,18 @@ export const listUsersController = asyncHandler(async (req: AuthedRequest, res: 
   const role = req.query.role ? String(req.query.role) : undefined
   const users = await listUsers(role)
   res.json({ users })
+})
+
+/** Staff directory — any signed-in staff member may browse work profiles. */
+export const listStaffController = asyncHandler(async (_req: AuthedRequest, res: Response) => {
+  const users = await listStaffDirectory()
+  res.json({ users })
+})
+
+/** A single staff profile for the dashboard profile page. */
+export const getStaffController = asyncHandler(async (req: AuthedRequest, res: Response) => {
+  const user = await getStaffProfile(String(req.params.id))
+  res.json({ user })
 })
 
 export const createUserController = asyncHandler(async (req: AuthedRequest, res: Response) => {

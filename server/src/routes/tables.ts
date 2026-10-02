@@ -6,11 +6,11 @@ import {
   setTableStatusController,
   updateTableController,
 } from '../controllers/table.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
-router.use(authenticateUser, authorizeRole('admin', 'manager'))
+router.use(authenticateUser, authorizePermission('tables.manage'))
 router.get('/', listTablesController)
 router.post('/', createTableController)
 router.put('/:id', updateTableController)

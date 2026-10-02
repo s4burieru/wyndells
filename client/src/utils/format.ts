@@ -242,6 +242,7 @@ export function friendlyError(error: unknown, fallback = 'Something went wrong. 
 const ROLE_LABELS: Record<Role, string> = {
   admin: 'Administrator',
   manager: 'Manager',
+  hr: 'HR',
 }
 
 export function roleLabel(role: Role): string {
@@ -251,6 +252,7 @@ export function roleLabel(role: Role): string {
 const ROLE_BADGE_STYLES: Record<Role, string> = {
   admin: 'bg-wyndell-orange/15 text-wyndell-orange-dark',
   manager: 'bg-wyndell-green/15 text-wyndell-green-dark',
+  hr: 'bg-wyndell-sun/25 text-wyndell-bark',
 }
 
 export function roleBadgeClass(role: Role): string {
@@ -260,6 +262,7 @@ export function roleBadgeClass(role: Role): string {
 const ROLE_AVATAR_STYLES: Record<Role, string> = {
   admin: 'bg-wyndell-orange/20 text-wyndell-orange-dark',
   manager: 'bg-wyndell-green/15 text-wyndell-green-dark',
+  hr: 'bg-wyndell-sun/25 text-wyndell-bark',
 }
 
 /** Avatar fallback colours, matching the role badge palette. */

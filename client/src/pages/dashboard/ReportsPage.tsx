@@ -12,7 +12,7 @@ import { BranchPerformanceCard } from '@/features/overview/components/BranchPerf
 import { useAuth } from '@/contexts/AuthContext'
 
 export function ReportsPage() {
-  const { user } = useAuth()
+  const { can } = useAuth()
   const [overview, setOverview] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -32,13 +32,15 @@ export function ReportsPage() {
     return <ErrorState message={error || 'Unable to generate reports.'} />
   }
 
-  const isAdmin = user?.role === 'admin'
+  // The all-branches comparison is its own permission, so HR (and a manager
+  // whose access an admin trimmed) sees only their own scope.
+  const canCompareBranches = can('reports.branch_performance') && 'branchPerformance' in overview
 
   return (
     <div>
       <PageHeader
         title="Reports"
-        subtitle={`Reservation trends and customer ratings for ${isAdmin ? 'all branches' : 'your branch'}.`}
+        subtitle={`Reservation trends and customer ratings for ${overview.scope.branchId ? 'your branch' : 'all branches'}.`}
       />
 
       <div className="mt-6">
@@ -68,9 +70,9 @@ export function ReportsPage() {
         </Card>
       </div>
 
-      {isAdmin && overview.role === 'admin' ? (
+      {canCompareBranches ? (
         <div className="mt-6 grid gap-6">
-          <BranchPerformanceCard overview={overview as Extract<Overview, { role: 'admin' }>} />
+          <BranchPerformanceCard overview={overview} />
           <Card>
             <CardHeader>
               <CardTitle>Branch performance details</CardTitle>

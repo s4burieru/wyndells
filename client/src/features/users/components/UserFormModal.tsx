@@ -63,13 +63,20 @@ export function UserFormModal({
 
   const shownAvatar = avatarRemoved ? '' : avatarPreview || (user?.avatarUrl ?? '')
 
-  const previewRole: Role = self ? (user?.role ?? 'manager') : role === 'admin' ? 'admin' : 'manager'
+  const previewRole: Role = self
+    ? (user?.role ?? 'manager')
+    : role === 'admin' || role === 'hr'
+      ? role
+      : 'manager'
   const phoneOk = contactNumber.trim() === '' || PHONE_PATTERN.test(contactNumber.trim())
+  // Only managers are tied to a branch; administrators and HR work across all
+  // of them, so the picker is optional for those two roles.
+  const branchOk = role !== 'manager' || assignedBranch !== ''
   const accountOk =
     self ||
     (email.trim() !== '' &&
       (user !== null || password.length >= 8) &&
-      (role === 'admin' || assignedBranch !== ''))
+      branchOk)
   const canSave = name.trim() !== '' && accountOk && phoneOk
 
   const handleSave = () => {
@@ -168,10 +175,14 @@ export function UserFormModal({
               <Field label="Role">
                 <SelectInput value={role} onChange={(event) => setRole(event.target.value)}>
                   <option value="manager">{roleLabel('manager')}</option>
+                  <option value="hr">{roleLabel('hr')}</option>
                   <option value="admin">{roleLabel('admin')}</option>
                 </SelectInput>
               </Field>
-              <Field label="Assigned branch">
+              <Field
+                label="Assigned branch"
+                hint={role === 'manager' ? 'Required — managers only run one branch.' : 'Optional — HR and administrators work across all branches.'}
+              >
                 <SelectInput
                   value={assignedBranch}
                   onChange={(event) => setAssignedBranch(event.target.value)}

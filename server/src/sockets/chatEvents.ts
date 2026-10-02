@@ -1,5 +1,6 @@
 import type { Server } from 'socket.io'
 import type { ChatConversation, ChatMessage } from '../models/Chat'
+import type { UserRole } from '../constants'
 
 /**
  * Shared Socket.io surface for the staff chat: the event maps both sides use,
@@ -51,7 +52,7 @@ export type ServerToClientEvents = {
 }
 
 /** Per-socket state set by the auth middleware: the signed-in staff member. */
-export type ChatSocketData = { user?: { id: string; role: 'admin' | 'manager'; name: string } }
+export type ChatSocketData = { user?: { id: string; role: UserRole; name: string } }
 
 export type ChatServer = Server<
   ClientToServerEvents,

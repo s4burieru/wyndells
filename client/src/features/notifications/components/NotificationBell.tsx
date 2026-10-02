@@ -75,7 +75,9 @@ export function NotificationBell() {
   }
 
   return (
-    <DropdownMenu open={open} onOpenChange={(next) => void handleOpenChange(next)}>
+    // modal={false} keeps the page behind the panel interactive and scrollable
+    // instead of locking the body while the list is open.
+    <DropdownMenu modal={false} open={open} onOpenChange={(next) => void handleOpenChange(next)}>
       <DropdownMenuTrigger asChild>
         <Button
           variant="ghost"

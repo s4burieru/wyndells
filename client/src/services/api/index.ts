@@ -39,4 +39,6 @@ export {
   cancelReservation,
 } from './reservations'
 export { fetchTables, createTable, updateTable, setTableStatus } from './tables'
+export { fetchRolePermissions, saveRolePermissions } from './roles'
+export type { RolePermissionsResult, RoleMatrix, PermissionEntry, RoleColumn } from './roles'
 export { fetchUsers, createUser, updateUser, setUserActive } from './users'

@@ -26,8 +26,11 @@ import { ApplicationCard } from '@/features/careers/components/ApplicationCard'
 import { PostingFormModal } from '@/features/careers/components/PostingFormModal'
 
 export function ManageApplicationsPage() {
-  const { user } = useAuth()
-  const isAdmin = user?.role === 'admin'
+  const { user, can } = useAuth()
+  // Deleting postings/applications is its own permission (default: admin + HR),
+  // so a manager can run the pipeline without being able to erase records.
+  const canDelete = can('careers.delete')
+  const isBranchScoped = user?.role === 'manager'
 
   const [postings, setPostings] = useState<ManageableCareerPosting[]>([])
   const [applications, setApplications] = useState<JobApplication[]>([])
@@ -57,9 +60,12 @@ export function ManageApplicationsPage() {
 
   useEffect(load, [])
 
-  const allowedBranches = isAdmin
-    ? branches
-    : user?.assignedBranch ? [{ _id: user.assignedBranch.id, name: user.assignedBranch.name }] : []
+  // Managers only ever see their own branch; administrators and HR pick any.
+  const allowedBranches = isBranchScoped
+    ? user?.assignedBranch
+      ? [{ _id: user.assignedBranch.id, name: user.assignedBranch.name }]
+      : []
+    : branches
 
   const handleSavePosting = (payload: Record<string, unknown>) => {
     const request = editing ? updatePosting(editing._id, payload) : createPosting(payload)
@@ -134,7 +140,7 @@ export function ManageApplicationsPage() {
                         <button type="button" onClick={() => setEditing(posting)} className="text-xs font-medium text-wyndell-orange-dark hover:underline">
                           Edit
                         </button>
-                        {isAdmin ? (
+                        {canDelete ? (
                           <button type="button" onClick={() => setConfirmDeletePosting(posting)} className="text-xs font-medium text-destructive hover:underline">
                             Delete
                           </button>
@@ -151,6 +157,7 @@ export function ManageApplicationsPage() {
           <div className="mt-12">
             <ApplicationsSection
               applications={applications}
+              canDelete={canDelete}
               onStatusChange={changeStatus}
               onDelete={(application) => setConfirmDeleteApplication(application)}
             />
@@ -207,10 +214,12 @@ export function ManageApplicationsPage() {
 
 function ApplicationsSection({
   applications,
+  canDelete,
   onStatusChange,
   onDelete,
 }: {
   applications: JobApplication[]
+  canDelete: boolean
   onStatusChange: (application: JobApplication, status: ApplicationStatus) => void
   onDelete: (application: JobApplication) => void
 }) {
@@ -228,7 +237,7 @@ function ApplicationsSection({
               key={application._id}
               application={application}
               onStatusChange={(status) => onStatusChange(application, status)}
-              onDelete={() => onDelete(application)}
+              onDelete={canDelete ? () => onDelete(application) : undefined}
             />
           ))}
         </div>

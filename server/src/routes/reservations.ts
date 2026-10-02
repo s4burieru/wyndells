@@ -9,7 +9,7 @@ import {
   updateReservationStatusController,
   verifyReservationController,
 } from '../controllers/reservation.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
@@ -19,8 +19,8 @@ router.get('/slots', getSlotsController)
 router.post('/verify', verifyReservationController)
 router.post('/:reference/cancel', cancelReservationController)
 
-// --- Staff (admin | manager) ---
-router.use(authenticateUser, authorizeRole('admin', 'manager'))
+// --- Staff with reservation access ---
+router.use(authenticateUser, authorizePermission('reservations.manage'))
 router.get('/', listReservationsController)
 router.get('/:id', getReservationController)
 router.patch('/:id/status', updateReservationStatusController)

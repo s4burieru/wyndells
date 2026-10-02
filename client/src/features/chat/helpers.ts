@@ -1,4 +1,4 @@
-import type { ChatConversation, ChatMessage, ChatParticipant } from '@/types'
+import type { ChatConversation, ChatMessage, ChatParticipant, Role } from '@/types'
 
 /** Everyone in the conversation except the current user. */
 export function otherParticipants(
@@ -28,7 +28,7 @@ export function conversationTitle(conversation: ChatConversation, currentUserId:
 export function conversationSubtitle(
   conversation: ChatConversation,
   currentUserId: string,
-  roleLabel: (role: 'admin' | 'manager') => string,
+  roleLabel: (role: Role) => string,
 ): string {
   if (conversation.type === 'group') {
     const count = conversation.participants.length

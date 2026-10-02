@@ -1,10 +1,10 @@
 import { Link } from 'react-router-dom'
-import type {  FeedbackSummary, Overview, Reservation  } from '@/types'
+import type {  AllBranchesOverview, FeedbackSummary, Reservation  } from '@/types'
 import { formatDate, formatTime12 } from '@/utils/format'
 import { EmptyState } from '@/components/common/PageHeader'
 import { ReservationStatusBadge } from '@/components/common/StatusBadges'
 
-type AdminOverview = Extract<Overview, { role: 'admin' }>
+type AdminOverview = AllBranchesOverview
 
 export function UpcomingSection({ upcoming }: { upcoming: Reservation[] }) {
   return (

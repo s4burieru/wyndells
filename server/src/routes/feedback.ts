@@ -5,7 +5,7 @@ import {
   listManageableFeedbackController,
   listPublicFeedbackController,
 } from '../controllers/feedback.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
@@ -14,9 +14,9 @@ router.get('/', listPublicFeedbackController)
 router.post('/', createFeedbackController)
 
 // Staff — managers see their own branch; admins see everything.
-router.get('/manage', authenticateUser, authorizeRole('admin', 'manager'), listManageableFeedbackController)
+router.get('/manage', authenticateUser, authorizePermission('feedback.view'), listManageableFeedbackController)
 
-// Moderation — admins only.
-router.delete('/:id', authenticateUser, authorizeRole('admin'), deleteFeedbackController)
+// Moderation — admin by default; grantable from Roles & Permissions.
+router.delete('/:id', authenticateUser, authorizePermission('feedback.delete'), deleteFeedbackController)
 
 export default router

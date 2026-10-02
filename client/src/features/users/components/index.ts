@@ -1,2 +1,2 @@
 export { UserFormModal } from './UserFormModal'
-export { UserProfileSheet } from './UserProfileSheet'
+export { StaffProfileView } from './StaffProfileView'

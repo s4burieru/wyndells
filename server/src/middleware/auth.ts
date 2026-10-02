@@ -2,14 +2,19 @@ import { type NextFunction, type Request, type RequestHandler, type Response } f
 import jwt from 'jsonwebtoken'
 import { getDb } from '../config/database'
 import { ApiError } from '../utils/ApiError'
+import type { UserRole } from '../constants'
+import { type Permission } from '../constants/permissions'
+import { getRolePermissions } from '../services/permission.service'
 
-export type UserRole = 'admin' | 'manager'
+export type { UserRole }
 
 export type AuthUser = {
   id: string
   role: UserRole
-  /** Assigned branch id (managers) or null (admins). */
+  /** Assigned branch id (managers) or null (admins / HR). */
   branch: string | null
+  /** Everything this user's role is currently allowed to do. */
+  permissions: Permission[]
 }
 
 /** Request type used by controllers that require an authenticated user. */
@@ -69,6 +74,9 @@ export async function authenticateUser(
       id: user.id,
       role: user.role,
       branch: user.assigned_branch_id,
+      // Resolved per request so a permission change takes effect on the very
+      // next call — no waiting for the JWT (7 days) to expire.
+      permissions: await getRolePermissions(user.role),
     }
 
     ;(req as AuthedRequest).user = authUser
@@ -91,14 +99,40 @@ export function authorizeRole(...roles: readonly UserRole[]): RequestHandler {
 }
 
 /**
+ * Restricts a route to holders of any listed permission, e.g.
+ * authorizePermission('careers.manage'). Permissions come from the caller's
+ * role (see `getRolePermissions`), so an administrator always passes.
+ *
+ * Use this instead of `authorizeRole` wherever access should be adjustable
+ * from Settings → Roles & Permissions.
+ */
+export function authorizePermission(...permissions: readonly Permission[]): RequestHandler {
+  return (req, _res, next) => {
+    const user = (req as AuthedRequest).user
+    if (!user || !permissions.some((permission) => user.permissions.includes(permission))) {
+      // The required key is kept out of the response — it is for server logs,
+      // not for the browser.
+      next(new ApiError(403, 'You do not have permission to perform this action.'))
+      return
+    }
+    next()
+  }
+}
+
+/** True when the user holds the permission (admins always do). */
+export function hasPermission(user: AuthUser, permission: Permission): boolean {
+  return user.role === 'admin' || user.permissions.includes(permission)
+}
+
+/**
  * Throws when a manager tries to operate on a branch other than their own.
- * Admins are allowed to operate on any branch.
+ * Admins and HR work across every branch, so only managers are constrained.
  */
 export function assertBranchAccess(user: AuthUser, branchId: string | null | undefined): void {
   if (branchId === undefined || branchId === null || branchId === '') {
     return
   }
-  if (user.role === 'admin') {
+  if (user.role !== 'manager') {
     return
   }
   if (user.branch !== branchId) {

@@ -14,6 +14,7 @@ import { careerPostingsTable } from '../models/CareerPosting'
 import { jobApplicationsTable } from '../models/JobApplication'
 import { notificationsTable } from '../models/Notification'
 import { addDays, todayString } from '../utils/validate'
+import type { UserRole } from '../constants'
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url))
 
@@ -33,6 +34,8 @@ for (const envPath of [
 const ADMIN_EMAIL = process.env.ADMIN_EMAIL || 'admin@wyndells.com'
 const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || 'Admin123!'
 const MANAGER_PASSWORD = process.env.MANAGER_PASSWORD || 'Manager123!'
+const HR_EMAIL = process.env.HR_EMAIL || 'hr@wyndells.com'
+const HR_PASSWORD = process.env.HR_PASSWORD || 'HRStaff123!'
 
 /**
  * `tsx seed.ts --sync` (npm run seed:sync) treats BRANCH_DATA as the source of
@@ -265,7 +268,7 @@ async function getOrCreateUser(data: {
   name: string
   email: string
   password: string
-  role: 'admin' | 'manager'
+  role: UserRole
   branchId?: string
   position?: string
   contactNumber?: string
@@ -344,6 +347,26 @@ async function seedBranchesAndUsers() {
     bio: 'Owns staff accounts, branches and reporting for every Wyndell\'s location.',
   })
   console.log(`Admin ready: ${ADMIN_EMAIL} / ${ADMIN_PASSWORD}`)
+
+  // HR is not tied to a branch — they work across every location.
+  try {
+    const hr = await getOrCreateUser({
+      name: 'Wyndell\'s HR',
+      email: HR_EMAIL,
+      password: HR_PASSWORD,
+      role: 'hr',
+      position: 'Human Resources',
+      contactNumber: '0917 000 0002',
+      address: 'Wyndell\'s Head Office, Tanay, Rizal',
+      bio: 'Handles hiring, staff records and HR reporting across all branches.',
+    })
+    console.log(`HR ready: ${hr.email} / ${HR_PASSWORD}`)
+  } catch (reason) {
+    // The `hr` enum value ships in migration 0006; without it the insert is
+    // refused. Keep seeding instead of aborting, and say what to run.
+    console.warn('HR account skipped — run supabase/migrations/0006_add_hr_role.sql first.')
+    console.warn(reason instanceof Error ? reason.message : String(reason))
+  }
 
   for (const branch of branches) {
     const manager = await getOrCreateUser({
@@ -776,6 +799,14 @@ async function main() {
   }
   void data
   console.log(`Connected to Supabase: ${supabaseUrl ? new URL(supabaseUrl).hostname : 'unknown host'}`)
+
+  // Roles are configurable now; a database that has not run 0007 still works
+  // (the API falls back to built-in defaults) but is worth pointing out.
+  const { error: permissionError } = await getDb().from('role_permissions').select('role').limit(1)
+  if (permissionError) {
+    console.warn('role_permissions not found — run supabase/migrations/0006_add_hr_role.sql and 0007_role_permissions.sql.')
+    console.warn('Until then, role access uses the built-in defaults.')
+  }
 
   await seedBranchesAndUsers()
 

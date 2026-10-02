@@ -3,6 +3,7 @@ import jwt from 'jsonwebtoken'
 import { Server } from 'socket.io'
 import { getDb } from '../config/database'
 import { getJwtSecret } from '../middleware/auth'
+import { getRolePermissions } from '../services/permission.service'
 import {
   deleteMessage,
   editMessage,
@@ -64,6 +65,12 @@ export function attachChatSocket(httpServer: HttpServer, clientOrigin: string): 
         .maybeSingle()
       if (error || !data || !data.is_active) {
         throw new ApiError(401, 'Your account is unavailable. Please contact support.')
+      }
+      // Same gate as the REST chat routes: a role that lost `chat.use` is cut
+      // off here too, not just from the page.
+      const permissions = await getRolePermissions(data.role)
+      if (!permissions.includes('chat.use')) {
+        throw new ApiError(403, 'Chat is not enabled for your role.')
       }
       socket.data.user = { id: String(data.id), role: data.role, name: String(data.name) }
       next()

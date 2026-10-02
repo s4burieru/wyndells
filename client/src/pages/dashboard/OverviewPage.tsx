@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { fetchOverview } from '@/services/api/reports'
+import { ApiError } from '@/services/api/client'
 import type {  Overview  } from '@/types'
 import { formatDate, friendlyError, todayLocal } from '@/utils/format'
 import { ErrorState, PageHeader, Spinner } from '@/components/common/PageHeader'
@@ -17,14 +18,22 @@ export function DashboardOverviewPage() {
   const [overview, setOverview] = useState<Overview | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
-  const { user } = useAuth()
+  const { user, can } = useAuth()
 
   useEffect(() => {
     setLoading(true)
     setError('')
     void fetchOverview()
       .then(setOverview)
-      .catch((reason: unknown) => setError(friendlyError(reason)))
+      .catch((reason: unknown) => {
+        // The summary lives behind `reports.view`; say so instead of showing
+        // a generic failure when an admin has just revoked it.
+        setError(
+          reason instanceof ApiError && reason.statusCode === 403
+            ? 'The dashboard summary is turned off for your role. An administrator can re-enable it in Settings → Roles & Permissions.'
+            : friendlyError(reason),
+        )
+      })
       .finally(() => setLoading(false))
   }, [])
 
@@ -69,9 +78,9 @@ export function DashboardOverviewPage() {
         </section>
       </div>
 
-      {overview.role === 'admin' ? (
+      {can('reports.branch_performance') && 'branchPerformance' in overview ? (
         <div className="mt-6">
-          <BranchPerformanceCard overview={overview as Extract<Overview, { role: 'admin' }>} />
+          <BranchPerformanceCard overview={overview} />
         </div>
       ) : null}
 

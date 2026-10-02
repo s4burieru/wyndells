@@ -9,7 +9,9 @@ import {
   MapPinIcon,
   MessageSquareTextIcon,
   MessagesSquareIcon,
+  ShieldCheckIcon,
   UsersIcon,
+  UsersRoundIcon,
   UtensilsCrossedIcon,
 } from 'lucide-react'
 import { useState, type ComponentType } from 'react'
@@ -38,44 +40,53 @@ import {
 import { NotificationBell } from '@/features/notifications/components'
 import { AccountMenu } from '@/features/users/components/AccountMenu'
 import { UserFormModal } from '@/features/users/components/UserFormModal'
-import { UserProfileSheet } from '@/features/users/components/UserProfileSheet'
+import type { Permission } from '@/types'
 
 type NavItem = {
   to: string
   label: string
   icon: ComponentType<{ className?: string }>
   end?: boolean
-  adminOnly?: boolean
+  /** Hidden unless the signed-in user's role holds this permission. */
+  permission?: Permission
+  /** Extra path prefixes that should light this item up (e.g. detail pages). */
+  match?: string[]
 }
 
 const NAV_ITEMS: NavItem[] = [
   { to: '/staff', label: 'Dashboard', icon: LayoutDashboardIcon, end: true },
-  { to: '/staff/reservations', label: 'Reservations', icon: CalendarCheckIcon },
-  { to: '/staff/tables', label: 'Tables', icon: ArmchairIcon },
-  { to: '/staff/menu', label: 'Menu', icon: UtensilsCrossedIcon },
-  { to: '/staff/feedback', label: 'Feedback', icon: MessageSquareTextIcon },
-  { to: '/staff/applications', label: 'Careers', icon: BriefcaseBusinessIcon },
-  { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon },
-  { to: '/staff/chat', label: 'Chat', icon: MessagesSquareIcon },
-  { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, adminOnly: true },
-  { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, adminOnly: true },
-  { to: '/staff/activity', label: 'Activity', icon: HistoryIcon, adminOnly: true },
+  { to: '/staff/reservations', label: 'Reservations', icon: CalendarCheckIcon, permission: 'reservations.manage' },
+  { to: '/staff/tables', label: 'Tables', icon: ArmchairIcon, permission: 'tables.manage' },
+  { to: '/staff/menu', label: 'Menu', icon: UtensilsCrossedIcon, permission: 'menu.manage' },
+  { to: '/staff/feedback', label: 'Feedback', icon: MessageSquareTextIcon, permission: 'feedback.view' },
+  { to: '/staff/applications', label: 'Careers', icon: BriefcaseBusinessIcon, permission: 'careers.manage' },
+  { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon, permission: 'reports.view' },
+  { to: '/staff/chat', label: 'Chat', icon: MessagesSquareIcon, permission: 'chat.use' },
+  { to: '/staff/directory', label: 'Staff', icon: UsersRoundIcon, permission: 'directory.view', match: ['/staff/profile'] },
+  { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, permission: 'branches.manage' },
+  { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, permission: 'users.view' },
+  { to: '/staff/activity', label: 'Activity', icon: HistoryIcon, permission: 'activity.view' },
+  {
+    to: '/staff/settings/roles',
+    label: 'Roles & Permissions',
+    icon: ShieldCheckIcon,
+    permission: 'roles.manage',
+    match: ['/staff/settings'],
+  },
 ]
 
 export function DashboardLayout() {
-  const { user, signOut, updateUser } = useAuth()
+  const { user, signOut, updateUser, can } = useAuth()
   const navigate = useNavigate()
-  const { pathname } = useLocation()
-  const [profileOpen, setProfileOpen] = useState(false)
+  const { pathname, search } = useLocation()
   const [editingSelf, setEditingSelf] = useState(false)
-  // Keeps the shared chat socket alive and the unread count current.
-  const chatUnread = useChatBadge(user !== null)
+  // Keeps the shared chat socket alive and the unread count current — but only
+  // for roles that still hold `chat.use`.
+  const chatUnread = useChatBadge(user !== null && can('chat.use'))
 
   if (!user) {
     return null
   }
-
-  const isAdmin = user.role === 'admin'
 
   const handleSignOut = () => {
     signOut()
@@ -92,9 +103,23 @@ export function DashboardLayout() {
       .catch((reason: unknown) => toast.error(friendlyError(reason)))
   }
 
-  const items = NAV_ITEMS.filter((item) => !item.adminOnly || isAdmin)
-  const isActive = (item: NavItem) =>
-    item.end === true ? pathname === item.to : pathname.startsWith(item.to)
+  const items = NAV_ITEMS.filter((item) => !item.permission || can(item.permission))
+  const isActive = (item: NavItem) => {
+    if (item.end === true) {
+      return pathname === item.to
+    }
+    // Detail pages (e.g. a profile) keep their parent section highlighted.
+    const viaMatch = item.match?.some(
+      (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
+    )
+    return viaMatch === true || pathname.startsWith(item.to)
+  }
+
+  // The profile opens as a full page in the main content area; `from` lets it
+  // route back to the exact page (and filter state) the user came from.
+  const openOwnProfile = () => {
+    navigate(`/staff/profile/${user.id}`, { state: { from: `${pathname}${search}` } })
+  }
 
   return (
     <SidebarProvider>
@@ -163,7 +188,7 @@ export function DashboardLayout() {
         <SidebarFooter>
           <AccountMenu
             user={user}
-            onViewProfile={() => setProfileOpen(true)}
+            onViewProfile={openOwnProfile}
             onEditProfile={() => setEditingSelf(true)}
             onSignOut={handleSignOut}
           />
@@ -186,16 +211,6 @@ export function DashboardLayout() {
           <Outlet />
         </main>
       </SidebarInset>
-
-      <UserProfileSheet
-        user={user}
-        open={profileOpen}
-        onClose={() => setProfileOpen(false)}
-        onEdit={() => {
-          setProfileOpen(false)
-          setEditingSelf(true)
-        }}
-      />
 
       {editingSelf ? (
         <UserFormModal

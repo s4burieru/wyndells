@@ -3,12 +3,15 @@ import { getDb } from '../config/database'
 import { usersTable } from '../models/User'
 import { ApiError } from '../utils/ApiError'
 import { signToken, type AuthUser } from '../middleware/auth'
+import type { UserRole } from '../constants'
+import type { Permission } from '../constants/permissions'
+import { getRolePermissions } from './permission.service'
 
 export type SafeUser = {
   id: string
   name: string
   email: string
-  role: 'admin' | 'manager'
+  role: UserRole
   isActive: boolean
   assignedBranch: { id: string; name: string } | null
   /** Profile details managed from the admin "Users & Managers" page / own profile. */
@@ -17,6 +20,8 @@ export type SafeUser = {
   address: string
   avatarUrl: string
   bio: string
+  /** What this account's role may currently do — drives every client-side gate. */
+  permissions: Permission[]
   createdAt: string
   updatedAt: string
 }
@@ -60,7 +65,7 @@ type UserLikeInput = {
   id: string
   name: string
   email: string
-  role: 'admin' | 'manager'
+  role: UserRole
   is_active: boolean
   assigned_branch_id?: string | null
   assigned_branch?: AssignedBranchRef | null
@@ -90,7 +95,7 @@ function embeddedBranchName(user: UserLikeInput): string | null {
 }
 
 /** Maps a Supabase user row (with embedded branch name) to the safe public shape. */
-function toSafeUser(user: UserLikeInput): SafeUser {
+function toSafeUser(user: UserLikeInput): Omit<SafeUser, 'permissions'> {
   const branchId = user.assigned_branch_id ? String(user.assigned_branch_id) : null
   return {
     id: user.id,
@@ -118,7 +123,7 @@ export async function buildSafeUser(userId: string): Promise<SafeUser> {
   if (error || !user) {
     throw new ApiError(404, 'User not found')
   }
-  return toSafeUser(user)
+  return (await buildSafeUsers([user]))[0]
 }
 
 /**
@@ -133,13 +138,17 @@ export const GOOGLE_NOT_AUTHORIZED_MESSAGE =
  * id, role and branch, so every downstream permission check keeps working) plus
  * the safe public profile.
  */
-function issueSession(user: UserLikeInput): { token: string; user: SafeUser } {
+async function issueSession(user: UserLikeInput): Promise<{ token: string; user: SafeUser }> {
+  // The login response seeds the client's permission checks, so it must carry
+  // the real grants rather than waiting for the first /me round-trip.
+  const permissions = await getRolePermissions(user.role)
   const authUser: AuthUser = {
     id: user.id,
     role: user.role,
     branch: user.assigned_branch_id ?? null,
+    permissions,
   }
-  return { token: signToken(authUser), user: toSafeUser(user) }
+  return { token: signToken(authUser), user: { ...toSafeUser(user), permissions } }
 }
 
 export async function login(email: string, password: string): Promise<{ token: string; user: SafeUser }> {
@@ -226,5 +235,15 @@ export async function loginWithGoogle(accessToken: string): Promise<{ token: str
 
 /** Maps user rows (already carrying their embedded branch name) to the safe public shape. */
 export async function buildSafeUsers(users: UserLikeInput[]): Promise<SafeUser[]> {
-  return users.map((user) => toSafeUser(user))
+  // Permissions are per role, so one lookup serves the whole batch.
+  const permissionsByRole = new Map<UserRole, Permission[]>()
+  await Promise.all(
+    [...new Set(users.map((user) => user.role))].map(async (role) => {
+      permissionsByRole.set(role, await getRolePermissions(role))
+    }),
+  )
+  return users.map((user) => ({
+    ...toSafeUser(user),
+    permissions: permissionsByRole.get(user.role) ?? [],
+  }))
 }

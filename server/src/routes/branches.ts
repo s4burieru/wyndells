@@ -7,7 +7,7 @@ import {
   setBranchActiveController,
   updateBranchController,
 } from '../controllers/branch.controller'
-import { authenticateUser, authorizeRole } from '../middleware/auth'
+import { authenticateUser, authorizePermission } from '../middleware/auth'
 
 const router = Router()
 
@@ -16,9 +16,9 @@ router.get('/', listBranchesController)
 router.get('/:id', getBranchController)
 
 // Administration.
-router.post('/', authenticateUser, authorizeRole('admin'), createBranchController)
-router.put('/:id', authenticateUser, authorizeRole('admin'), updateBranchController)
-router.patch('/:id/status', authenticateUser, authorizeRole('admin'), setBranchActiveController)
-router.delete('/:id', authenticateUser, authorizeRole('admin'), deleteBranchController)
+router.post('/', authenticateUser, authorizePermission('branches.manage'), createBranchController)
+router.put('/:id', authenticateUser, authorizePermission('branches.manage'), updateBranchController)
+router.patch('/:id/status', authenticateUser, authorizePermission('branches.manage'), setBranchActiveController)
+router.delete('/:id', authenticateUser, authorizePermission('branches.manage'), deleteBranchController)
 
 export default router

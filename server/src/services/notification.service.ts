@@ -27,11 +27,13 @@ export type NotifyPayload = {
 /**
  * Resolves who should hear about an event. Branch events reach every active
  * manager assigned to that branch plus every active administrator (admins are
- * branch-agnostic, so they are added explicitly).
+ * branch-agnostic, so they are added explicitly). `withHr` adds HR the same
+ * way — they are branch-agnostic too, and care about hiring and people events.
  */
 async function resolveRecipients(options: {
   branchId?: string | null
   adminsOnly?: boolean
+  withHr?: boolean
 }): Promise<string[]> {
   const db = getDb()
   const ids = new Set<string>()
@@ -52,6 +54,15 @@ async function resolveRecipients(options: {
       .eq('is_active', true)
       .eq('role', 'admin')
     if (!error) for (const row of admins ?? []) ids.add(String(row.id))
+  }
+
+  if (options.withHr) {
+    const { data: hrRows, error } = await db
+      .from(usersTable)
+      .select('id')
+      .eq('is_active', true)
+      .eq('role', 'hr')
+    if (!error) for (const row of hrRows ?? []) ids.add(String(row.id))
   }
 
   return [...ids]
@@ -102,10 +113,11 @@ export async function notifyBranch(
   branchId: string | null | undefined,
   payload: NotifyPayload,
   excludeActorId?: string | null,
+  options?: { withHr?: boolean },
 ): Promise<void> {
   try {
     if (!branchId) return
-    let recipients = await resolveRecipients({ branchId })
+    let recipients = await resolveRecipients({ branchId, withHr: options?.withHr })
     if (excludeActorId) {
       recipients = recipients.filter((id) => id !== excludeActorId)
     }
@@ -115,10 +127,16 @@ export async function notifyBranch(
   }
 }
 
-/** Fans a notification out to administrators only. Never throws. */
+/**
+ * Fans a notification out to administrators and HR. Never throws — used for
+ * people events (a new staff account) that HR needs to see.
+ */
 export async function notifyAdmins(payload: NotifyPayload): Promise<void> {
   try {
-    await insertFor(await resolveRecipients({ adminsOnly: true }), { ...payload, branchId: null })
+    await insertFor(await resolveRecipients({ adminsOnly: true, withHr: true }), {
+      ...payload,
+      branchId: null,
+    })
   } catch (error) {
     console.warn(`notifyAdmins failed (${payload.type}):`, error)
   }
