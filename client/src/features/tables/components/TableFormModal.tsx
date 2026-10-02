@@ -71,9 +71,9 @@ export function TableFormModal({
         </Field>
       </div>
       <div className="mt-4 flex justify-end gap-2">
-        <button type="button" onClick={onClose} className="rounded-lg border border-neutral-300 px-4 py-2 text-sm font-medium text-neutral-700 hover:bg-neutral-100">
+        <Button variant="outline" onClick={onClose}>
           Cancel
-        </button>
+        </Button>
         <Button
           onClick={() =>
             onSave({

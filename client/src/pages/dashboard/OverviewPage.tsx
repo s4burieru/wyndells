@@ -52,7 +52,7 @@ export function DashboardOverviewPage() {
       <div className="mt-6 grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
         <StatCard label={`Today · ${formatDate(todayLocal())}`} value={overview.today.reservations} accent="text-wyndell-orange-dark" />
         <StatCard label="Today confirmed" value={overview.today.confirmed} accent="text-wyndell-green-dark" />
-        <StatCard label="Pending reservations" value={overview.counts.pending} accent="text-yellow-700" />
+        <StatCard label="Pending reservations" value={overview.counts.pending} accent="text-yellow-800" />
         <StatCard label="Completed reservations" value={overview.counts.completed} accent="text-wyndell-green-dark" />
       </div>
 

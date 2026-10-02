@@ -22,7 +22,7 @@ export function ContactPage() {
         title="Contact us"
         subtitle="Reach the branch nearest you directly."
         action={
-          <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+          <Button asChild>
             <Link to="/reserve">Book a reservation</Link>
           </Button>
         }

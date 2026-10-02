@@ -70,7 +70,7 @@ export function BranchDetailPage() {
             <CardDescription>We couldn’t find that location. It may have been renamed or removed.</CardDescription>
           </CardHeader>
           <CardContent className="flex justify-center">
-            <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+            <Button asChild>
               <Link to="/branches">View all branches</Link>
             </Button>
           </CardContent>
@@ -128,7 +128,7 @@ export function BranchDetailPage() {
               {branch.description || 'A warm Wyndell’s garden dining experience.'}
             </p>
             <div className="mt-6 flex flex-wrap gap-2">
-              <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+              <Button asChild>
                 <Link to={`/reserve?branch=${branch._id}`}>
                   <CalendarCheck />
                   Reserve at {branch.name.split(',')[0]}

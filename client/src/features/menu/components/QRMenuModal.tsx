@@ -85,7 +85,7 @@ export function QRMenuModal({
               <p className="mt-1 text-xs text-neutral-500">
                 Scan to view the Wyndell&rsquo;s digital menu — no app or account needed.
               </p>
-              <p className="mt-2 max-w-56 break-all text-[11px] text-neutral-400">{menuUrl}</p>
+              <p className="mt-2 max-w-56 break-all text-[11px] text-muted-foreground">{menuUrl}</p>
             </div>
           ) : null}
 

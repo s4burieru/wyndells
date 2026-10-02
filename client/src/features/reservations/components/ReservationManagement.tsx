@@ -39,7 +39,7 @@ export function StatusActions({
 }) {
   const actions = TRANSITIONS[reservation.status]
   if (actions.length === 0) {
-    return <span className="text-xs text-neutral-400">—</span>
+    return <span className="text-xs text-muted-foreground">—</span>
   }
   return (
     <div className="flex flex-wrap justify-end gap-1">
@@ -97,10 +97,10 @@ export function ReservationDetailModal({
             className={[
               'rounded-lg px-3 py-1.5 text-sm font-semibold',
               action.status === 'completed' || action.status === 'confirmed'
-                ? 'bg-wyndell-green-dark text-white hover:bg-wyndell-green'
+                ? 'bg-wyndell-green-dark text-white hover:bg-wyndell-forest'
                 : action.status === 'rejected' || action.status === 'cancelled' || action.status === 'no-show'
-                  ? 'border border-red-300 bg-white text-red-700 hover:bg-red-50'
-                  : 'bg-wyndell-orange text-white hover:bg-wyndell-orange-dark',
+                  ? 'border border-destructive/30 bg-background text-destructive hover:bg-destructive/10'
+                  : 'bg-wyndell-orange-dark text-white hover:opacity-90',
             ].join(' ')}
           >
             {action.label}

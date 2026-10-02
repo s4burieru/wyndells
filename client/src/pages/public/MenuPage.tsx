@@ -63,7 +63,7 @@ export function MenuPage() {
         subtitle="Scan at the table or browse here. No account needed — the menu is always open."
         action={
           selectedBranch ? (
-            <Button asChild className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+            <Button asChild>
               <Link to={`/reserve?branch=${selectedBranch}`}>
                 <CalendarCheck />
                 Reserve at this branch

@@ -156,7 +156,7 @@ export function ReservationForm({
                   <ArrowRight />
                 </Link>
               </Button>
-              <Button onClick={onSubmit} disabled={submitting} className="bg-wyndell-orange text-white hover:bg-wyndell-orange-dark">
+              <Button onClick={onSubmit} disabled={submitting}>
                 {submitting ? (
                   <>
                     <Loader2 className="animate-spin" />
@@ -217,7 +217,7 @@ function SlotPicker({
             type="button"
             variant={form.time === slot.time ? 'default' : 'outline'}
             onClick={() => onUpdate('time', slot.time)}
-            className={form.time === slot.time ? 'bg-wyndell-orange text-white hover:bg-wyndell-orange-dark' : undefined}
+            className={form.time === slot.time ? 'bg-wyndell-orange-dark text-white' : undefined}
           >
             {formatTime12(slot.time)}
             <Badge variant="secondary" className="bg-muted text-muted-foreground">{slot.availableSpots}</Badge>

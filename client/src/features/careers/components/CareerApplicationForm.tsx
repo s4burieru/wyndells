@@ -174,7 +174,7 @@ export function CareerApplicationForm({
             </span>
           ) : null}
         </Field>
-        <Button onClick={() => void submit()} disabled={submitting || !posting} className="bg-wyndell-green text-white hover:bg-wyndell-green-dark">
+        <Button onClick={() => void submit()} disabled={submitting || !posting} className="bg-wyndell-green-dark text-white hover:bg-wyndell-forest">
           {submitting ? (
             <>
               <Loader2 className="animate-spin" />

@@ -88,7 +88,7 @@ export function CareersPage() {
                       setSelected(posting)
                       document.getElementById('apply-form')?.focus()
                     }}
-                    className="bg-wyndell-green text-white hover:bg-wyndell-green-dark"
+                    className="bg-wyndell-green-dark text-white hover:bg-wyndell-forest"
                   >
                     Apply
                     <ArrowRight />

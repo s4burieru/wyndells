@@ -9,7 +9,7 @@ export function PublicFooter() {
         <div className="grid gap-10 py-14 sm:grid-cols-2 lg:grid-cols-4">
           <div>
             <BrandLogo className="h-16 w-auto" />
-            <p className="mt-4 max-w-xs text-sm leading-relaxed text-wyndell-cream/40">
+            <p className="mt-4 max-w-xs text-sm leading-relaxed text-wyndell-cream/70">
               Warm, natural, home-style dining across Rizal and Metro Manila. Fresh food, garden
               spaces, and tables that feel like family.
             </p>
@@ -91,7 +91,7 @@ export function PublicFooter() {
             </ul>
           </div>
         </div>
-        <div className="flex flex-col items-center justify-between gap-2 border-t border-wyndell-cream/10 py-5 text-xs text-wyndell-cream/40 sm:flex-row">
+        <div className="flex flex-col items-center justify-between gap-2 border-t border-wyndell-cream/10 py-5 text-xs text-wyndell-cream/60 sm:flex-row">
           <p>&copy; {new Date().getFullYear()} Wyndell&rsquo;s. All rights reserved.</p>
           <p>Warm, natural, home-style dining.</p>
         </div>
