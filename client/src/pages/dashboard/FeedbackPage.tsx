@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { Mail, Phone } from 'lucide-react'
 import { toast } from 'sonner'
 import { deleteFeedback, fetchManageableFeedback } from '@/services/api/feedback'
@@ -8,6 +9,7 @@ import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common
 import { ConfirmDialog } from '@/components/common/Modal'
 import { StarRating } from '@/components/common/StatusBadges'
 import { useAuth } from '@/contexts/AuthContext'
+import { BranchSelect } from '@/components/common/BranchSelect'
 
 export function ManageFeedbackPage() {
   const { user } = useAuth()
@@ -15,6 +17,8 @@ export function ManageFeedbackPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [removing, setRemoving] = useState<Feedback | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const branchFilter = searchParams.get('branch') ?? ''
 
   const load = () => {
     setLoading(true)
@@ -26,6 +30,10 @@ export function ManageFeedbackPage() {
   }
 
   useEffect(load, [])
+
+  const visibleItems = branchFilter && branchFilter !== 'all'
+    ? items.filter((item) => item.branch?._id === branchFilter)
+    : items
 
   const remove = (id: string) => {
     void deleteFeedback(id)
@@ -45,17 +53,34 @@ export function ManageFeedbackPage() {
         subtitle={user?.role === 'manager' ? 'Feedback from guests at your branch.' : 'Feedback across all branches.'}
       />
 
+      {user?.role !== 'manager' ? (
+        <div className="mt-4">
+          <BranchSelect
+            value={branchFilter === 'all' ? '' : branchFilter}
+            onChange={(branchId) => {
+              const next = new URLSearchParams(searchParams)
+              if (branchId) {
+                next.set('branch', branchId)
+              } else {
+                next.delete('branch')
+              }
+              setSearchParams(next)
+            }}
+          />
+        </div>
+      ) : null}
+
       {error ? (
         <div className="mt-6">
           <ErrorState message="Unable to load feedback right now." onRetry={load} />
         </div>
-      ) : items.length === 0 ? (
+      ) : visibleItems.length === 0 ? (
         <div className="mt-6">
           <EmptyState title="No feedback yet" message="Customer reviews will appear here." />
         </div>
       ) : (
         <div className="mt-6 space-y-4">
-          {items.map((item) => (
+          {visibleItems.map((item) => (
             <article key={item._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div>

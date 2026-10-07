@@ -255,6 +255,35 @@ export async function ensureWelcome(userId: string): Promise<void> {
   }
 }
 
+/** Permanently removes one notification — only ever the recipient's own row. */
+export async function deleteNotification(id: string, userId: string): Promise<void> {
+  const { data, error } = await getDb()
+    .from(notificationsTable)
+    .delete()
+    .eq('id', id)
+    .eq('user_id', userId)
+    .select('id')
+  if (error) {
+    throw new ApiError(500, 'Could not delete the notification.')
+  }
+  if (!data || data.length === 0) {
+    throw new ApiError(404, 'Notification not found')
+  }
+}
+
+/** Removes every notification for the signed-in user. Returns the count removed. */
+export async function clearAllNotifications(userId: string): Promise<number> {
+  const { data, error } = await getDb()
+    .from(notificationsTable)
+    .delete()
+    .eq('user_id', userId)
+    .select('id')
+  if (error) {
+    throw new ApiError(500, 'Could not clear notifications.')
+  }
+  return data?.length ?? 0
+}
+
 /** Called after an account is created so it starts life with an item. */
 export async function welcomeNewUser(userId: string, branchId: string | null): Promise<void> {
   try {

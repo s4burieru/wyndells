@@ -706,6 +706,41 @@ export async function assignTable(id: string, tableId: string, actor: AuthUser) 
   return getReservation(id)
 }
 
+/**
+ * Permanently removes a reservation. Any table it held is released back to
+ * "available" (only when it was auto-reserved by this workflow), and the
+ * removal is written to the activity log.
+ */
+export async function deleteReservation(id: string, actor: AuthUser) {
+  assertUuid(id, 'reservation')
+  const { data: reservation, error: fetchError } = await getDb()
+    .from(reservationsTable)
+    .select('*')
+    .eq('id', id)
+    .maybeSingle()
+  if (fetchError || !reservation) {
+    throw new ApiError(404, 'Reservation not found')
+  }
+  const row = reservation as ReservationRow
+  assertBranchAccess(actor, String(row.branch_id))
+
+  if (row.table_id) {
+    await releaseTableIfHeld(String(row.table_id))
+  }
+  const { error: deleteError } = await getDb().from(reservationsTable).delete().eq('id', id)
+  if (deleteError) {
+    throw new ApiError(500, 'Could not delete the reservation.')
+  }
+  void recordActivity({
+    actorId: actor.id,
+    branchId: String(row.branch_id),
+    action: 'reservation.deleted',
+    summary: `${row.reference} · ${row.customer_name} reservation removed (${row.date} ${row.time})`,
+    entity: 'reservation',
+    entityId: id,
+  })
+}
+
 /** Returns the id as-is, or null when undefined (no user attribution). */
 function reservedIfDefined(value: string | undefined): string | null {
   return value === undefined ? null : value

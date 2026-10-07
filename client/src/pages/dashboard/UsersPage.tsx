@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { useLocation, useNavigate } from 'react-router-dom'
 import { EllipsisIcon, PlusIcon } from 'lucide-react'
-import { createUser, fetchUsers, setUserActive, updateUser } from '@/services/api/users'
+import { createUser, deleteUser, fetchUsers, setUserActive, updateUser } from '@/services/api/users'
 import type { SafeUser } from '@/types'
 import { friendlyError, roleBadgeClass, roleLabel } from '@/utils/format'
 import { Button } from '@/components/common/FormControls'
@@ -65,6 +65,7 @@ export function ManageUsersPage() {
   const [creating, setCreating] = useState(false)
   const [editing, setEditing] = useState<SafeUser | null>(null)
   const [confirmToggle, setConfirmToggle] = useState<SafeUser | null>(null)
+  const [deleting, setDeleting] = useState<SafeUser | null>(null)
 
   // Profiles open as a full page in the dashboard shell; `from` routes back here.
   const openProfile = (member: SafeUser) => {
@@ -102,6 +103,17 @@ export function ManageUsersPage() {
       return
     }
     void setUserActive(target.id, !target.isActive)
+      .then(load)
+      .catch((reason: unknown) => setError(friendlyError(reason)))
+  }
+
+  const handleDelete = () => {
+    const target = deleting
+    setDeleting(null)
+    if (!target) {
+      return
+    }
+    void deleteUser(target.id)
       .then(load)
       .catch((reason: unknown) => setError(friendlyError(reason)))
   }
@@ -262,6 +274,12 @@ export function ManageUsersPage() {
                                 >
                                   {user.isActive ? 'Deactivate account' : 'Activate account'}
                                 </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  className="text-destructive focus:text-destructive"
+                                  onSelect={() => setDeleting(user)}
+                                >
+                                  Delete account
+                                </DropdownMenuItem>
                               </>
                             )}
                           </>
@@ -294,6 +312,15 @@ export function ManageUsersPage() {
         confirmLabel={confirmToggle?.isActive ? 'Deactivate' : 'Activate'}
         onConfirm={handleToggleActive}
         onCancel={() => setConfirmToggle(null)}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete this account?"
+        message={`${deleting?.name ?? ''} will be permanently removed from the staff directory. This can’t be undone.`}
+        confirmLabel="Delete"
+        onConfirm={handleDelete}
+        onCancel={() => setDeleting(null)}
       />
     </div>
   )

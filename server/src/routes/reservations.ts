@@ -3,6 +3,7 @@ import {
   assignTableController,
   cancelReservationController,
   createReservationController,
+  deleteReservationController,
   getReservationController,
   getSlotsController,
   listReservationsController,
@@ -25,5 +26,6 @@ router.get('/', listReservationsController)
 router.get('/:id', getReservationController)
 router.patch('/:id/status', updateReservationStatusController)
 router.patch('/:id/table', assignTableController)
+router.delete('/:id', deleteReservationController)
 
 export default router

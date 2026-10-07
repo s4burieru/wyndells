@@ -4,6 +4,7 @@ import {
   assignTable,
   cancelGuestReservation,
   createReservation,
+  deleteReservation,
   getAvailableTimeSlots,
   getReservation,
   listReservations,
@@ -94,3 +95,10 @@ export const assignTableController = asyncHandler(async (req: AuthedRequest, res
   const reservation = await assignTable(String(req.params.id), tableId, req.user)
   res.json({ reservation })
 })
+
+export const deleteReservationController = asyncHandler(
+  async (req: AuthedRequest, res: Response) => {
+    await deleteReservation(String(req.params.id), req.user)
+    res.json({ message: 'Reservation deleted' })
+  },
+)

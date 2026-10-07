@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { createMenuItem, deleteMenuItem, fetchMenuItems, updateMenuItem } from '@/services/api/menu'
 import type { MenuItem } from '@/types'
@@ -7,6 +8,7 @@ import { Button } from '@/components/common/FormControls'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
 import { ConfirmDialog } from '@/components/common/Modal'
 import { useAuth } from '@/contexts/AuthContext'
+import { BranchSelect } from '@/components/common/BranchSelect'
 import { MenuFormModal } from '@/features/menu/components/MenuFormModal'
 import { QRMenuModal } from '@/features/menu/components/QRMenuModal'
 
@@ -19,17 +21,23 @@ export function ManageMenuPage() {
   const [creating, setCreating] = useState(false)
   const [showQR, setShowQR] = useState(false)
   const [deleting, setDeleting] = useState<MenuItem | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const branchFilter = searchParams.get('branch') ?? ''
 
   const load = () => {
     setLoading(true)
     setError(false)
-    void fetchMenuItems({ includeUnavailable: true, includeInactiveBranches: true })
+    void fetchMenuItems({
+      branch: branchFilter && branchFilter !== 'all' ? branchFilter : undefined,
+      includeUnavailable: true,
+      includeInactiveBranches: true,
+    })
       .then(setItems)
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
-  useEffect(load, [])
+  useEffect(load, [branchFilter])
 
   const closeForm = () => {
     setCreating(false)
@@ -79,6 +87,23 @@ export function ManageMenuPage() {
           </div>
         }
       />
+
+      {user?.role !== 'manager' ? (
+        <div className="mt-4">
+          <BranchSelect
+            value={branchFilter === 'all' ? '' : branchFilter}
+            onChange={(branchId) => {
+              const next = new URLSearchParams(searchParams)
+              if (branchId) {
+                next.set('branch', branchId)
+              } else {
+                next.delete('branch')
+              }
+              setSearchParams(next)
+            }}
+          />
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mt-6">

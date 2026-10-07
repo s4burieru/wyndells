@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react'
 import { toast } from 'sonner'
 import { MapPin, Mail, Phone } from 'lucide-react'
-import { createBranch, fetchBranches, setBranchActive, updateBranch } from '@/services/api/branches'
+import { createBranch, deleteBranch, fetchBranches, setBranchActive, updateBranch } from '@/services/api/branches'
 import type {  Branch  } from '@/types'
 import { friendlyError } from '@/utils/format'
 import { Button } from '@/components/common/FormControls'
@@ -16,6 +16,7 @@ export function ManageBranchesPage() {
   const [editing, setEditing] = useState<Branch | null>(null)
   const [creating, setCreating] = useState(false)
   const [confirmToggle, setConfirmToggle] = useState<Branch | null>(null)
+  const [deleting, setDeleting] = useState<Branch | null>(null)
 
   const load = () => {
     setLoading(true)
@@ -80,6 +81,9 @@ export function ManageBranchesPage() {
                   <button type="button" onClick={() => setConfirmToggle(branch)} className="text-xs font-medium text-neutral-500 hover:underline">
                     {branch.isActive ? 'Deactivate' : 'Activate'}
                   </button>
+                  <button type="button" onClick={() => setDeleting(branch)} className="text-xs font-medium text-destructive hover:underline">
+                    Delete
+                  </button>
                 </div>
               </div>
               <dl className="mt-3 grid gap-x-6 gap-y-1 text-sm">
@@ -118,6 +122,22 @@ export function ManageBranchesPage() {
           setConfirmToggle(null)
         }}
         onCancel={() => setConfirmToggle(null)}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete this branch?"
+        message={`“${deleting?.name ?? ''}” will be permanently removed. This can’t be undone.`}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleting) {
+            void deleteBranch(deleting._id)
+              .then(load)
+              .catch((reason: unknown) => toast.error(friendlyError(reason)))
+          }
+          setDeleting(null)
+        }}
+        onCancel={() => setDeleting(null)}
       />
     </div>
   )

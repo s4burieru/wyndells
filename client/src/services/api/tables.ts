@@ -26,3 +26,7 @@ export async function setTableStatus(id: string, status: string): Promise<Dining
   })
   return data.table
 }
+
+export async function deleteTable(id: string): Promise<void> {
+  await apiRequest<{ message: string }>(`/api/tables/${id}`, { method: 'DELETE' })
+}

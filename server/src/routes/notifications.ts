@@ -1,5 +1,7 @@
 import { Router } from 'express'
 import {
+  clearAllNotificationsController,
+  deleteNotificationController,
   listNotificationsController,
   markAllReadController,
   markReadController,
@@ -18,5 +20,7 @@ router.get('/unread-count', unreadCountController)
 router.post('/read-all', markAllReadController)
 router.patch('/:id/read', markReadController)
 router.patch('/:id/unread', markUnreadController)
+router.delete('/:id', deleteNotificationController)
+router.delete('/', clearAllNotificationsController)
 
 export default router

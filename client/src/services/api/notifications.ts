@@ -35,3 +35,13 @@ export async function markAllNotificationsRead(): Promise<number> {
   })
   return data.updated
 }
+
+export async function deleteNotification(id: string): Promise<void> {
+  await apiRequest<{ message: string }>(`/api/notifications/${id}`, { method: 'DELETE' })
+}
+
+/** Removes every notification for the signed-in user; returns how many were removed. */
+export async function clearAllNotifications(): Promise<number> {
+  const data = await apiRequest<{ deleted: number }>('/api/notifications', { method: 'DELETE' })
+  return data.deleted
+}

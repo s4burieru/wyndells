@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
+import { useLocation } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { friendlyError } from '@/utils/format'
@@ -71,6 +72,8 @@ function mergeConversation(
 export function ChatPage() {
   const { user } = useAuth()
   const userId = user?.id ?? ''
+  const location = useLocation()
+  const pendingOpenId = (location.state as { openConversationId?: string } | null)?.openConversationId
 
   const [conversations, setConversations] = useState<ChatConversation[]>([])
   const [listLoading, setListLoading] = useState(true)
@@ -339,6 +342,17 @@ export function ChatPage() {
     // Best-effort: the read receipt travels to the room via the server.
     void markConversationRead(conversationId).catch(() => undefined)
   }, [])
+
+  // Opens a conversation deep-linked from another page (e.g. a staff profile).
+  useEffect(() => {
+    if (!pendingOpenId || listLoading) return
+    const exists = conversations.some((item) => item._id === pendingOpenId)
+    if (exists) {
+      openConversation(pendingOpenId)
+      // Clear the state so a re-render doesn't re-open it.
+      window.history.replaceState({}, '')
+    }
+  }, [pendingOpenId, listLoading, conversations, openConversation])
 
   const loadOlderMessages = useCallback(() => {
     const conversationId = activeIdRef.current

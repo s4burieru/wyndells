@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import {
+  clearAllNotifications,
+  deleteNotification,
   fetchNotifications,
   fetchUnreadCount,
   markAllNotificationsRead,
@@ -138,11 +140,44 @@ export function useNotifications(enabled: boolean) {
     }
   }, [enabled, loadList, refreshCount])
 
+  const remove = useCallback(
+    async (id: string) => {
+      if (!getToken()) return
+      // Optimistic: drop the row (and its unread contribution) before the server answers.
+      setState((prev) => {
+        const target = prev.notifications.find((item) => item._id === id)
+        return {
+          ...prev,
+          notifications: prev.notifications.filter((item) => item._id !== id),
+          unread: target && !target.isRead ? Math.max(prev.unread - 1, 0) : prev.unread,
+        }
+      })
+      try {
+        await deleteNotification(id)
+      } catch {
+        await loadList()
+      }
+    },
+    [loadList],
+  )
+
+  const clearAll = useCallback(async () => {
+    if (!getToken()) return
+    setState((prev) => ({ ...prev, notifications: [], unread: 0 }))
+    try {
+      await clearAllNotifications()
+    } catch {
+      await loadList()
+    }
+  }, [loadList])
+
   return {
     ...state,
     refresh: loadList,
     refreshCount,
     markRead,
     markAllRead,
+    remove,
+    clearAll,
   }
 }

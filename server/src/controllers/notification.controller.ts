@@ -1,6 +1,8 @@
 import type { Response } from 'express'
 import { asyncHandler } from '../utils/asyncHandler'
 import {
+  clearAllNotifications,
+  deleteNotification,
   ensureWelcome,
   listNotifications,
   markAllRead,
@@ -48,3 +50,16 @@ export const markUnreadController = asyncHandler(async (req: AuthedRequest, res:
 export const markAllReadController = asyncHandler(async (req: AuthedRequest, res: Response) => {
   res.json({ updated: await markAllRead(req.user.id) })
 })
+
+export const deleteNotificationController = asyncHandler(
+  async (req: AuthedRequest, res: Response) => {
+    await deleteNotification(assertUuid(String(req.params.id), 'notification'), req.user.id)
+    res.json({ message: 'Notification deleted' })
+  },
+)
+
+export const clearAllNotificationsController = asyncHandler(
+  async (req: AuthedRequest, res: Response) => {
+    res.json({ deleted: await clearAllNotifications(req.user.id) })
+  },
+)

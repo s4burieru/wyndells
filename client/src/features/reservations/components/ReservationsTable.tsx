@@ -9,12 +9,14 @@ export function ReservationsTable({
   onSelect,
   onAssign,
   onChangeStatus,
+  onDelete,
 }: {
   items: Reservation[]
   showBranch: boolean
   onSelect: (reservation: Reservation) => void
   onAssign: (reservation: Reservation) => void
   onChangeStatus: (id: string, status: ReservationStatus) => void
+  onDelete: (reservation: Reservation) => void
 }) {
   return (
     <div className="mt-6 overflow-x-auto">
@@ -53,7 +55,12 @@ export function ReservationsTable({
               </td>
               <td className="px-3 py-2.5"><ReservationStatusBadge status={reservation.status} /></td>
               <td className="px-3 py-2.5 text-right">
-                <StatusActions reservation={reservation} onChange={(status) => onChangeStatus(reservation._id, status)} />
+                <div className="flex items-center justify-end gap-3">
+                  <StatusActions reservation={reservation} onChange={(status) => onChangeStatus(reservation._id, status)} />
+                  <button type="button" onClick={() => onDelete(reservation)} className="text-xs font-medium text-destructive hover:underline">
+                    Delete
+                  </button>
+                </div>
               </td>
             </tr>
           ))}
