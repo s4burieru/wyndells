@@ -5,6 +5,7 @@ import {
   IdCardIcon,
   MailIcon,
   MapPinIcon,
+  MessageSquareTextIcon,
   PencilIcon,
   PhoneIcon,
   ShieldCheckIcon,
@@ -52,11 +53,13 @@ export function StaffProfileView({
   isSelf,
   canEdit,
   onEdit,
+  onChat,
 }: {
   user: SafeUser
   isSelf: boolean
   canEdit: boolean
   onEdit: () => void
+  onChat?: () => void
 }) {
   return (
     <div className="grid gap-4">
@@ -80,12 +83,20 @@ export function StaffProfileView({
             </div>
           </div>
 
-          {canEdit ? (
-            <Button onClick={onEdit} className="shrink-0">
-              <PencilIcon />
-              {isSelf ? 'Edit profile' : 'Edit details'}
-            </Button>
-          ) : null}
+          <div className="flex shrink-0 items-center gap-2">
+            {!isSelf && onChat ? (
+              <Button variant="outline" onClick={onChat}>
+                <MessageSquareTextIcon />
+                Chat
+              </Button>
+            ) : null}
+            {canEdit ? (
+              <Button onClick={onEdit}>
+                <PencilIcon />
+                {isSelf ? 'Edit profile' : 'Edit details'}
+              </Button>
+            ) : null}
+          </div>
         </div>
       </Card>
 

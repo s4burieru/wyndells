@@ -34,3 +34,7 @@ export async function setBranchActive(id: string, isActive: boolean): Promise<Br
   })
   return data.branch
 }
+
+export async function deleteBranch(id: string): Promise<void> {
+  await apiRequest<{ message: string }>(`/api/branches/${id}`, { method: 'DELETE' })
+}

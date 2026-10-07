@@ -67,11 +67,13 @@ export function ReservationDetailModal({
   onClose,
   onChange,
   onAssign,
+  onDelete,
 }: {
   reservation: Reservation
   onClose: () => void
   onChange: (status: ReservationStatus) => void
   onAssign: () => void
+  onDelete: () => void
 }) {
   return (
     <Modal open title={`Reservation ${reservation.reference}`} onClose={onClose}>
@@ -115,6 +117,13 @@ export function ReservationDetailModal({
             Assign table
           </button>
         ) : null}
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-lg border border-destructive/30 bg-background px-3 py-1.5 text-sm font-semibold text-destructive hover:bg-destructive/10"
+        >
+          Delete
+        </button>
       </div>
     </Modal>
   )

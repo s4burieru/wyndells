@@ -1,9 +1,10 @@
 import { useEffect, useState } from 'react'
-import { Link, useLocation, useParams } from 'react-router-dom'
+import { Link, useLocation, useNavigate, useParams } from 'react-router-dom'
 import { ArrowLeftIcon, ChevronRightIcon } from 'lucide-react'
 import { toast } from 'sonner'
 import { updateProfile } from '@/services/api/auth'
 import { ApiError } from '@/services/api/client'
+import { createDirectConversation } from '@/services/api/chat'
 import { fetchStaffProfile, updateUser } from '@/services/api/users'
 import { useAuth } from '@/contexts/AuthContext'
 import type { SafeUser } from '@/types'
@@ -51,6 +52,7 @@ function ProfileSkeleton() {
 export function StaffProfilePage() {
   const { id } = useParams<{ id: string }>()
   const location = useLocation()
+  const navigate = useNavigate()
   const { user: currentUser, updateUser: setAuthUser, can } = useAuth()
 
   const [profile, setProfile] = useState<SafeUser | null>(null)
@@ -95,6 +97,17 @@ export function StaffProfilePage() {
 
   const isSelf = currentUser !== null && profile !== null && currentUser.id === profile.id
   const canEdit = isSelf || can('users.manage')
+  const canChat = !isSelf && can('chat.use')
+
+  const handleChat = async () => {
+    if (!profile) return
+    try {
+      const conversation = await createDirectConversation(profile.id)
+      navigate('/staff/chat', { state: { openConversationId: conversation._id } })
+    } catch (reason: unknown) {
+      toast.error(friendlyError(reason, 'Unable to start a chat.'))
+    }
+  }
 
   const handleSave = (payload: Record<string, unknown> | FormData) => {
     if (!profile) {
@@ -144,6 +157,7 @@ export function StaffProfilePage() {
             isSelf={isSelf}
             canEdit={canEdit === true}
             onEdit={() => setEditing(true)}
+            onChat={canChat ? () => void handleChat() : undefined}
           />
           {editing ? (
             <UserFormModal

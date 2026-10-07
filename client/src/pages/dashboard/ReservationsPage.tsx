@@ -1,12 +1,14 @@
 import { useEffect, useState } from 'react'
 import { useSearchParams } from 'react-router-dom'
-import { fetchReservations, updateReservationStatus } from '@/services/api/reservations'
+import { deleteReservation, fetchReservations, updateReservationStatus } from '@/services/api/reservations'
 import type {  Reservation, ReservationStatus  } from '@/types'
 import { friendlyError } from '@/utils/format'
 import { PageHeader, Spinner, EmptyState, ErrorState } from '@/components/common/PageHeader'
+import { ConfirmDialog } from '@/components/common/Modal'
 import { DatePicker } from '@/components/ui/date-picker'
 import { useAuth } from '@/contexts/AuthContext'
 import { RESERVATION_STATUS_FILTERS, ReservationDetailModal } from '@/features/reservations/components/ReservationManagement'
+import { BranchSelect } from '@/components/common/BranchSelect'
 import { ReservationsTable } from '@/features/reservations/components/ReservationsTable'
 import { TableAssignmentModal } from '@/features/reservations/components/TableAssignmentModal'
 
@@ -21,18 +23,25 @@ export function ManageReservationsPage() {
   const [error, setError] = useState('')
   const [selected, setSelected] = useState<Reservation | null>(null)
   const [assigning, setAssigning] = useState<Reservation | null>(null)
+  const [deleting, setDeleting] = useState<Reservation | null>(null)
   const highlightRef = searchParams.get('ref') ?? ''
+  const branchFilter = searchParams.get('branch') ?? ''
 
   const load = () => {
     setLoading(true)
     setError('')
-    void fetchReservations({ status: filter === 'all' ? undefined : filter, date: date || undefined, limit: 100 })
+    void fetchReservations({
+      status: filter === 'all' ? undefined : filter,
+      date: date || undefined,
+      branch: branchFilter && branchFilter !== 'all' ? branchFilter : undefined,
+      limit: 100,
+    })
       .then(({ reservations }) => setItems(reservations))
       .catch((reason: unknown) => setError(friendlyError(reason, 'Unable to load reservations.')))
       .finally(() => setLoading(false))
   }
 
-  useEffect(load, [filter, date])
+  useEffect(load, [filter, date, branchFilter])
 
   // Open the booking a notification pointed at, then drop the parameter so a
   // refresh or a later navigation doesn't reopen a stale detail modal. The
@@ -48,6 +57,17 @@ export function ManageReservationsPage() {
     }
     setSearchParams({}, { replace: true })
   }, [highlightRef, loading, items, setSearchParams])
+
+  const deleteOne = (id: string) => {
+    setError('')
+    void deleteReservation(id)
+      .then(() => {
+        setSelected(null)
+        load()
+      })
+      .catch((reason: unknown) => setError(friendlyError(reason, 'Unable to delete the reservation.')))
+      .finally(() => setDeleting(null))
+  }
 
   const changeStatus = (id: string, status: ReservationStatus) => {
     setError('')
@@ -73,6 +93,20 @@ export function ManageReservationsPage() {
       ) : null}
 
       <div className="mt-6 flex flex-wrap items-center gap-2">
+        {user?.role !== 'manager' ? (
+          <BranchSelect
+            value={branchFilter === 'all' ? '' : branchFilter}
+            onChange={(branchId) => {
+              const next = new URLSearchParams(searchParams)
+              if (branchId) {
+                next.set('branch', branchId)
+              } else {
+                next.delete('branch')
+              }
+              setSearchParams(next)
+            }}
+          />
+        ) : null}
         {RESERVATION_STATUS_FILTERS.map(([key, label]) => (
           <button
             key={key}
@@ -115,6 +149,7 @@ export function ManageReservationsPage() {
           onSelect={setSelected}
           onAssign={setAssigning}
           onChangeStatus={changeStatus}
+          onDelete={setDeleting}
         />
       ) : null}
 
@@ -124,6 +159,7 @@ export function ManageReservationsPage() {
           onClose={() => setSelected(null)}
           onChange={(status) => changeStatus(selected._id, status)}
           onAssign={() => setAssigning(selected)}
+          onDelete={() => setDeleting(selected)}
         />
       ) : null}
       {assigning ? (
@@ -137,6 +173,15 @@ export function ManageReservationsPage() {
           onError={(message) => setError(message)}
         />
       ) : null}
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete this reservation?"
+        message={deleting ? `Reservation ${deleting.reference} (${deleting.customerName}) will be permanently removed. This can’t be undone.` : ''}
+        confirmLabel="Delete"
+        onConfirm={() => deleting && deleteOne(deleting._id)}
+        onCancel={() => setDeleting(null)}
+      />
     </div>
   )
 }

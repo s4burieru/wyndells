@@ -74,3 +74,7 @@ export async function assignTableToReservation(id: string, tableId: string): Pro
   })
   return data.reservation
 }
+
+export async function deleteReservation(id: string): Promise<void> {
+  await apiRequest<{ message: string }>(`/api/reservations/${id}`, { method: 'DELETE' })
+}

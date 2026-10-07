@@ -9,7 +9,9 @@ import {
   CheckCheckIcon,
   MessageSquareTextIcon,
   SparklesIcon,
+  Trash2Icon,
   UserPlusIcon,
+  XIcon,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -48,7 +50,7 @@ const EMPTY_MESSAGE = "You're all caught up."
 export function NotificationBell() {
   const navigate = useNavigate()
   const [open, setOpen] = useState(false)
-  const { notifications, unread, loading, error, refresh, refreshCount, markRead, markAllRead } =
+  const { notifications, unread, loading, error, refresh, refreshCount, markRead, markAllRead, remove, clearAll } =
     useNotifications(true)
 
   const badgeLabel = unread > 9 ? '9+' : String(unread)
@@ -100,17 +102,30 @@ export function NotificationBell() {
       <DropdownMenuContent align="end" side="bottom" sideOffset={8} className="w-80 p-0">
         <div className="flex items-center justify-between gap-2 border-b px-3 py-2">
           <p className="text-sm font-semibold">Notifications</p>
-          {unread > 0 && (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => void markAllRead()}
-              className="h-6 gap-1 px-2 text-xs text-muted-foreground"
-            >
-              <CheckCheckIcon className="size-3.5" />
-              Mark all read
-            </Button>
-          )}
+          <div className="flex items-center gap-1">
+            {unread > 0 && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => void markAllRead()}
+                className="h-6 gap-1 px-2 text-xs text-muted-foreground"
+              >
+                <CheckCheckIcon className="size-3.5" />
+                Mark all read
+              </Button>
+            )}
+            {notifications.length > 0 && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => void clearAll()}
+                className="h-6 gap-1 px-2 text-xs text-destructive"
+              >
+                <Trash2Icon className="size-3.5" />
+                Clear all
+              </Button>
+            )}
+          </div>
         </div>
 
         <div className="max-h-96 overflow-y-auto p-1">
@@ -174,6 +189,18 @@ export function NotificationBell() {
                         aria-label="Unread"
                       />
                     )}
+                    <button
+                      type="button"
+                      aria-label="Delete notification"
+                      onClick={(event) => {
+                        event.stopPropagation()
+                        event.preventDefault()
+                        void remove(item._id)
+                      }}
+                      className="mt-0.5 shrink-0 rounded p-0.5 text-muted-foreground/70 hover:bg-muted hover:text-destructive"
+                    >
+                      <XIcon className="size-3.5" />
+                    </button>
                   </span>
                   {item.body && (
                     <span className="mt-0.5 line-clamp-2 block text-xs text-muted-foreground">

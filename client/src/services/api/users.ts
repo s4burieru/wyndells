@@ -44,3 +44,7 @@ export async function setUserActive(id: string, isActive: boolean): Promise<Safe
   })
   return data.user
 }
+
+export async function deleteUser(id: string): Promise<void> {
+  await apiRequest<{ message: string }>(`/api/users/${id}`, { method: 'DELETE' })
+}

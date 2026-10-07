@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
 import { fetchBranches } from '@/services/api/branches'
 import {
@@ -23,6 +24,7 @@ import { StatCard } from '@/components/common/StatCard'
 import { ConfirmDialog } from '@/components/common/Modal'
 import { useAuth } from '@/contexts/AuthContext'
 import { ApplicationCard } from '@/features/careers/components/ApplicationCard'
+import { BranchSelect } from '@/components/common/BranchSelect'
 import { PostingFormModal } from '@/features/careers/components/PostingFormModal'
 
 export function ManageApplicationsPage() {
@@ -41,6 +43,8 @@ export function ManageApplicationsPage() {
   const [editing, setEditing] = useState<ManageableCareerPosting | null>(null)
   const [confirmDeletePosting, setConfirmDeletePosting] = useState<ManageableCareerPosting | null>(null)
   const [confirmDeleteApplication, setConfirmDeleteApplication] = useState<JobApplication | null>(null)
+  const [searchParams, setSearchParams] = useSearchParams()
+  const branchFilter = searchParams.get('branch') ?? ''
 
   const load = () => {
     setLoading(true)
@@ -94,6 +98,13 @@ export function ManageApplicationsPage() {
   const openCount = postings.filter((posting) => posting.status === 'open').length
   const newCount = applications.filter((application) => application.status === 'new').length
 
+  const visiblePostings = branchFilter && branchFilter !== 'all'
+    ? postings.filter((posting) => posting.branch?._id === branchFilter)
+    : postings
+  const visibleApplications = branchFilter && branchFilter !== 'all'
+    ? applications.filter((application) => application.branch?._id === branchFilter)
+    : applications
+
   return (
     <div>
       <PageHeader
@@ -104,6 +115,23 @@ export function ManageApplicationsPage() {
         action={<Button onClick={() => { setEditing(null); setCreating(true) }}>+ Add position</Button>}
       />
 
+      {user?.role !== 'manager' ? (
+        <div className="mt-4">
+          <BranchSelect
+            value={branchFilter === 'all' ? '' : branchFilter}
+            onChange={(branchId) => {
+              const next = new URLSearchParams(searchParams)
+              if (branchId) {
+                next.set('branch', branchId)
+              } else {
+                next.delete('branch')
+              }
+              setSearchParams(next)
+            }}
+          />
+        </div>
+      ) : null}
+
       {error ? (
         <div className="mt-6">
           <ErrorState message="Unable to load careers data right now." onRetry={load} />
@@ -112,19 +140,19 @@ export function ManageApplicationsPage() {
         <>
           <div className="mt-6 grid gap-4 sm:grid-cols-3">
             <StatCard label="Open positions" value={openCount} accent="text-wyndell-green-dark" />
-            <StatCard label="Total applications" value={applications.length} />
+            <StatCard label="Total applications" value={visibleApplications.length} />
             <StatCard label="New applications" value={newCount} accent="text-wyndell-orange-dark" />
           </div>
 
           <section className="mt-8">
             <h2 className="text-base font-semibold text-wyndell-forest">Positions</h2>
-            {postings.length === 0 ? (
+            {visiblePostings.length === 0 ? (
               <div className="mt-4">
                 <EmptyState title="No positions yet" message="Add a job posting to start receiving applications." />
               </div>
             ) : (
               <div className="mt-4 space-y-4">
-                {postings.map((posting) => (
+                {visiblePostings.map((posting) => (
                   <article key={posting._id} className="rounded-2xl border border-wyndell-cream-dark bg-white p-4 shadow-sm">
                     <div className="flex flex-wrap items-center justify-between gap-3">
                       <div>
@@ -156,7 +184,7 @@ export function ManageApplicationsPage() {
 
           <div className="mt-12">
             <ApplicationsSection
-              applications={applications}
+              applications={visibleApplications}
               canDelete={canDelete}
               onStatusChange={changeStatus}
               onDelete={(application) => setConfirmDeleteApplication(application)}

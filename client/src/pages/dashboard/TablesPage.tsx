@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
+import { useNavigate, useSearchParams } from 'react-router-dom'
 import { toast } from 'sonner'
-import { createTable, fetchTables, setTableStatus, updateTable } from '@/services/api/tables'
+import { createTable, deleteTable, fetchTables, setTableStatus, updateTable } from '@/services/api/tables'
 import type { DiningTable, TableStatus } from '@/types'
 import { friendlyError, tableLabel } from '@/utils/format'
 import { Button } from '@/components/common/FormControls'
@@ -9,28 +10,35 @@ import { TableStatusBadge } from '@/components/common/StatusBadges'
 import { ConfirmDialog } from '@/components/common/Modal'
 import { useAuth } from '@/contexts/AuthContext'
 import { TableFormModal } from '@/features/tables/components/TableFormModal'
+import { BranchSelect } from '@/components/common/BranchSelect'
 
 const TABLE_STATUSES: TableStatus[] = ['available', 'reserved', 'occupied', 'cleaning', 'unavailable']
 
 export function ManageTablesPage() {
   const { user } = useAuth()
   const [tables, setTables] = useState<DiningTable[]>([])
+  const [searchParams] = useSearchParams()
+  const navigate = useNavigate()
+  const branchFilter = searchParams.get('branch') ?? ''
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
   const [editing, setEditing] = useState<DiningTable | null>(null)
   const [creating, setCreating] = useState(false)
   const [confirmDeactivate, setConfirmDeactivate] = useState<DiningTable | null>(null)
+  const [deleting, setDeleting] = useState<DiningTable | null>(null)
+
+  const isManager = user?.role === 'manager'
 
   const load = () => {
     setLoading(true)
     setError(false)
-    void fetchTables({})
+    void fetchTables({ branch: branchFilter && branchFilter !== 'all' ? branchFilter : undefined })
       .then(setTables)
       .catch(() => setError(true))
       .finally(() => setLoading(false))
   }
 
-  useEffect(load, [])
+  useEffect(load, [branchFilter])
 
   const quickStatus = (table: DiningTable, status: TableStatus) => {
     void setTableStatus(table._id, status)
@@ -65,6 +73,23 @@ export function ManageTablesPage() {
         subtitle={user?.role === 'manager' ? 'Manage the tables in your branch.' : 'Manage tables across all branches.'}
         action={<Button onClick={() => setCreating(true)}>+ Add table</Button>}
       />
+
+      {!isManager ? (
+        <div className="mt-4">
+          <BranchSelect
+            value={branchFilter === 'all' ? '' : branchFilter}
+            onChange={(branchId) => {
+              const next = new URLSearchParams(searchParams)
+              if (branchId) {
+                next.set('branch', branchId)
+              } else {
+                next.delete('branch')
+              }
+              navigate(`?${next.toString()}`)
+            }}
+          />
+        </div>
+      ) : null}
 
       {error ? (
         <div className="mt-6">
@@ -104,9 +129,14 @@ export function ManageTablesPage() {
                 <button type="button" onClick={() => setEditing(table)} className="text-xs font-medium text-wyndell-orange-dark hover:underline">
                   Edit
                 </button>
-                <button type="button" onClick={() => setConfirmDeactivate(table)} className="text-xs font-medium text-destructive hover:underline">
-                  Deactivate
-                </button>
+                <span className="flex items-center gap-3">
+                  <button type="button" onClick={() => setConfirmDeactivate(table)} className="text-xs font-medium text-destructive hover:underline">
+                    Deactivate
+                  </button>
+                  <button type="button" onClick={() => setDeleting(table)} className="text-xs font-medium text-destructive hover:underline">
+                    Delete
+                  </button>
+                </span>
               </div>
             </div>
           ))}
@@ -140,6 +170,22 @@ export function ManageTablesPage() {
           setConfirmDeactivate(null)
         }}
         onCancel={() => setConfirmDeactivate(null)}
+      />
+
+      <ConfirmDialog
+        open={deleting !== null}
+        title="Delete this table?"
+        message={`Table ${deleting?.tableNumber ?? ''} will be deactivated and removed from availability. Historical reservations are kept.`}
+        confirmLabel="Delete"
+        onConfirm={() => {
+          if (deleting) {
+            void deleteTable(deleting._id)
+              .then(load)
+              .catch((reason: unknown) => toast.error(friendlyError(reason)))
+          }
+          setDeleting(null)
+        }}
+        onCancel={() => setDeleting(null)}
       />
     </div>
   )

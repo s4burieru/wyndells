@@ -60,9 +60,9 @@ const NAV_ITEMS: NavItem[] = [
   { to: '/staff/menu', label: 'Menu', icon: UtensilsCrossedIcon, permission: 'menu.manage' },
   { to: '/staff/feedback', label: 'Feedback', icon: MessageSquareTextIcon, permission: 'feedback.view' },
   { to: '/staff/applications', label: 'Careers', icon: BriefcaseBusinessIcon, permission: 'careers.manage' },
-  { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon, permission: 'reports.view' },
   { to: '/staff/chat', label: 'Chat', icon: MessagesSquareIcon, permission: 'chat.use' },
   { to: '/staff/directory', label: 'Staff', icon: UsersRoundIcon, permission: 'directory.view', match: ['/staff/profile'] },
+  { to: '/staff/reports', label: 'Reports', icon: ChartColumnIcon, permission: 'reports.view' },
   { to: '/staff/branches', label: 'Branches', icon: MapPinIcon, permission: 'branches.manage' },
   { to: '/staff/users', label: 'Users & Managers', icon: UsersIcon, permission: 'users.view' },
   { to: '/staff/activity', label: 'Activity', icon: HistoryIcon, permission: 'activity.view' },
@@ -74,6 +74,43 @@ const NAV_ITEMS: NavItem[] = [
     match: ['/staff/settings'],
   },
 ]
+
+/** Groups nav items into logical sections for easier scanning. */
+const NAV_GROUPS: { label: string; items: NavItem[] }[] = [
+  {
+    label: 'Overview',
+    items: [],
+  },
+  {
+    label: 'Operations',
+    items: [],
+  },
+  {
+    label: 'Communication',
+    items: [],
+  },
+  {
+    label: 'Management',
+    items: [],
+  },
+]
+
+/** Maps each nav item to its group. */
+const ITEM_GROUP_MAP: Record<string, string> = {
+  '/staff': 'Overview',
+  '/staff/reservations': 'Operations',
+  '/staff/tables': 'Operations',
+  '/staff/menu': 'Operations',
+  '/staff/feedback': 'Operations',
+  '/staff/applications': 'Operations',
+  '/staff/chat': 'Communication',
+  '/staff/directory': 'Communication',
+  '/staff/reports': 'Management',
+  '/staff/branches': 'Management',
+  '/staff/users': 'Management',
+  '/staff/activity': 'Management',
+  '/staff/settings/roles': 'Management',
+}
 
 export function DashboardLayout() {
   const { user, signOut, updateUser, can } = useAuth()
@@ -115,6 +152,12 @@ export function DashboardLayout() {
     return viaMatch === true || pathname.startsWith(item.to)
   }
 
+  // Build groups with their filtered items
+  const groups = NAV_GROUPS.map((group) => ({
+    ...group,
+    items: items.filter((item) => ITEM_GROUP_MAP[item.to] === group.label),
+  })).filter((group) => group.items.length > 0)
+
   // The profile opens as a full page in the main content area; `from` lets it
   // route back to the exact page (and filter state) the user came from.
   const openOwnProfile = () => {
@@ -154,35 +197,37 @@ export function DashboardLayout() {
         </SidebarHeader>
 
         <SidebarContent>
-          <SidebarGroup>
-            <SidebarGroupLabel>Navigation</SidebarGroupLabel>
-            <SidebarGroupContent>
-              <SidebarMenu>
-                {items.map((item) => {
-                  const badge = item.to === '/staff/chat' ? chatUnread : 0
-                  return (
-                    <SidebarMenuItem key={item.to}>
-                      <SidebarMenuButton
-                        asChild
-                        isActive={isActive(item)}
-                        tooltip={badge > 0 ? `${item.label} · ${badge} unread` : item.label}
-                      >
-                        <NavLink to={item.to} end={item.end === true}>
-                          <item.icon />
-                          <span>{item.label}</span>
-                          {badge > 0 ? (
-                            <span className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
-                              {badge > 99 ? '99+' : badge}
-                            </span>
-                          ) : null}
-                        </NavLink>
-                      </SidebarMenuButton>
-                    </SidebarMenuItem>
-                  )
-                })}
-              </SidebarMenu>
-            </SidebarGroupContent>
-          </SidebarGroup>
+          {groups.map((group) => (
+            <SidebarGroup key={group.label}>
+              <SidebarGroupLabel>{group.label}</SidebarGroupLabel>
+              <SidebarGroupContent>
+                <SidebarMenu>
+                  {group.items.map((item) => {
+                    const badge = item.to === '/staff/chat' ? chatUnread : 0
+                    return (
+                      <SidebarMenuItem key={item.to}>
+                        <SidebarMenuButton
+                          asChild
+                          isActive={isActive(item)}
+                          tooltip={badge > 0 ? `${item.label} · ${badge} unread` : item.label}
+                        >
+                          <NavLink to={item.to} end={item.end === true}>
+                            <item.icon />
+                            <span>{item.label}</span>
+                            {badge > 0 ? (
+                              <span className="ml-auto inline-flex min-w-5 shrink-0 items-center justify-center rounded-full bg-primary px-1.5 py-0.5 text-[0.65rem] font-semibold text-primary-foreground group-data-[collapsible=icon]:hidden">
+                                {badge > 99 ? '99+' : badge}
+                              </span>
+                            ) : null}
+                          </NavLink>
+                        </SidebarMenuButton>
+                      </SidebarMenuItem>
+                    )
+                  })}
+                </SidebarMenu>
+              </SidebarGroupContent>
+            </SidebarGroup>
+          ))}
         </SidebarContent>
 
         <SidebarFooter>
