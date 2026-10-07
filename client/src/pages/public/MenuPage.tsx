@@ -14,6 +14,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Skeleton } from '@/components/ui/skeleton'
 import { Tabs, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
+import { MenuItemImage } from '@/features/menu/components/MenuItemImage'
 
 export function MenuPage() {
   const [branches, setBranches] = useState<Branch[]>([])
@@ -165,7 +166,8 @@ export function MenuPage() {
 function MenuItemCard({ item }: { item: MenuItem }) {
   const unavailable = item.status === 'unavailable'
   return (
-    <Card className={unavailable ? 'opacity-70' : undefined}>
+    <Card className={unavailable ? 'overflow-hidden opacity-70' : 'overflow-hidden'}>
+      <MenuItemImage src={item.image} alt={item.name} className="-mt-6 aspect-[16/10] w-full" />
       <CardHeader>
         <div className="flex items-start justify-between gap-2">
           <div>

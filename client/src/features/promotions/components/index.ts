@@ -1,0 +1,1 @@
+export { PromotionFormModal } from './PromotionFormModal'

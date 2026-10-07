@@ -19,6 +19,9 @@ export const PERMISSIONS = [
   'menu.manage',
   'feedback.view',
   'feedback.delete',
+  'promotions.manage',
+  'customers.view',
+  'customers.delete',
   'careers.manage',
   'careers.delete',
   'reports.view',
@@ -80,6 +83,19 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
     ],
   },
   {
+    key: 'marketing',
+    label: 'Marketing',
+    permissions: [
+      {
+        key: 'promotions.manage',
+        label: 'Manage promotions',
+        hint: 'Create, publish and remove home-page promotions.',
+      },
+      { key: 'customers.view', label: 'View customers', hint: 'Read the newsletter subscriber list.' },
+      { key: 'customers.delete', label: 'Remove subscribers', hint: 'Delete entries from the customer list.' },
+    ],
+  },
+  {
     key: 'hiring',
     label: 'Recruitment',
     permissions: [
@@ -120,15 +136,18 @@ export const PERMISSION_GROUPS: PermissionGroup[] = [
  * table is missing or has not been seeded yet, so an un-migrated database can
  * never lock anybody out.
  *
- * Keep in sync with the seed block in `supabase/migrations/0007_role_permissions.sql`.
+ * Keep in sync with the seed blocks in `supabase/migrations/0007_role_permissions.sql`
+ * and `supabase/migrations/0010_marketing_permissions.sql`.
  */
 export const DEFAULT_ROLE_PERMISSIONS: Record<ConfigurableRole, readonly Permission[]> = {
-  // Managers keep the full day-to-day branch toolkit they have always had.
+  // Managers keep the full day-to-day branch toolkit they have always had,
+  // plus the promotions for their own branch.
   manager: [
     'reservations.manage',
     'tables.manage',
     'menu.manage',
     'feedback.view',
+    'promotions.manage',
     'careers.manage',
     'reports.view',
     'chat.use',

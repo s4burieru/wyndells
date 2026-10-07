@@ -22,6 +22,11 @@ export {
 } from './feedback'
 export { fetchMenuItems, createMenuItem, updateMenuItem, deleteMenuItem } from './menu'
 export {
+  subscribeNewsletter,
+  fetchSubscribers,
+  deleteSubscriber,
+} from './newsletter'
+export {
   fetchNotifications,
   fetchUnreadCount,
   markAllNotificationsRead,
@@ -29,6 +34,13 @@ export {
   markNotificationUnread,
 } from './notifications'
 export { fetchOverview, fetchOverviewForBranch } from './reports'
+export {
+  fetchPublicPromotions,
+  fetchManageablePromotions,
+  createPromotion,
+  updatePromotion,
+  deletePromotion,
+} from './promotions'
 export {
   createReservation,
   fetchReservations,

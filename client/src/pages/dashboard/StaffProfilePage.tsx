@@ -59,6 +59,7 @@ export function StaffProfilePage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [editing, setEditing] = useState(false)
+  const [chatStarting, setChatStarting] = useState(false)
 
   const state = location.state as { from?: string } | null
   const from = state?.from && state.from.startsWith('/staff') ? state.from : '/staff/directory'
@@ -100,12 +101,17 @@ export function StaffProfilePage() {
   const canChat = !isSelf && can('chat.use')
 
   const handleChat = async () => {
-    if (!profile) return
+    if (!profile || chatStarting) return
+    setChatStarting(true)
     try {
       const conversation = await createDirectConversation(profile.id)
       navigate('/staff/chat', { state: { openConversationId: conversation._id } })
     } catch (reason: unknown) {
       toast.error(friendlyError(reason, 'Unable to start a chat.'))
+    } finally {
+      // On success the page unmounts with the navigation; this only matters
+      // when the request failed and the button needs to be usable again.
+      setChatStarting(false)
     }
   }
 
@@ -158,6 +164,7 @@ export function StaffProfilePage() {
             canEdit={canEdit === true}
             onEdit={() => setEditing(true)}
             onChat={canChat ? () => void handleChat() : undefined}
+            chatStarting={chatStarting}
           />
           {editing ? (
             <UserFormModal

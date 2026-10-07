@@ -93,3 +93,6 @@ export const APPLICATION_TRANSITIONS: Record<ApplicationStatus, readonly Applica
 
 export const MAX_APPLICATIONS_PER_CLIENT_PER_HOUR = 5
 export const MAX_COVER_LETTER_LENGTH = 3000
+
+/** Newsletter signups allowed from one IP + user agent per hour. */
+export const NEWSLETTER_MAX_SUBMISSIONS_PER_CLIENT_PER_HOUR = 5

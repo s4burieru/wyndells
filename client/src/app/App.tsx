@@ -21,6 +21,8 @@ import { ManageReservationsPage } from '@/pages/dashboard/ReservationsPage'
 import { ManageTablesPage } from '@/pages/dashboard/TablesPage'
 import { ManageMenuPage } from '@/pages/dashboard/MenuPage'
 import { ManageFeedbackPage } from '@/pages/dashboard/FeedbackPage'
+import { ManagePromotionsPage } from '@/pages/dashboard/PromotionsPage'
+import { ManageCustomersPage } from '@/pages/dashboard/CustomersPage'
 import { ManageApplicationsPage } from '@/pages/dashboard/ApplicationsPage'
 import { ReportsPage } from '@/pages/dashboard/ReportsPage'
 import { ManageBranchesPage } from '@/pages/dashboard/BranchesPage'
@@ -67,6 +69,12 @@ function App() {
               </Route>
               <Route element={<RequireAuth permission="feedback.view" />}>
                 <Route path="/staff/feedback" element={<ManageFeedbackPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="promotions.manage" />}>
+                <Route path="/staff/promotions" element={<ManagePromotionsPage />} />
+              </Route>
+              <Route element={<RequireAuth permission="customers.view" />}>
+                <Route path="/staff/customers" element={<ManageCustomersPage />} />
               </Route>
               <Route element={<RequireAuth permission="careers.manage" />}>
                 <Route path="/staff/applications" element={<ManageApplicationsPage />} />
