@@ -69,7 +69,10 @@ wyndells/
    `supabase/migrations/0004_notifications_activity.sql`, then
    `supabase/migrations/0005_chat.sql`, then
    `supabase/migrations/0006_add_hr_role.sql`, then
-   `supabase/migrations/0007_role_permissions.sql`, and run each. This
+   `supabase/migrations/0007_role_permissions.sql`, then
+   `supabase/migrations/0008_promotions.sql`, then
+   `supabase/migrations/0009_newsletter_subscribers.sql`, then
+   `supabase/migrations/0010_marketing_permissions.sql`, and run each. This
    creates the tables, indexes, row-level security, and the report functions the
    dashboard depends on, plus the `career_postings` / `job_applications` tables
    powering the Careers feature, the staff profile columns (job title, contact
@@ -77,11 +80,15 @@ wyndells/
    `notifications` / `activity_log` tables behind the header bell and the
    admin **Activity** page, the `chat_conversations` / `chat_participants` /
    `chat_messages` tables behind the staff **Chat** page, the `hr` role value
-   and the `role_permissions` matrix behind **Roles & Permissions**.
+   and the `role_permissions` matrix behind **Roles & Permissions**, the
+   `promotions` table behind the home page's **Promotions & announcements**
+   section, and the `newsletter_subscribers` table behind the home-page signup
+   form, the timed popup and the dashboard's **Customers** screen.
 
-   > Profile photos are uploaded to a public Supabase Storage bucket (`avatars`)
-   > that the API creates automatically on the first upload, so no extra SQL is
-   > required for the photo upload itself.
+   > Profile photos and promotion card images are uploaded to public Supabase
+   > Storage buckets (`avatars` and `promotions`) that the API creates
+   > automatically on the first upload, so no extra SQL is required for the
+   > photo upload itself.
 
    > The API reads the profile columns on every staff login, so an existing
    > project must run `0003_user_profiles.sql` before deploying this code —
@@ -197,6 +204,11 @@ The Express server exposes the same routes the client uses today:
 | GET    | `/api/menu` `/api/menu/:id`   | Public (QR menu)    |
 | POST   | `/api/reservations` `/api/reservations/slots` `/api/reservations/verify` | Public |
 | GET    | `/api/feedback` `/api/feedback/manage` | Public / Staff |
+| GET    | `/api/promotions` | Public (published promotions inside their visibility window — home page) |
+| GET/POST/PUT/DELETE | `/api/promotions` `/api/promotions/manage` `/api/promotions/:id` | Staff with `promotions.manage` (managers are pinned to their own branch; restaurant-wide rows need an admin) |
+| POST   | `/api/newsletter` | Public (newsletter signup from the home-page section or the popup; `source` is `homepage` or `popup`) |
+| GET    | `/api/newsletter/manage` | Staff with `customers.view` (`search` matches name or email) |
+| DELETE | `/api/newsletter/:id` | Staff with `customers.delete` |
 | GET    | `/api/careers/postings` | Public (open positions) |
 | POST   | `/api/careers/applications` | Public (job applications; `multipart/form-data` with a `resume` PDF/DOC/DOCX file, up to 5 MB) |
 | GET/POST/PUT/DELETE | `/api/careers/postings` `/api/careers/postings/manage` `/api/careers/postings/:id` | Staff with `careers.manage` (deletes need `careers.delete`) |
@@ -230,7 +242,7 @@ There are three platform roles, stored on `users.role`:
 | Role | Scope | Shipped access |
 | ---- | ----- | -------------- |
 | **Administrator** | All branches | Everything. Always locked to full access — the matrix can never narrow it down. |
-| **Manager** | One branch (`assigned_branch_id`) | Reservations, tables, menu, feedback, careers, reports, chat, staff directory. |
+| **Manager** | One branch (`assigned_branch_id`) | Reservations, tables, menu, feedback, **branch promotions**, careers, reports, chat, staff directory. |
 | **HR** | All branches (no branch required) | Read-only **Users & Managers**, recruitment (postings + applications, including deletes), reports, chat, staff directory. |
 
 Access itself is data, not code: `role_permissions` (migration `0007`) stores
@@ -326,6 +338,44 @@ no branch filtering: anyone can message anyone, one-to-one or in groups.
   edited or deleted and they never count toward unread badges.
 
 Requires `supabase/migrations/0005_chat.sql`.
+
+### Promotions & newsletter
+
+The home page has two content sections backed by the API:
+
+- **Promotions & announcements** (`GET /api/promotions`) — cards for
+  promotions, events and announcements. A row is public only when
+  `is_published` is true **and** today falls inside its optional
+  `starts_on`/`expires_on` window; rows pinned to a deactivated branch are
+  hidden too. `branch_id` null means restaurant-wide.
+- **Stay in the loop** and the timed popup (`POST /api/newsletter`) — signups
+  are stored in `newsletter_subscribers` with a `source` of `homepage` or
+  `popup`. Re-subscribing an address we already hold resolves with
+  `alreadySubscribed: true` rather than an error, and signups are throttled
+  per IP + user agent (5 per hour, mirroring the feedback throttle).
+
+Staff manage everything from two new sidebar entries:
+
+- **Promotions** (`/staff/promotions`, `promotions.manage`) — create, edit,
+  publish/unpublish and delete. The card image is a JPG/PNG/WEBP up to 4 MB
+  uploaded to the public `promotions` bucket (created on first upload, no SQL
+  needed); sending an empty `image` clears it and deletes the stored file.
+  Managers are pinned to their own branch and cannot publish restaurant-wide
+  rows — those need an administrator.
+- **Customers** (`/staff/customers`, `customers.view` / `customers.delete`) —
+  the newsletter subscriber list with search and removal. Ships
+  administrator-only; grant it from **Settings → Roles & Permissions**.
+
+The popup is deliberately non-modal: it appears bottom-right after 20 seconds
+on any public page, closes with the X or Escape, and records its dismissal in
+`sessionStorage` so it shows at most once per session. A successful signup
+stores `wyndells:subscribed` in `localStorage`, which keeps the popup away for
+good.
+
+Requires `supabase/migrations/0008_promotions.sql`,
+`0009_newsletter_subscribers.sql`, and `0010_marketing_permissions.sql` (the
+latter grants managers `promotions.manage` on databases where `0007` had
+already been applied).
 
 ### Staff profile photos
 

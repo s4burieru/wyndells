@@ -3,6 +3,7 @@ import {
   Building2Icon,
   CalendarDaysIcon,
   IdCardIcon,
+  Loader2Icon,
   MailIcon,
   MapPinIcon,
   MessageSquareTextIcon,
@@ -54,12 +55,15 @@ export function StaffProfileView({
   canEdit,
   onEdit,
   onChat,
+  chatStarting = false,
 }: {
   user: SafeUser
   isSelf: boolean
   canEdit: boolean
   onEdit: () => void
   onChat?: () => void
+  /** True while the direct conversation is being created for `onChat`. */
+  chatStarting?: boolean
 }) {
   return (
     <div className="grid gap-4">
@@ -85,9 +89,13 @@ export function StaffProfileView({
 
           <div className="flex shrink-0 items-center gap-2">
             {!isSelf && onChat ? (
-              <Button variant="outline" onClick={onChat}>
-                <MessageSquareTextIcon />
-                Chat
+              <Button variant="outline" onClick={onChat} disabled={chatStarting}>
+                {chatStarting ? (
+                  <Loader2Icon className="animate-spin" />
+                ) : (
+                  <MessageSquareTextIcon />
+                )}
+                {chatStarting ? 'Starting chat…' : 'Chat'}
               </Button>
             ) : null}
             {canEdit ? (

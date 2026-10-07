@@ -12,6 +12,7 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Separator } from '@/components/ui/separator'
 import { Skeleton } from '@/components/ui/skeleton'
 import { EmptyState, ErrorState, PageHeader } from '@/components/common/PageHeader'
+import { MenuItemImage } from '@/features/menu/components/MenuItemImage'
 
 export function BranchDetailPage() {
   const { code } = useParams()
@@ -174,7 +175,8 @@ export function BranchDetailPage() {
         ) : (
           <div className="mt-5 grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {items.map((item) => (
-              <Card key={item._id}>
+              <Card key={item._id} className="overflow-hidden">
+                <MenuItemImage src={item.image} alt={item.name} className="-mt-6 aspect-[16/10] w-full" />
                 <CardHeader>
                   <div className="flex items-start justify-between gap-2">
                     <CardTitle className="text-wyndell-forest">{item.name}</CardTitle>

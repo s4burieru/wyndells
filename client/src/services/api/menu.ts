@@ -23,12 +23,20 @@ export async function fetchMenuItems(options: {
   return data.items
 }
 
-export async function createMenuItem(payload: Record<string, unknown>): Promise<MenuItem> {
+/**
+ * Saves a menu item. Payloads are sent as `FormData` so the optional dish
+ * photo travels with the rest of the fields (the API also accepts JSON when
+ * there is no file).
+ */
+export async function createMenuItem(payload: FormData | Record<string, unknown>): Promise<MenuItem> {
   const data = await apiRequest<{ item: MenuItem }>('/api/menu', { method: 'POST', body: payload })
   return data.item
 }
 
-export async function updateMenuItem(id: string, payload: Record<string, unknown>): Promise<MenuItem> {
+export async function updateMenuItem(
+  id: string,
+  payload: FormData | Record<string, unknown>,
+): Promise<MenuItem> {
   const data = await apiRequest<{ item: MenuItem }>(`/api/menu/${id}`, {
     method: 'PUT',
     body: payload,

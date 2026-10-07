@@ -13,6 +13,8 @@ import { feedbackTable } from '../models/Feedback'
 import { careerPostingsTable } from '../models/CareerPosting'
 import { jobApplicationsTable } from '../models/JobApplication'
 import { notificationsTable } from '../models/Notification'
+import { promotionsTable } from '../models/Promotion'
+import { newsletterSubscribersTable } from '../models/NewsletterSubscriber'
 import { addDays, todayString } from '../utils/validate'
 import type { UserRole } from '../constants'
 
@@ -791,6 +793,106 @@ async function seedCareers() {
   }
 }
 
+/**
+ * Sample promotions, events and announcements for the home page, plus a couple
+ * of newsletter signups so the Customers screen is not empty on first run.
+ * Idempotent: skipped entirely when promotions already exist.
+ */
+async function seedPromotions() {
+  const today = todayString()
+  const { data: existing } = await getDb().from(promotionsTable).select('id').limit(1)
+  if ((existing ?? []).length > 0) {
+    console.log('  Promotions: already present')
+    return
+  }
+
+  const { data: branches } = await getDb()
+    .from(branchesTable)
+    .select('id')
+    .eq('is_active', true)
+    .order('name')
+  const branchIds = (branches ?? []).map((row) => row.id)
+
+  // Restaurant-wide rows first (branch_id null), then one pinned to a branch so
+  // the optional-branch treatment is visible in the dashboard.
+  const SAMPLES = [
+    {
+      branch_id: null as string | null,
+      kind: 'promotion',
+      title: 'Sulit Sundays: 20% off family platters',
+      summary: 'Bring the whole table — every family platter is 20% off every Sunday this month.',
+      event_date: addDays(today, 3),
+      starts_on: today,
+      expires_on: addDays(today, 30),
+    },
+    {
+      branch_id: null,
+      kind: 'event',
+      title: 'Garden Live Nights',
+      summary: 'Acoustic sets under the lights every Friday evening, with grill specials all night.',
+      event_date: addDays(today, 7),
+      starts_on: today,
+      expires_on: addDays(today, 45),
+    },
+    {
+      branch_id: null,
+      kind: 'announcement',
+      title: 'New harvest menu is here',
+      summary: 'Fresh, seasonal plates join the menu — same warmth, new favourites to share.',
+      event_date: today,
+      starts_on: null,
+      expires_on: null,
+    },
+    {
+      branch_id: branchIds[0] ?? null,
+      kind: 'promotion',
+      title: 'Weekday lunch plates, ₱50 off',
+      summary: 'Drop by on weekdays between 11am and 2pm and enjoy ₱50 off any rice meal.',
+      event_date: addDays(today, 1),
+      starts_on: today,
+      expires_on: addDays(today, 21),
+    },
+    {
+      // Left as a draft so the dashboard's published/draft states are both visible.
+      branch_id: null,
+      kind: 'event',
+      title: 'Anniversary week coming soon',
+      summary: 'A week of throwback dishes and special rates — details dropping soon.',
+      event_date: addDays(today, 60),
+      starts_on: null,
+      expires_on: null,
+      is_published: false,
+    },
+  ].map((sample) => ({
+    ...sample,
+    image: '',
+    is_published: sample.is_published ?? true,
+  }))
+
+  const { error: insertError } = await getDb().from(promotionsTable).insert(SAMPLES)
+  if (insertError) {
+    throw insertError
+  }
+  console.log(`  Promotions: ${SAMPLES.length} sample promotions added`)
+
+  const { data: subscriberCount } = await getDb()
+    .from(newsletterSubscribersTable)
+    .select('id')
+    .limit(1)
+  if ((subscriberCount ?? []).length > 0) {
+    console.log('  Newsletter: subscribers already present')
+    return
+  }
+  const { error: subscriberError } = await getDb().from(newsletterSubscribersTable).insert([
+    { name: 'Maria Santos', email: 'maria.santos@example.com', source: 'homepage' },
+    { name: 'Josefina Reyes', email: 'josefina.reyes@example.com', source: 'popup' },
+  ])
+  if (subscriberError) {
+    throw subscriberError
+  }
+  console.log('  Newsletter: 2 sample subscribers added')
+}
+
 async function main() {
   const supabaseUrl = process.env.SUPABASE_URL
   const { data, error } = await getDb().from(branchesTable).select('id').limit(1)
@@ -828,6 +930,7 @@ async function main() {
 
   await seedSamples()
   await seedCareers()
+  await seedPromotions()
 
   console.log('Seed complete ✔')
 }

@@ -37,7 +37,9 @@ client/src/
 │   ├── careers/
 │   ├── feedback/
 │   ├── menu/
+│   ├── newsletter/           # Timed newsletter popup
 │   ├── overview/             # Dashboard charts + sections
+│   ├── promotions/           # Home-page promotion form
 │   ├── reservations/         # Forms, detail view, table assignment
 │   ├── tables/
 │   └── users/

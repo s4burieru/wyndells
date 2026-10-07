@@ -20,6 +20,9 @@ export type Permission =
   | 'menu.manage'
   | 'feedback.view'
   | 'feedback.delete'
+  | 'promotions.manage'
+  | 'customers.view'
+  | 'customers.delete'
   | 'careers.manage'
   | 'careers.delete'
   | 'reports.view'
@@ -150,6 +153,43 @@ export type Feedback = FeedbackSummary & {
   contactNumber: string
   email: string
   reservationReference: string
+}
+
+// ---------------------------------------------------------------------------
+// Promotions & newsletter
+// ---------------------------------------------------------------------------
+
+/** Card flavours the home page can render. Keep in sync with `promotion_kind`. */
+export type PromotionKind = 'promotion' | 'event' | 'announcement'
+
+/** A home-page promotion, event or announcement. */
+export type Promotion = {
+  _id: string
+  /** null = restaurant-wide (shown for every branch). */
+  branch: BranchRef | null
+  kind: PromotionKind
+  title: string
+  summary: string
+  image: string
+  /** YYYY-MM-DD displayed on the card. */
+  eventDate: string
+  /** YYYY-MM-DD visibility window; either end may be open. */
+  startsOn: string | null
+  expiresOn: string | null
+  isPublished: boolean
+  createdAt: string
+  updatedAt: string
+}
+
+/** Where a newsletter signup came from — the home-page section or the popup. */
+export type NewsletterSource = 'homepage' | 'popup'
+
+export type NewsletterSubscriber = {
+  _id: string
+  name: string
+  email: string
+  source: NewsletterSource
+  createdAt: string
 }
 
 export type TimeSlot = { time: string; availableSpots: number }

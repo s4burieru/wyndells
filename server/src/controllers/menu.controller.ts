@@ -8,6 +8,12 @@ import {
   updateMenuItem,
 } from '../services/menu.service'
 import { type AuthedRequest } from '../middleware/auth'
+import { type MenuImageUpload } from '../services/menuImage.service'
+
+/** The `menuImage` file attached to a request, when the caller uploaded one. */
+function uploadedMenuImage(req: AuthedRequest): MenuImageUpload | undefined {
+  return (req as AuthedRequest & { file?: MenuImageUpload }).file
+}
 
 export const listMenuItemsController = asyncHandler(async (req: AuthedRequest, res: Response) => {
   const options = {
@@ -27,12 +33,17 @@ export const getMenuItemController = asyncHandler(async (req: AuthedRequest, res
 })
 
 export const createMenuItemController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const item = await createMenuItem(req.body as Record<string, unknown>, req.user)
+  const item = await createMenuItem(req.body as Record<string, unknown>, uploadedMenuImage(req), req.user)
   res.status(201).json({ item })
 })
 
 export const updateMenuItemController = asyncHandler(async (req: AuthedRequest, res: Response) => {
-  const item = await updateMenuItem(String(req.params.id), req.body as Record<string, unknown>, req.user)
+  const item = await updateMenuItem(
+    String(req.params.id),
+    req.body as Record<string, unknown>,
+    uploadedMenuImage(req),
+    req.user,
+  )
   res.json({ item })
 })
 

@@ -21,6 +21,8 @@ import notificationsRouter from './routes/notifications'
 import activityRouter from './routes/activity'
 import rolesRouter from './routes/roles'
 import chatRouter from './routes/chat'
+import promotionsRouter from './routes/promotions'
+import newsletterRouter from './routes/newsletter'
 import { attachChatSocket } from './sockets/chat.socket'
 import { errorHandler, notFoundHandler } from './middleware/errorHandler'
 
@@ -61,6 +63,8 @@ app.use('/api/notifications', notificationsRouter)
 app.use('/api/activity', activityRouter)
 app.use('/api/roles', rolesRouter)
 app.use('/api/chat', chatRouter)
+app.use('/api/promotions', promotionsRouter)
+app.use('/api/newsletter', newsletterRouter)
 
 app.use(notFoundHandler)
 app.use(errorHandler)

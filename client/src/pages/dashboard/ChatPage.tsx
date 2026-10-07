@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation, useNavigate } from 'react-router-dom'
 import { toast } from 'sonner'
 import { cn } from '@/utils/cn'
 import { friendlyError } from '@/utils/format'
@@ -73,6 +73,7 @@ export function ChatPage() {
   const { user } = useAuth()
   const userId = user?.id ?? ''
   const location = useLocation()
+  const navigate = useNavigate()
   const pendingOpenId = (location.state as { openConversationId?: string } | null)?.openConversationId
 
   const [conversations, setConversations] = useState<ChatConversation[]>([])
@@ -100,6 +101,8 @@ export function ChatPage() {
   const conversationsRef = useRef<ChatConversation[]>([])
   /** Invalidates in-flight message loads when the reader switches threads. */
   const loadTokenRef = useRef(0)
+  /** Deep-linked thread already opened (see the effect below); never re-open. */
+  const openedPendingIdRef = useRef<string | null>(null)
 
   const activeConversation = conversations.find((item) => item._id === activeId) ?? null
 
@@ -321,9 +324,14 @@ export function ChatPage() {
     setHasMore(false)
     setOlderLoading(false)
     setMessagesLoading(true)
-    setConversations((prev) =>
-      prev.map((item) => (item._id === conversationId ? { ...item, unread: 0 } : item)),
-    )
+    setConversations((prev) => {
+      const target = prev.find((item) => item._id === conversationId)
+      // Keep the array identity when there is nothing to reset: this list is a
+      // dependency of the deep-link effect above, so needless churn there can
+      // re-trigger it.
+      if (!target || target.unread === 0) return prev
+      return prev.map((item) => (item._id === conversationId ? { ...item, unread: 0 } : item))
+    })
 
     fetchChatMessages(conversationId)
       .then((result) => {
@@ -346,13 +354,19 @@ export function ChatPage() {
   // Opens a conversation deep-linked from another page (e.g. a staff profile).
   useEffect(() => {
     if (!pendingOpenId || listLoading) return
+    // `conversations` gets a new identity on every list update, so this effect
+    // re-runs constantly — opening the same thread again would loop forever
+    // (each open resets `unread`, which updates the list this depends on).
+    if (openedPendingIdRef.current === pendingOpenId) return
     const exists = conversations.some((item) => item._id === pendingOpenId)
     if (exists) {
+      openedPendingIdRef.current = pendingOpenId
       openConversation(pendingOpenId)
-      // Clear the state so a re-render doesn't re-open it.
-      window.history.replaceState({}, '')
+      // Clear the state through the router: a raw `history.replaceState` never
+      // reaches React Router, so `location.state` would stay set indefinitely.
+      navigate(location.pathname, { replace: true, state: null })
     }
-  }, [pendingOpenId, listLoading, conversations, openConversation])
+  }, [pendingOpenId, listLoading, conversations, openConversation, navigate, location.pathname])
 
   const loadOlderMessages = useCallback(() => {
     const conversationId = activeIdRef.current
